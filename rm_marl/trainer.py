@@ -16,7 +16,6 @@ class Trainer:
         self.agents = agents
 
     def run(self, run_config: dict):
-
         log_dir = os.path.join(
             run_config["log_dir"],
             run_config["name"],
@@ -24,13 +23,24 @@ class Trainer:
         )
         logger = SummaryWriter(log_dir)
 
+        try:
+            self._run(run_config, logger)
+        except KeyboardInterrupt:
+            pass
+
+        _ = [e.close() for e in self.envs.values()]
+        logger.close()
+        if run_config["training"]:
+            self.save(log_dir)
+
+    def _run(self, run_config: dict, logger: SummaryWriter):
         base_seed = run_config["seed"]
 
         steps = defaultdict(list)
         losses = defaultdict(list)
         rewards = defaultdict(list)
 
-        _ = [a.set_log_folder(os.path.join(log_dir, aid)) for aid, a in self.agents.items()]
+        _ = [a.set_log_folder(os.path.join(logger.log_dir, aid)) for aid, a in self.agents.items()]
 
         for episode in tqdm(range(1, run_config["total_episodes"] + 1)):
             episode_losses = defaultdict(list)
@@ -142,10 +152,6 @@ class Trainer:
                     ]
                     logger.add_video(f"training/replay/{env_id}", video, episode)
 
-        _ = [e.close() for e in self.envs.values()]
-        logger.close()
-        if run_config["training"]:
-            self.save(log_dir)
 
     @staticmethod
     def _project_labels(labels, a, aid):

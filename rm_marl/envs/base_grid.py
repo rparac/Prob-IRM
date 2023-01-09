@@ -35,7 +35,9 @@ class BaseGridEnv(gym.Env):
         self.window_size = 512  # The size of the PyGame window
 
         self.original_positions = copy.deepcopy(positions)
-        self.positions = positions
+        self.positions = defaultdict(list)
+        for p, l in self.original_positions.items():
+            self.positions[p].append(l)
         self.active_flags = defaultdict(self._active_flag_constructor)
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
@@ -55,9 +57,8 @@ class BaseGridEnv(gym.Env):
 
         self.observation_space = gym.spaces.Dict(
             {
-                o: gym.spaces.Box(0, size - 1, shape=(2,), dtype=int)
-                for o in self.positions.values()
-                if o.startswith("A")
+                a: gym.spaces.Box(0, size - 1, shape=(2,), dtype=int)
+                for a in self.agent_locations.keys()
             }
         )
 
@@ -68,7 +69,7 @@ class BaseGridEnv(gym.Env):
     @property
     def agent_locations(self): 
         return {
-            o: np.array(p) for p, o in self.positions.items() if o.startswith("A")
+            l: np.array(p) for p, ls in self.positions.items() for l in ls if l.startswith("A")
         }
 
     @staticmethod
@@ -90,9 +91,10 @@ class BaseGridEnv(gym.Env):
     def postions_by_type(self, type, pos=None):
         pos = pos or self.positions
         positions = defaultdict(list)
-        for p, l in pos.items():
-            if l.startswith(type):
-                positions[l].append(p)
+        for p, ls in pos.items():
+            for l in ls:
+                if l.startswith(type):
+                    positions[l].append(p)
         return positions
 
     def reset(self, seed=None, options=None):
@@ -100,7 +102,9 @@ class BaseGridEnv(gym.Env):
         super().reset(seed=seed)
 
         self.active_flags.clear()
-        self.positions = copy.deepcopy(self.original_positions)
+        self.positions.clear()
+        for p, l in self.original_positions.items():
+            self.positions[p].append(l)
 
         observation = self._get_obs()
         info = self._get_info()
@@ -129,11 +133,12 @@ class BaseGridEnv(gym.Env):
         canvas = pygame.Surface((self.window_size, self.window_size))
         canvas.fill((255, 255, 255))
 
-        for pos, label in self.positions.items():
-            if not self.active_flags[label]:
-                continue
-            pos = np.array(pos)
-            self._draw_component(label, pos, canvas)
+        for pos, labels in self.positions.items():
+            for label in labels:
+                if not self.active_flags[label]:
+                    continue
+                pos = np.array(pos)
+                self._draw_component(label, pos, canvas)
 
         # Finally, add some gridlines
         for x in range(self.size + 1):

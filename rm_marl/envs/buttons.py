@@ -77,8 +77,8 @@ class ButtonsEnv(BaseGridEnv):
                 self.agent_locations[aid] + direction, 0, self.size - 1
             )
             if self._can_enter(new_agent_pos):
-                self.positions.pop(tuple(self.agent_locations[aid]))
-                self.positions[tuple(new_agent_pos)] = aid
+                self.positions[tuple(self.agent_locations[aid])].remove(aid)
+                self.positions[tuple(new_agent_pos)].append(aid)
 
         self._check_open_walls()
 

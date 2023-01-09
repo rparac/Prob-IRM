@@ -103,6 +103,9 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         return updated
 
     def _update_reward_machine(self):
+        if not self.positive_examples:
+            return
+
         self.rm_num_states = min(len(t) for t in self.positive_examples) + 2
 
         self.rm_learning_counter += 1
