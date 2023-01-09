@@ -1,0 +1,7 @@
+_target_: rm_marl.agent.RewardMachineLearningAgent
+algo_kws:
+  action_space: 
+    _target_: builtins.getattr
+    _args_:
+      - ${.....env}
+      - action_space

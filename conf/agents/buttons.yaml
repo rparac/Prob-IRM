@@ -1,0 +1,8 @@
+defaults:
+  - buttons/@_agent1_config: agent1
+  - buttons/@_agent2_config: agent2
+  - buttons/@_agent3_config: agent3
+
+A1: ${._agent1_config.agent}
+A2: ${._agent2_config.agent}
+A3: ${._agent3_config.agent}

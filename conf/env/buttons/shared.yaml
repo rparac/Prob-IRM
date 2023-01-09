@@ -1,0 +1,36 @@
+defaults:
+  - base
+
+config:
+  rm_file: data/buttons/rm_team.txt
+
+env:
+  _target_: rm_marl.utils.gym.wrap_env
+  _args_:
+    - _target_: gym.make
+      id: ${....config.env_id}
+      render_mode: ${....config.env_render_mode}
+      file: ${....config.env_file}
+    -
+      - cls: 
+          _target_: rm_marl.utils.imports.import_cls
+          path: rm_marl.envs.buttons.ButtonsLabelingFunctionWrapper
+      - cls: 
+          _target_: rm_marl.utils.imports.import_cls
+          path: rm_marl.envs.wrappers.RewardMachineWrapper
+        args: 
+          - _target_: rm_marl.reward_machine.RewardMachine.load_from_file
+            file: ${.......config.rm_file}
+        kwargs:
+          label_mode: 
+            _target_: builtins.getattr
+            _args_: 
+              - _target_: builtins.getattr
+                _args_: 
+                 - _target_: rm_marl.utils.imports.import_cls
+                   path: rm_marl.envs.wrappers.RewardMachineWrapper
+                 - LabelMode
+              - ${........config.label_mode}
+      - cls: 
+          _target_: rm_marl.utils.imports.import_cls
+          path: rm_marl.envs.wrappers.RecordEpisodeStatistics

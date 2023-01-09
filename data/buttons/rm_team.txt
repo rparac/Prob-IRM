@@ -1,0 +1,14 @@
+0 # initial state 
+(0, 1, 'by') # Yellow button is pressed
+(1, 2, 'bg') # Green button is pressed
+(2, 3, 'a2br') # Agent 2 on red button
+(2, 4, 'a3br') # Agent 3 on red button
+(3, 5, 'a3br') # Agent 3 on red button
+(3, 2, 'a2lr') # Agent 2 left red button
+(4, 5, 'a2br') # Agent 2 on red button
+(4, 2, 'a3lr') # Agent 3 left red button
+(5, 3, 'a3lr') # Agent 3 left red button
+(5, 4, 'a2lr') # Agent 2 left red button
+(5, 6, 'br') # Red button has been pressed
+(6, 7, 'g') # Agent 1 reaches goal destination
+(7, 7, 'True') # 8 is a terminating state

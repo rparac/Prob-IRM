@@ -1,0 +1,8 @@
+training: True
+total_episodes: 10000
+log_dir: logs
+recording_freq: 500
+log_freq: 1
+seed: 123
+name: ???
+path: ???

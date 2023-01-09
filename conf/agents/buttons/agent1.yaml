@@ -1,0 +1,6 @@
+defaults:
+  - base
+
+config:
+  rm_file: data/buttons/rm_agent_1.txt
+  env: env1

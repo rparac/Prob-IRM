@@ -1,0 +1,5 @@
+0 # initial state 
+(0, 1, 'by') # Yellow button is pressed
+(1, 2, 'br') # Red button is pressed
+(2, 3, 'g') # Goal state is reached
+(3, 3, 'True') # state 3 is an absorbing state

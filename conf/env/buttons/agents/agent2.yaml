@@ -1,0 +1,21 @@
+defaults:
+  - base
+
+config:
+  agent_id: A2
+  rm_file: data/buttons/rm_agent_2.txt
+  random_label_config:
+    br:
+      - 0.3
+      - _target_: builtins.getattr
+        _args_:
+          - _target_: rm_marl.utils.imports.import_cls
+            path: rm_marl.envs.buttons.ButtonsEnv
+          - open_walls_R
+    by:
+      - 0.3
+      - _target_: builtins.getattr
+        _args_:
+          - _target_: rm_marl.utils.imports.import_cls
+            path: rm_marl.envs.buttons.ButtonsEnv
+          - open_walls_Y
