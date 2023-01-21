@@ -6,10 +6,13 @@ from ..reward_machine import RewardMachine
 from itertools import groupby
 from .rm_agent import RewardMachineAgent
 from ..ilasp import generate_ilasp_task, parse_ilasp_solutions, solve_ilasp_task
+from ..utils.logging import getLogger
 
 if TYPE_CHECKING:
     from ..algo import Algo
     from ..reward_machine import RewardMachine
+
+LOGGER = getLogger(__name__)
 
 class TraceTracker:
 
@@ -34,7 +37,7 @@ class TraceTracker:
 class RewardMachineLearningAgent(RewardMachineAgent):
 
     def __init__(
-        self, algo_cls: "Algo" = QRM, algo_kws: dict = None
+        self, agent_id: str, algo_cls: "Algo" = QRM, algo_kws: dict = None
     ):
         self.trace = TraceTracker()
         self.incomplete_examples = set()
@@ -45,7 +48,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
 
         rm = self._default_rm()
 
-        super().__init__(rm, algo_cls, algo_kws)
+        super().__init__(agent_id, rm, algo_cls, algo_kws)
 
     @staticmethod
     def _default_rm():
@@ -64,8 +67,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         return super().reset(seed)
 
     def update_agent(self, state, action, reward, terminated, truncated, next_state, labels, learning=True):
-
-        ret = super().update_agent(state, action, reward, terminated, truncated, next_state, labels, learning)
+        loss, interrupt = super().update_agent(state, action, reward, terminated, truncated, next_state, labels, learning)
 
         if learning:
             self.trace.update(labels)
@@ -73,8 +75,15 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                 examples_updated = self._update_examples(self.trace.nodups_trace, terminated)
                 if examples_updated:
                     self._update_reward_machine()
+            # elif self.rm.is_state_terminal(self.u):
+            #     LOGGER.debug(f"[{self.agent_id}] the RM {self.rm_learning_counter} is wrong.")
+            #     examples_updated = self._update_examples(self.trace.nodups_trace, False)
+            #     if examples_updated:
+            #         self.rm_num_states = 3
+            #         self._update_reward_machine()
+            #         interrupt = True
 
-        return ret
+        return loss, interrupt
 
     def project_labels(self, labels):
         return tuple(labels)
@@ -90,9 +99,9 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                     pre = trace[: i + 1]
                     if pre not in self.positive_examples:
                         self.incomplete_examples.add(pre)
-                    post = trace[-i - 1 :]
-                    if post not in self.positive_examples:
-                        self.incomplete_examples.add(post)
+                    # post = trace[-i - 1 :]
+                    # if post not in self.positive_examples:
+                    #     self.incomplete_examples.add(post)
         else:
             if trace and trace not in self.incomplete_examples:
                 self.incomplete_examples.add(trace)
@@ -103,15 +112,23 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         return updated
 
     def _update_reward_machine(self):
+        LOGGER.debug(f"[{self.agent_id}]`_update_reward_machine`")
+
         if not self.positive_examples:
+            LOGGER.debug(f"[{self.agent_id}] No positive examples")
             return
 
         self.rm_num_states = min(len(t) for t in self.positive_examples) + 2
+        LOGGER.debug(f"[{self.agent_id}] num_state: {self.rm_num_states}")
 
         self.rm_learning_counter += 1
 
+        LOGGER.debug(f"[{self.agent_id}] generating task {self.rm_learning_counter}: start")
         self._generate_ilasp_task()
+        LOGGER.debug(f"[{self.agent_id}] generating task {self.rm_learning_counter}: done")
+        LOGGER.debug(f"[{self.agent_id}] solving task {self.rm_learning_counter}: start")
         solver_success = self._solve_ilasp_task()
+        LOGGER.debug(f"[{self.agent_id}] solving task {self.rm_learning_counter}: done")
         if solver_success:
             ilasp_solution_filename = os.path.join(
                 self.log_folder, f"solution_{self.rm_learning_counter}"
@@ -130,7 +147,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                     self.rm = candidate_rm
                     self.algo.reset()
             else:
-                # unsatisfiable
+                LOGGER.debug(f"[{self.agent_id}] ILASP task unsolvable")
                 self.rm_num_states += 1
                 self._update_reward_machine()
         else:
@@ -155,7 +172,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
             ilasp_task_filename,
             "bfs-alternative",  # symmetry_breaking_method
             1,  # max_disjunction_size
-            False,  # learn_acyclic_graph
+            True,  # learn_acyclic_graph
             True,  # use_compressed_traces
             True,  # avoid_learning_only_negative
             False,  # prioritize_optimal_solutions

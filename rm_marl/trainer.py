@@ -96,9 +96,11 @@ class Trainer:
                     assert all(agent_labels[aid] == synchronized_labels[aid] for aid in env_agents[env_id].keys()), f"Not synchronized!! {agent_labels}, {synchronized_labels}"
 
                     # update the agent's RM and Q-functions
+                    agent_loss = []
+                    interrupt_episode = terminated or truncated
                     for aid, a in env_agents[env_id].items():
                         current_u = a.u
-                        loss = a.update_agent(
+                        loss, interrupt = a.update_agent(
                             self._project_obs(obs[env_id], a, aid),
                             actions[aid],
                             reward,
@@ -109,7 +111,10 @@ class Trainer:
                             learning=run_config["training"],
                         )
 
+                        # interrupt_episode |= interrupt
+
                         if run_config["training"]:
+                            agent_loss.append(loss)
                             self._counterfactual_update(
                                 env,
                                 a,
@@ -122,10 +127,10 @@ class Trainer:
 
                     obs[env_id] = next_obs
                     infos[env_id] = info
-                    dones[env_id] = done
+                    dones[env_id] = interrupt_episode
 
-                    if loss is not None:
-                        episode_losses[env_id].append(loss)
+                    if agent_loss:
+                        episode_losses[env_id].append(np.mean(agent_loss))
 
             # track metrics and log them in TB
             for env_id in self.envs.keys():

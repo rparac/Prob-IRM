@@ -55,6 +55,7 @@ def create_shared_env():
 def create_rm_agents(envs):
     return {
         "A1": RewardMachineAgent(
+            "A1",
             RewardMachine.load_from_file(
                 "/Users/leo/dev/phd/rm-marl/data/buttons/rm_agent_1.txt"
             ),
@@ -63,6 +64,7 @@ def create_rm_agents(envs):
             }
         ),
         "A2": RewardMachineAgent(
+            "A2",
             RewardMachine.load_from_file(
                 "/Users/leo/dev/phd/rm-marl/data/buttons/rm_agent_2.txt"
             ),
@@ -71,6 +73,7 @@ def create_rm_agents(envs):
             }
         ),
         "A3": RewardMachineAgent(
+            "A3",
             RewardMachine.load_from_file(
                 "/Users/leo/dev/phd/rm-marl/data/buttons/rm_agent_3.txt"
             ),
@@ -83,16 +86,19 @@ def create_rm_agents(envs):
 def create_rm_learning_agents(envs):
     return {
         "A1": RewardMachineLearningAgent(
+            "A1",
             algo_kws={
                 "action_space": envs["E1"].action_space
             }
         ),
         "A2": RewardMachineLearningAgent(
+            "A2",
             algo_kws={
                 "action_space": envs["E2"].action_space
             }
         ),
         "A3": RewardMachineLearningAgent(
+            "A3",
             algo_kws={
                 "action_space": envs["E3"].action_space
             }

@@ -10,8 +10,9 @@ if TYPE_CHECKING:
 
 class RewardMachineAgent:
     def __init__(
-        self, rm: "RewardMachine", algo_cls: "Algo" = QRM, algo_kws: dict = None
+        self, agent_id: str, rm: "RewardMachine", algo_cls: "Algo" = QRM, algo_kws: dict = None
     ):
+        self.agent_id = agent_id
         algo_kws = algo_kws or {}
         self.algo = algo_cls(**algo_kws)
         self.rm = rm
@@ -37,7 +38,7 @@ class RewardMachineAgent:
         return self.algo.action(state, self.u, greedy=greedy)
 
     def learn(self, state, u, action, reward, done, next_state, next_u):
-        self.algo.learn(state, u, action, reward, done, next_state, next_u)
+        return self.algo.learn(state, u, action, reward, done, next_state, next_u)
 
     def update_agent(
         self, state, action, reward, terminated, truncated, next_state, labels, learning=True
@@ -49,12 +50,12 @@ class RewardMachineAgent:
             next_u = self.rm.get_next_state(next_u, event)
 
         if learning:
-            loss = self.algo.learn(
+            loss = self.learn(
                 state, self.u, action, reward, terminated or truncated, next_state, next_u
             )
 
         self.u = next_u
-        return loss
+        return loss, terminated or truncated
 
     def project_labels(self, labels):
         return tuple(e for e in labels if e in self.rm.get_valid_events(self.u))
