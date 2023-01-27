@@ -6,7 +6,7 @@ from itertools import groupby
 from typing import TYPE_CHECKING
 
 import gym
-from gym.wrappers import RecordEpisodeStatistics
+from gym.wrappers import RecordEpisodeStatistics, TimeLimit
 
 if TYPE_CHECKING:
     from ..reward_machine import RewardMachine
@@ -40,6 +40,12 @@ class LabelingFunctionWrapper(gym.Wrapper):
         info["labels"] = self.get_labels()
         self.prev_agent_locations = copy.deepcopy(self.agent_locations)
         return observation, reward, terminated, truncated, info
+
+    def reset(self, **kwargs):
+        """Resets the environment with kwargs."""
+        ret = super().reset(**kwargs)
+        self.prev_agent_locations = self.unwrapped.agent_locations
+        return ret
 
 
 class RandomLabelingFunctionWrapper(gym.Wrapper):
