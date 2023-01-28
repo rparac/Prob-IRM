@@ -12,22 +12,31 @@ LOGGER = getLogger(__name__)
 
 class DAFSALearner(RMLearner):
 
-    def learn(self, _observables, rm, positive_examples, _negative_examples, _incomplete_examples):
-        LOGGER.debug(f"[{self.agent_id}]`learn`")
+    def __init__(self, agent_id):
+        super().__init__(agent_id)
+        self._previous_examples = []
 
+    def learn(self, _observables, rm, positive_examples, _negative_examples, _incomplete_examples):
+        
         if not positive_examples:
             LOGGER.debug(f"[{self.agent_id}] No positive examples")
             return
 
+        selected_examples = sorted(positive_examples, key=len)[:50]
+        if selected_examples == self._previous_examples:
+            return
+            
         self.rm_learning_counter += 1
 
-        candidate_rm = self._generate_rm(sorted(positive_examples, key=len)[:50])
+        candidate_rm = self._generate_rm(selected_examples)
+        self._previous_examples = selected_examples
 
         if candidate_rm.states:
             candidate_rm.set_u0("u0")
             candidate_rm.set_uacc("u_acc")
 
             if candidate_rm != rm:
+                LOGGER.debug(f"[{self.agent_id}] New RM found.")
                 rm_plot_filename = os.path.join(
                     self.log_folder, f"plot_{self.rm_learning_counter}"
                 )
