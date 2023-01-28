@@ -7,9 +7,37 @@ import gym
 import os
 
 AGENT_RANDOM_LABEL_CONFIG = {
-    1: {"br": (0.3, ButtonsEnv.open_walls_R)},
-    2: {"by": (0.3, ButtonsEnv.open_walls_Y), "br": (0.3, ButtonsEnv.open_walls_R)},
-    3: {"bg": (0.3, ButtonsEnv.open_walls_G), "br": (0.3, ButtonsEnv.open_walls_R)}
+    1: {
+        "br": RandomLabelingConfig(
+            proba=0.3,
+            condition=ButtonsEnv.can_open_wall_R,
+            update=ButtonsEnv.open_walls_R,
+        )
+    },
+    2: {
+        "by": RandomLabelingConfig(
+            proba=0.3,
+            condition=ButtonsEnv.can_open_wall_Y,
+            update=ButtonsEnv.open_walls_Y,
+        ),
+        "br": RandomLabelingConfig(
+            proba=0.3,
+            condition=ButtonsEnv.can_open_wall_R,
+            update=ButtonsEnv.open_walls_R,
+        ),
+    },
+    3: {
+        "bg": RandomLabelingConfig(
+            proba=0.3,
+            condition=ButtonsEnv.can_open_wall_G,
+            update=ButtonsEnv.open_walls_G,
+        ),
+        "br": RandomLabelingConfig(
+            proba=0.3,
+            condition=ButtonsEnv.can_open_wall_R,
+            update=ButtonsEnv.open_walls_R,
+        ),
+    },
 }
 
 
@@ -24,16 +52,16 @@ def _create_env(agent_id):
     env = RandomLabelingFunctionWrapper(env, AGENT_RANDOM_LABEL_CONFIG[agent_id])
     env = RewardMachineWrapper(
         env,
-        RewardMachine.load_from_file(
-            f"data/buttons/rm_agent_{agent_id}.txt"
-        ),
+        RewardMachine.load_from_file(f"data/buttons/rm_agent_{agent_id}.txt"),
         label_mode=RewardMachineWrapper.LabelMode.STATE,
     )
     env = RecordEpisodeStatistics(env)
     return env
 
+
 def create_local_envs():
     return {f"E{aid}": _create_env(aid) for aid in AGENT_RANDOM_LABEL_CONFIG.keys()}
+
 
 def create_shared_env():
     env = gym.make(
@@ -52,6 +80,7 @@ def create_shared_env():
     env = RecordEpisodeStatistics(env)
     return {"G": env}
 
+
 def create_rm_agents(envs):
     return {
         "A1": RewardMachineAgent(
@@ -59,59 +88,44 @@ def create_rm_agents(envs):
             RewardMachine.load_from_file(
                 "/Users/leo/dev/phd/rm-marl/data/buttons/rm_agent_1.txt"
             ),
-            algo_kws={
-                "action_space": envs["E1"].action_space
-            }
+            algo_kws={"action_space": envs["E1"].action_space},
         ),
         "A2": RewardMachineAgent(
             "A2",
             RewardMachine.load_from_file(
                 "/Users/leo/dev/phd/rm-marl/data/buttons/rm_agent_2.txt"
             ),
-            algo_kws={
-                "action_space": envs["E2"].action_space
-            }
+            algo_kws={"action_space": envs["E2"].action_space},
         ),
         "A3": RewardMachineAgent(
             "A3",
             RewardMachine.load_from_file(
                 "/Users/leo/dev/phd/rm-marl/data/buttons/rm_agent_3.txt"
             ),
-            algo_kws={
-                "action_space": envs["E3"].action_space
-            }
-        )
+            algo_kws={"action_space": envs["E3"].action_space},
+        ),
     }
+
 
 def create_rm_learning_agents(envs):
     return {
         "A1": RewardMachineLearningAgent(
-            "A1",
-            algo_kws={
-                "action_space": envs["E1"].action_space
-            }
+            "A1", algo_kws={"action_space": envs["E1"].action_space}
         ),
         "A2": RewardMachineLearningAgent(
-            "A2",
-            algo_kws={
-                "action_space": envs["E2"].action_space
-            }
+            "A2", algo_kws={"action_space": envs["E2"].action_space}
         ),
         "A3": RewardMachineLearningAgent(
-            "A3",
-            algo_kws={
-                "action_space": envs["E3"].action_space
-            }
-        )
+            "A3", algo_kws={"action_space": envs["E3"].action_space}
+        ),
     }
-
 
 
 if __name__ == "__main__":
 
     # Training
     # envs = create_local_envs()
-    
+
     # # agents = create_rm_agents(envs)
     # agents = create_rm_learning_agents(envs)
 
@@ -127,13 +141,13 @@ if __name__ == "__main__":
     #     "seed": 123
     # })
 
-##########################################################
+    ##########################################################
 
     # Evaluation
     # path = "logs/buttons_single_agent/2023-01-01_16-26-25/trainer.pkl"
     # trainer_load = Trainer.load(path)
     # agents = trainer_load.agents
-    
+
     # envs = create_shared_env()
 
     # trainer = Trainer(envs, agents)
@@ -149,18 +163,17 @@ if __name__ == "__main__":
     #     "seed": 10000 + 123
     # })
 
-
-########################################################################################
+    ########################################################################################
 
     ## MANUAL RUN
-    
+
     env = gym.make(
         "rm-marl/Buttons-v0",
         render_mode="rgb_array",
         file="/Users/leo/dev/phd/rm-marl/data/buttons/env.txt",
     )
-    env.unwrapped.render_mode="human"
-    
+    env.unwrapped.render_mode = "human"
+
     done = False
     obs, info = env.reset()
 
@@ -172,4 +185,3 @@ if __name__ == "__main__":
         print(info)
 
 ############################################
-    

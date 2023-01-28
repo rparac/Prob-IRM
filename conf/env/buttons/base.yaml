@@ -2,4 +2,4 @@ config:
   env_id: rm-marl/Buttons-v0
   env_render_mode: rgb_array
   env_file: data/buttons/env.txt
-  label_mode: STATE
+  label_mode: RM

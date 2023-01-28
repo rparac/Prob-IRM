@@ -4,7 +4,7 @@ import numpy as np
 import pygame
 
 from .base_grid import BaseGridEnv
-from .wrappers import LabelingFunctionWrapper
+from .wrappers import LabelingFunctionWrapper, RandomLabelingFunctionWrapper
 
 if TYPE_CHECKING:
     from ..reward_machine import RewardMachine
@@ -198,3 +198,10 @@ class ButtonsLabelingFunctionWrapper(LabelingFunctionWrapper):
             tuple(from_loc[agent]) not in positions
             and tuple(to_loc[agent]) in positions
         )
+
+
+class ButtonsRandomLabelingFunctionWrapper(RandomLabelingFunctionWrapper):
+    @staticmethod
+    def can_open_wall_R_A2_A3(e):
+        events = [l for l in e.flatten_trace if l in ("a2br", "a2lr", "a3br", "a3lr")]
+        return events and any(l == events[-1] for l in ("a2br", "a3br"))

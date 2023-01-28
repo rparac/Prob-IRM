@@ -47,8 +47,3 @@ env:
       - cls: 
           _target_: rm_marl.utils.imports.import_cls
           path: rm_marl.envs.wrappers.RecordEpisodeStatistics
-      - cls: 
-          _target_: rm_marl.utils.imports.import_cls
-          path: rm_marl.envs.wrappers.TimeLimit
-        args:
-          - 100

@@ -6,15 +6,31 @@ config:
   rm_file: data/buttons/rm_agent_3.txt
   random_label_config:
     br:
-      - 0.3
-      - _target_: builtins.getattr
+      _target_: rm_marl.envs.wrappers.RandomLabelingConfig
+      proba: 0.3
+      condition:
+        _target_: builtins.getattr
+        _args_:
+          - _target_: rm_marl.utils.imports.import_cls
+            path: rm_marl.envs.buttons.ButtonsRandomLabelingFunctionWrapper
+          - can_open_wall_R_A2_A3
+      env_update:
+        _target_: builtins.getattr
         _args_:
           - _target_: rm_marl.utils.imports.import_cls
             path: rm_marl.envs.buttons.ButtonsEnv
           - open_walls_R
     bg:
-      - 0.3
-      - _target_: builtins.getattr
+      _target_: rm_marl.envs.wrappers.RandomLabelingConfig
+      proba: 0.3
+      condition:
+        _target_: builtins.getattr
+        _args_:
+          - _target_: rm_marl.utils.imports.import_cls
+            path: rm_marl.envs.wrappers.RandomLabelingFunctionWrapper
+          - condition_true
+      env_update:
+        _target_: builtins.getattr
         _args_:
           - _target_: rm_marl.utils.imports.import_cls
             path: rm_marl.envs.buttons.ButtonsEnv

@@ -1,5 +1,6 @@
 import abc
 import copy
+from dataclasses import dataclass
 import os
 from enum import Enum
 from itertools import groupby
@@ -48,18 +49,36 @@ class LabelingFunctionWrapper(gym.Wrapper):
         return ret
 
 
+@dataclass
+class RandomLabelingConfig:
+    proba: float
+    condition: callable
+    env_update: callable
+
+
 class RandomLabelingFunctionWrapper(gym.Wrapper):
+
+
     def __init__(self, env: gym.Env, random_events: dict):
         """
         random_event: {event: (probability, function(env))}
         """
-        self.random_events = random_events
+        self.random_events = random_events or {}
+        self.trace = []
         super().__init__(env)
 
+    @property
+    def flatten_trace(self):
+        return tuple(e for es in self.trace for e in es)
+
     def get_labels(self, _obs: dict = None, _prev_obs: dict = None):
-        event = self.np_random.choice(list(self.random_events.keys()))
-        proba, _env_update_func = self.random_events[event]
-        if self.np_random.random() <= proba:
+        valid_events = [e for e, c in self.random_events.items() if c.condition(self)]
+        if not valid_events:
+            return []
+
+        event = self.np_random.choice(valid_events)
+        config = self.random_events[event]
+        if self.np_random.random() <= config.proba:
             return [event]
 
         return []
@@ -71,10 +90,20 @@ class RandomLabelingFunctionWrapper(gym.Wrapper):
         if not labels:
             labels = self.get_labels()
             for l in labels:
-                simulated_env_updates[l] = self.random_events[l][1]
+                simulated_env_updates[l] = self.random_events[l].env_update
+        
+        self.trace.append(labels or [])
         info["labels"] = labels
         info["env_simulated_updates"] = simulated_env_updates
         return observation, reward, terminated, truncated, info
+
+    def reset(self, **kwargs):
+        self.trace.clear()
+        return super().reset(**kwargs)
+
+    @staticmethod
+    def condition_true(e):
+        return True
 
 
 class RewardMachineWrapper(gym.Wrapper):
