@@ -1,4 +1,4 @@
-from ...reward_machine import RewardMachine
+from ....reward_machine import RewardMachine
 from ..ilasp_common import N_TRANSITION_STR, CONNECTED_STR
 from ..task_parser.ilasp_parser_utils import parse_edge_rule, parse_negative_transition_rule
 
