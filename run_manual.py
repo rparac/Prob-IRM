@@ -10,31 +10,31 @@ AGENT_RANDOM_LABEL_CONFIG = {
     1: {
         "br": RandomLabelingConfig(
             proba=0.3,
-            condition=ButtonsEnv.can_open_wall_R,
+            condition=RandomLabelingFunctionWrapper.condition_true,
             update=ButtonsEnv.open_walls_R,
         )
     },
     2: {
         "by": RandomLabelingConfig(
             proba=0.3,
-            condition=ButtonsEnv.can_open_wall_Y,
+            condition=RandomLabelingFunctionWrapper.condition_true,
             update=ButtonsEnv.open_walls_Y,
         ),
         "br": RandomLabelingConfig(
             proba=0.3,
-            condition=ButtonsEnv.can_open_wall_R,
+            condition=ButtonsRandomLabelingFunctionWrapper.can_open_wall_R_A2_A3,
             update=ButtonsEnv.open_walls_R,
         ),
     },
     3: {
         "bg": RandomLabelingConfig(
             proba=0.3,
-            condition=ButtonsEnv.can_open_wall_G,
+            condition=RandomLabelingFunctionWrapper.condition_true,
             update=ButtonsEnv.open_walls_G,
         ),
         "br": RandomLabelingConfig(
             proba=0.3,
-            condition=ButtonsEnv.can_open_wall_R,
+            condition=ButtonsRandomLabelingFunctionWrapper.can_open_wall_R_A2_A3,
             update=ButtonsEnv.open_walls_R,
         ),
     },
