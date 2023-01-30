@@ -1,5 +1,5 @@
 training: True
-total_episodes: 10000
+total_episodes: 50000
 log_dir: logs
 recording_freq: 500
 log_freq: 1
