@@ -96,7 +96,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
             self.trace.update(labels)
             if terminated or truncated:
                 examples_updated = self._update_examples(
-                    self.trace.nodups_trace, terminated
+                    self.trace.flatten_trace, terminated
                 )
                 if examples_updated:
                     candidate_rm = self.rm_learner.learn(
@@ -129,13 +129,6 @@ class RewardMachineLearningAgent(RewardMachineAgent):
             if trace and trace not in self.positive_examples:
                 self.positive_examples.add(trace)
                 updated = True
-                # for i in range(len(trace) - 1):
-                #     pre = trace[: i + 1]
-                #     if pre not in self.positive_examples:
-                #         self.incomplete_examples.add(pre)
-                #     post = trace[-i - 1 :]
-                #     if post not in self.positive_examples:
-                #         self.incomplete_examples.add(post)
         else:
             if trace and trace not in self.incomplete_examples:
                 self.incomplete_examples.add(trace)
