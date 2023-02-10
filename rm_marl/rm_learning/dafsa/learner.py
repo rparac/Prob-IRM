@@ -12,6 +12,14 @@ from ...reward_machine import RewardMachine
 from ...utils.logging import getLogger
 from ..learner import RMLearner
 
+try:
+    from itertools import pairwise
+except ImportError:
+    def pairwise(iterable):
+        a, b = itertools.tee(iterable)
+        next(b, None)
+        return zip(a, b)
+
 LOGGER = getLogger(__name__)
 
 class DAFSALearner(RMLearner):
@@ -57,7 +65,7 @@ class DAFSALearner(RMLearner):
         final_nodes = [nid for nid, n in automaton.nodes.items() if n.final]
         graph = automaton.to_graph()
         _, shortest_path = nx.multi_source_dijkstra(graph, sources=final_nodes, target=0, weight=lambda *args: 1)
-        shortest_sequence = [graph.edges[e]["label"] for e in itertools.pairwise(shortest_path)][::-1]
+        shortest_sequence = [graph.edges[e]["label"] for e in pairwise(shortest_path)][::-1]
 
         for i, event in enumerate(shortest_sequence[:-1]):
             rm.add_transition(f"u{i}", f"u{i+1}", event)
