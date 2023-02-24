@@ -10,11 +10,29 @@ LOGGER = getLogger(__name__)
 
 
 class ILASPLearner(RMLearner):
+    def learn(
+        self, observables, rm, positive_examples, negative_examples, incomplete_examples
+    ):
+        return self._update_reward_machine(
+            observables,
+            rm,
+            self.process_examples(positive_examples),
+            self.process_examples(negative_examples),
+            self.process_examples(incomplete_examples),
+        )
 
-    def learn(self, observables, rm, positive_examples, negative_examples, incomplete_examples):
-        return self._update_reward_machine(observables, rm, positive_examples, negative_examples, incomplete_examples)
+    def process_examples(self, examples):
+        return set(examples)
 
-    def _update_reward_machine(self, observables, rm, positive_examples, negative_examples, incomplete_examples, rm_num_states=None):
+    def _update_reward_machine(
+        self,
+        observables,
+        rm,
+        positive_examples,
+        negative_examples,
+        incomplete_examples,
+        rm_num_states=None,
+    ):
         LOGGER.debug(f"[{self.agent_id}]`_update_reward_machine`")
 
         if not positive_examples:
@@ -26,10 +44,22 @@ class ILASPLearner(RMLearner):
 
         self.rm_learning_counter += 1
 
-        LOGGER.debug(f"[{self.agent_id}] generating task {self.rm_learning_counter}: start")
-        self._generate_ilasp_task(observables, positive_examples, negative_examples, incomplete_examples, rm_num_states)
-        LOGGER.debug(f"[{self.agent_id}] generating task {self.rm_learning_counter}: done")
-        LOGGER.debug(f"[{self.agent_id}] solving task {self.rm_learning_counter}: start")
+        LOGGER.debug(
+            f"[{self.agent_id}] generating task {self.rm_learning_counter}: start"
+        )
+        self._generate_ilasp_task(
+            observables,
+            positive_examples,
+            negative_examples,
+            incomplete_examples,
+            rm_num_states,
+        )
+        LOGGER.debug(
+            f"[{self.agent_id}] generating task {self.rm_learning_counter}: done"
+        )
+        LOGGER.debug(
+            f"[{self.agent_id}] solving task {self.rm_learning_counter}: start"
+        )
         solver_success = self._solve_ilasp_task()
         LOGGER.debug(f"[{self.agent_id}] solving task {self.rm_learning_counter}: done")
         if solver_success:
@@ -50,13 +80,26 @@ class ILASPLearner(RMLearner):
                     return candidate_rm
             else:
                 LOGGER.debug(f"[{self.agent_id}] ILASP task unsolvable")
-                self._update_reward_machine(observables, positive_examples, negative_examples, incomplete_examples, rm_num_states=rm_num_states+1)
+                self._update_reward_machine(
+                    observables,
+                    positive_examples,
+                    negative_examples,
+                    incomplete_examples,
+                    rm_num_states=rm_num_states + 1,
+                )
         else:
             raise RuntimeError(
                 "Error: Couldn't find an automaton within the specified timeout!"
             )
 
-    def _generate_ilasp_task(self, observables, positive_examples, negative_examples, incomplete_examples, rm_num_states):
+    def _generate_ilasp_task(
+        self,
+        observables,
+        positive_examples,
+        negative_examples,
+        incomplete_examples,
+        rm_num_states,
+    ):
         ilasp_task_filename = f"task_{self.rm_learning_counter}"
 
         # the sets of examples are sorted to make sure that ILASP produces the same solution for the same sets (ILASP

@@ -24,24 +24,27 @@ LOGGER = getLogger(__name__)
 
 class DAFSALearner(RMLearner):
 
-    def __init__(self, agent_id):
+    def __init__(self, agent_id, num_examples: int = 50):
         super().__init__(agent_id)
         self._previous_examples = []
+        self.num_examples = num_examples
 
     def learn(self, _observables, rm, positive_examples, _negative_examples, _incomplete_examples):
-        
+        positive_examples = self.process_examples(positive_examples)
+
         if not positive_examples:
             LOGGER.debug(f"[{self.agent_id}] No positive examples")
             return
 
-        selected_examples = sorted(positive_examples, key=len)[:50]
+        selected_examples = sorted(positive_examples, key=len)[:self.num_examples]
         if selected_examples == self._previous_examples:
             return
             
         self.rm_learning_counter += 1
 
-        candidate_rm = self._generate_rm(selected_examples)
+        automaton = DAFSA(selected_examples)
         self._previous_examples = selected_examples
+        candidate_rm = self._generate_rm(automaton)
 
         if candidate_rm.states:
             candidate_rm.set_u0("u0")
@@ -55,11 +58,10 @@ class DAFSALearner(RMLearner):
                 candidate_rm.plot(rm_plot_filename)
                 return candidate_rm
 
-    def _generate_rm(self, positive_examples):
-        automaton = DAFSA(
-            positive_examples
-        )
+    def process_examples(self, examples):
+        return set(examples)
 
+    def _generate_rm(self, automaton):
         rm = RewardMachine()
 
         final_nodes = [nid for nid, n in automaton.nodes.items() if n.final]

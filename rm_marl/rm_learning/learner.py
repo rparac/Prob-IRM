@@ -29,5 +29,8 @@ class RMLearner(metaclass=abc.ABCMeta):
     def learn(self):
         raise NotImplementedError("learn")
 
+    def process_examples(self, examples):
+        return examples
+
 
 

@@ -27,8 +27,8 @@ config:
         _target_: builtins.getattr
         _args_:
           - _target_: rm_marl.utils.imports.import_cls
-            path: rm_marl.envs.wrappers.RandomLabelingFunctionWrapper
-          - condition_true
+            path: rm_marl.envs.buttons.ButtonsRandomLabelingFunctionWrapper
+          - can_open_wall_Y_A2
       env_update:
         _target_: builtins.getattr
         _args_:

@@ -1,10 +1,10 @@
-import os
 from itertools import groupby
 from typing import TYPE_CHECKING, Optional
+from collections import OrderedDict
 
 from ..algo import QRM
 from ..reward_machine import RewardMachine
-from ..rm_learning import ILASPLearner, DAFSALearner
+from ..rm_learning import ILASPLearner, DAFSALearner, AlergiaLearner
 from ..utils.logging import getLogger
 from .rm_agent import RewardMachineAgent
 
@@ -19,20 +19,40 @@ LOGGER = getLogger(__name__)
 class TraceTracker:
     def __init__(self) -> None:
         self.trace = []
+        self.obs = []
+
+        self._hash_state_mapping = OrderedDict()
 
     def reset(self):
         self.trace.clear()
+        self.obs.clear()
 
-    def update(self, labels):
-        self.trace.append(labels or [])
+    def update(self, labels, obs):
+        self.trace.append(self._process_label(labels))
+        self.obs.append(self._process_obs(obs))
+
+    def _process_label(self, labels):
+        # TODO check or remove that
+        assert len(labels) < 2, "Assumption that there is only one label at a time"
+        return labels or []
+
+    def _process_obs(self, obs):
+        state_hash = hash(str(obs))
+        if state_hash not in self._hash_state_mapping: 
+            self._hash_state_mapping[state_hash] = obs
+        return list(self._hash_state_mapping.keys()).index(state_hash) + 1
 
     @property
-    def flatten_trace(self):
+    def labels_sequence(self):
         return tuple(e for es in self.trace for e in es)
 
     @property
-    def nodups_trace(self):
-        return tuple(i[0] for i in groupby(self.flatten_trace or []))
+    def no_dups_labels_sequence(self):
+        return tuple(i[0] for i in groupby(self.labels_sequence or []))
+
+    @property
+    def sequence(self):
+        return tuple((l[0], o) for l, o in zip(self.trace, self.obs) if l)
 
 
 class RewardMachineLearningAgent(RewardMachineAgent):
@@ -41,15 +61,15 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         agent_id: str,
         algo_cls: "Algo" = QRM,
         algo_kws: dict = None,
-        rm_learner_cls: "RMLearner" = DAFSALearner,
+        rm_learner_cls: "RMLearner" = AlergiaLearner,
         rm_learner_kws: dict = None,
     ):
         rm_learner_kws = rm_learner_kws or {}
         self.rm_learner = rm_learner_cls(agent_id, **rm_learner_kws)
         self.trace = TraceTracker()
-        self.incomplete_examples = set()
-        self.positive_examples = set()
-        self.negative_examples = set()
+        self.incomplete_examples = []
+        self.positive_examples = []
+        self.negative_examples = []
 
         rm = self._default_rm()
 
@@ -68,8 +88,8 @@ class RewardMachineLearningAgent(RewardMachineAgent):
 
     @property
     def observables(self):
-        union = self.incomplete_examples.union(self.positive_examples).union(
-            self.negative_examples
+        union = set(self.incomplete_examples).union(set(self.positive_examples)).union(
+            set(self.negative_examples)
         )
         return {l for t in union for l in t}
 
@@ -93,10 +113,11 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         )
 
         if learning:
-            self.trace.update(labels)
+            self.trace.update(labels, next_state)
+            seq = self.trace.labels_sequence if isinstance(self.rm_learner, AlergiaLearner) else self.trace.no_dups_labels_sequence
             if terminated or truncated:
                 examples_updated = self._update_examples(
-                    self.trace.flatten_trace, terminated
+                    seq, terminated
                 )
                 if examples_updated:
                     candidate_rm = self.rm_learner.learn(
@@ -111,7 +132,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                         self.algo.reset()
             # elif self.rm.is_state_terminal(self.u):
             #     LOGGER.debug(f"[{self.agent_id}] the RM {self.rm_learning_counter} is wrong.")
-            #     examples_updated = self._update_examples(self.trace.nodups_trace, False)
+            #     examples_updated = self._update_examples(seq, False)
             #     if examples_updated:
             #         self.rm_num_states = 3
             #         self._update_reward_machine()
@@ -123,17 +144,22 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         return tuple(labels)
 
     def _update_examples(self, trace: tuple, complete: bool):
+        if not trace:
+            return False
+
         updated = False
 
         if complete:
-            if trace and trace not in self.positive_examples:
-                self.positive_examples.add(trace)
-                updated = True
+            self.positive_examples.append(trace)
+            updated = True
         else:
-            if trace and trace not in self.incomplete_examples:
-                self.incomplete_examples.add(trace)
-                updated = True
+            self.incomplete_examples.append(trace)
+            updated = True
 
-        _ = [self.incomplete_examples.discard(e) for e in self.positive_examples]
+        if updated:
+            self.incomplete_examples = [
+                e for e in self.incomplete_examples 
+                if e not in self.positive_examples
+            ]
 
         return updated

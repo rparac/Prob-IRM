@@ -203,5 +203,17 @@ class ButtonsLabelingFunctionWrapper(LabelingFunctionWrapper):
 class ButtonsRandomLabelingFunctionWrapper(RandomLabelingFunctionWrapper):
     @staticmethod
     def can_open_wall_R_A2_A3(e):
-        events = [l for l in e.flatten_trace if l in ("a2br", "a2lr", "a3br", "a3lr")]
-        return events and any(l == events[-1] for l in ("a2br", "a3br"))
+        events = [l for l in e.flatten_trace if l in ("bg", "a2br", "a2lr", "a3br", "a3lr")]
+        return events and "bg" in events and any(l == events[-1] for l in ("a2br", "a3br"))
+
+    @staticmethod
+    def can_open_wall_G_A3(e):
+        return e.active_flags["WG"]
+
+    @staticmethod
+    def can_open_wall_Y_A2(e):
+        return e.active_flags["WY"]
+
+    @staticmethod
+    def can_open_wall_R_A1(e):
+        return e.active_flags["WR"]
