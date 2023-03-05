@@ -22,7 +22,7 @@ class ILASPLearner(RMLearner):
         )
 
     def process_examples(self, examples):
-        return set(examples)
+        return sorted(set(examples), key=len)[:10]
 
     def _update_reward_machine(
         self,

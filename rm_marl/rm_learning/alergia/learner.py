@@ -1,8 +1,12 @@
 import itertools
 import os
+from collections import deque
 
+import networkx as nx
 from aalpy.learning_algs import run_Alergia
 from aalpy.utils.FileHandler import save_automaton_to_file
+from networkx.algorithms.shortest_paths.generic import \
+    _build_paths_from_predecessors
 
 from ...reward_machine import RewardMachine
 from ...utils.logging import getLogger
@@ -68,7 +72,6 @@ class AlergiaLearner(RMLearner):
 
         state_names = {s.state_id: f"u{i}" if s.transitions else "u_acc" for i, s in enumerate(automaton.states, start=1)}
 
-        import networkx as nx
         g = nx.DiGraph()
         for state in automaton.states:
             for new_state, prob in state.transitions:
@@ -88,10 +91,6 @@ class AlergiaLearner(RMLearner):
             rm.add_transition(f, t, d["label"])
 
         return rm
-
-
-from networkx.algorithms.shortest_paths.generic import _build_paths_from_predecessors
-from collections import deque
 
 def _most_probable_route(G, source="u_acc", target="u0", weight="proba"):
     
