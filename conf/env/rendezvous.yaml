@@ -1,7 +1,6 @@
 defaults:
   - rendezvous/agents@_agent1_config: agent1
   - rendezvous/agents@_agent2_config: agent2
-  - rendezvous/agents@_agent3_config: agent3
   - rendezvous/shared@_shared_config
 
 local:

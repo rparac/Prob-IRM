@@ -141,10 +141,8 @@ class RendezVousLabelingFunctionWrapper(LabelingFunctionWrapper):
 class RendezVousRandomLabelingFunctionWrapper(RandomLabelingFunctionWrapper):
     @staticmethod
     def can_satisfy_rdv_A1(e):
-        events = [l for l in e.flatten_trace if l in ("r1",)]
-        return events and events[-1] == "r1"
+        return e.flatten_trace and e.flatten_trace[-1] == "r1"
 
     @staticmethod
     def can_satisfy_rdv_A2(e):
-        events = [l for l in e.flatten_trace if l in ("r2",)]
-        return events and events[-1] == "r2"
+        return e.flatten_trace and e.flatten_trace[-1] == "r2"
