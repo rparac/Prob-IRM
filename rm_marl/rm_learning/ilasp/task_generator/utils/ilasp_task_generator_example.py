@@ -63,10 +63,11 @@ def _generate_example(example):
     first = True
 
     for i in range(0, len(example)):
-        if not first:
-            example_str += " "
-        example_str += '%s("%s", %d).' % (OBS_STR, example[i], i)
-        first = False
+        for symbol in example[i]:
+            if not first:
+                example_str += " "
+            example_str += "%s(\"%s\", %d)." % (OBS_STR, symbol, i)
+            first = False
 
     if len(example) > 0:
         example_str += "\n"

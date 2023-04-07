@@ -19,15 +19,17 @@ def run(cfg: DictConfig) -> None:
         cfg.run.log_dir = os.path.join(os.path.dirname(__file__), cfg.run.log_dir)
     
     if cfg.run.training:
-        env_mode = "local"
         agents = _instantiate(cfg.env.agents)
+        local_envs = _instantiate(cfg.env)["local"]
     else:
-        env_mode = "shared"
         agents = Trainer.load(cfg.run.path).agents
-
-    envs = _instantiate(cfg.env)[env_mode]
+        local_envs = None
     
-    trainer = Trainer(envs, agents)
+    shared_envs = _instantiate(cfg.env)["shared"]
+    
+    trainer = Trainer(local_envs, shared_envs, agents)
+    # from copy import deepcopy
+    # trainer = Trainer(deepcopy(shared_envs), shared_envs, agents)
     trainer.run(cfg.run)
 
 if __name__ == "__main__":

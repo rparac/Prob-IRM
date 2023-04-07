@@ -44,10 +44,7 @@ class RewardMachineAgent:
         self, state, action, reward, terminated, truncated, next_state, labels, learning=True
     ):
         loss = None
-
-        next_u = self.u
-        for event in labels:
-            next_u = self.rm.get_next_state(next_u, event)
+        next_u = self.rm.get_next_state(self.u, labels)
 
         if learning:
             loss = self.learn(

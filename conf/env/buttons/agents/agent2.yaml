@@ -4,6 +4,7 @@ defaults:
 config:
   agent_id: A2
   rm_file: data/buttons/rm_agent_2.txt
+  onestate_rm_file: data/buttons/onestate_rm_agent_2.txt
   random_label_config:
     br:
       _target_: rm_marl.envs.wrappers.RandomLabelingConfig

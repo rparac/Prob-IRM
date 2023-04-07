@@ -88,6 +88,8 @@ class RewardMachine:
             if condition not in (self.ACCEPT_CONDITION, self.REJECT_CONDITION):
                 if from_state == self.u0:
                     from_state = f"{from_state} (u0)"
+                if to_state == self.u0:
+                    to_state = f"{to_state} (u0)"
 
                 if to_state == self.uacc:
                     to_state = f"{to_state} (uacc)"
@@ -118,7 +120,9 @@ class RewardMachine:
 
         if u1 in self.transitions:
             for condition in self.transitions[u1]:
-                if self._is_event_satisfied(condition, event):
+                if not isinstance(condition, (list, tuple)):
+                    condition = (condition,)
+                if all(self._is_event_satisfied(c, event) for c in condition):
                     return self.transitions[u1][condition]
         return u1
 
@@ -132,8 +136,8 @@ class RewardMachine:
 
     def get_valid_events(self, u1=None):
         if u1 is None:
-            return tuple(e for v in self.transitions.values() for e in v.keys())
-        return self.transitions[u1].keys()
+            return tuple({l for v in self.transitions.values() for e in v.keys() for l in e})
+        return tuple(l for e in self.transitions[u1].keys() for l in e)
 
     def is_state_terminal(self, u):
         return u in (self.uacc, self.urej)
@@ -183,11 +187,11 @@ class RewardMachine:
         # adding transitions
         for e in lines[1:]:
             t = eval(e)
-            t = (node_cls(t[0]), node_cls(t[1]), t[2])
+            t = (node_cls(t[0]), node_cls(t[1]), tuple(t[2].split(",")))
             rm.add_transition(*t)
-            if t[-1] == "True":
+            if t[-1] == ("True",):
                 rm.set_uacc(t[0])
-            elif t[-1] == "False":
+            elif t[-1] == ("False",):
                 rm.set_urej(t[0])
 
         u0 = node_cls(eval(lines[0]))

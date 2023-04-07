@@ -1,9 +1,10 @@
 training: True
 total_episodes: 5000
 log_dir: logs
-recording_freq: 500
+recording_freq: 50
 log_freq: 1
 testing_freq: 5
+greedy: False
 seed: 123
 name: ???
 path: ???

@@ -27,7 +27,7 @@ def parse_ilasp_solutions(ilasp_learnt_filename):
         for edge in edges:
             from_state, to_state = edge[0]
             rm.add_states([from_state, to_state])
-            rm.add_transition(from_state, to_state, edges[edge][0]) # TODO: LEO: Fix this
+            rm.add_transition(from_state, to_state, tuple(edges[edge]))
 
         return rm
 

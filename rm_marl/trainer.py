@@ -11,9 +11,12 @@ from tqdm import tqdm
 
 
 class Trainer:
-    def __init__(self, envs: dict, agents: dict):
-        self.envs = envs
+    def __init__(self, local_envs: dict, shared_envs: dict, agents: dict):
+        self.envs = local_envs or shared_envs
+        self.testing_envs = shared_envs
         self.agents = agents
+
+        self.total_steps = 0
 
     def run(self, run_config: dict):
         log_dir = os.path.join(
@@ -24,7 +27,7 @@ class Trainer:
         logger = SummaryWriter(log_dir)
 
         try:
-            self._run(run_config, logger)
+            self._run(self.envs, run_config, logger)
         except KeyboardInterrupt:
             pass
 
@@ -33,7 +36,7 @@ class Trainer:
         if run_config["training"]:
             self.save(log_dir)
 
-    def _run(self, run_config: dict, logger: SummaryWriter):
+    def _run(self, envs: dict, run_config: dict, logger: SummaryWriter):
         base_seed = run_config["seed"]
 
         steps = defaultdict(list)
@@ -42,20 +45,20 @@ class Trainer:
 
         _ = [a.set_log_folder(os.path.join(logger.log_dir, aid)) for aid, a in self.agents.items()]
 
-        for episode in tqdm(range(1, run_config["total_episodes"] + 1)):
+        for episode in tqdm(range(1, 1 + run_config["total_episodes"])):
             episode_losses = defaultdict(list)
             episode_frames = defaultdict(list)
 
             seed = base_seed + episode
 
             # reset and initial setup
-            dones = {env_id: False for env_id in self.envs.keys()}
+            dones = {env_id: False for env_id in envs.keys()}
             env_agents = {}
 
             _ = [a.reset(seed=seed) for a in self.agents.values()]
 
             obs, infos, env_agents, shared_events = {}, {}, {}, {}
-            for env_id, env in self.envs.items():
+            for env_id, env in envs.items():
                 o, i = env.reset(seed=seed)
                 obs[env_id] = o
                 infos[env_id] = i
@@ -65,9 +68,14 @@ class Trainer:
                 }
                 shared_events[env_id] = self._get_shared_events(env_agents[env_id])
 
+            steps_count = 0
             while not all(dones.values()):
+                steps_count += 1
 
-                for env_id, env in self.envs.items():
+                if run_config["training"]:
+                    self.total_steps += 1
+
+                for env_id, env in envs.items():
 
                     if episode % run_config["recording_freq"] == 0:
                         episode_frames[env_id].append(env.render())
@@ -111,9 +119,15 @@ class Trainer:
                             learning=run_config["training"],
                         )
 
-                        # interrupt_episode |= interrupt
-
                         if run_config["training"]:
+                            if interrupt:
+                                interrupt_episode = True
+                                info["episode"] = {
+                                    "l": steps_count,
+                                    "r": reward
+                                }
+                                break
+
                             agent_loss.append(loss)
                             self._counterfactual_update(
                                 env,
@@ -133,7 +147,9 @@ class Trainer:
                         episode_losses[env_id].append(np.mean(agent_loss))
 
             # track metrics and log them in TB
-            for env_id in self.envs.keys():
+            for env_id in envs.keys():
+                prefix = "training" if run_config["training"] else "eval"
+
                 steps[env_id].append(infos[env_id]["episode"]["l"])
                 rewards[env_id].append(infos[env_id]["episode"]["r"])
                 if episode_losses[env_id]:
@@ -142,30 +158,44 @@ class Trainer:
                 if episode % run_config["log_freq"] == 0:
                     if losses[env_id]:
                         logger.add_scalar(
-                            f"training/loss/{env_id}", np.mean(losses[env_id]), episode
+                            f"{prefix}/loss/{env_id}", np.mean(losses[env_id]), self.total_steps
                         )
                     logger.add_scalar(
-                        f"training/num_steps/{env_id}", np.mean(steps[env_id]), episode
+                        f"{prefix}/num_steps/{env_id}", np.mean(steps[env_id]), self.total_steps
                     )
                     logger.add_scalar(
-                        f"training/reward/{env_id}", np.mean(rewards[env_id]), episode
+                        f"{prefix}/reward/{env_id}", np.mean(rewards[env_id]), self.total_steps
                     )
 
                 if episode_frames[env_id]:
                     video = np.array(episode_frames[env_id]).transpose(0, 3, 1, 2)[
                         np.newaxis, :
                     ]
-                    logger.add_video(f"training/replay/{env_id}", video, episode)
+                    logger.add_video(f"{prefix}/replay/{env_id}", video, self.total_steps)
+
+            if run_config["training"] and episode % run_config["testing_freq"] == 0:
+                self._run(self.testing_envs, {
+                    "training": False,
+                    "log_freq": 1,
+                    "recording_freq": 1,
+                    "total_episodes": 1,
+                    "greedy": run_config.get("greedy", True),
+                    "seed": run_config["seed"]
+                }, logger)
 
 
     @staticmethod
     def _project_labels(labels, a, aid):
+        # return {
+        #     aid: labels
+        # }
         return {
             aid: a.project_labels(labels)
         }
 
     @staticmethod
     def _project_obs(obs, _a, aid):
+        # return obs
         return {
             i: o for i, o in obs.items() if i == aid
         }
@@ -195,17 +225,18 @@ class Trainer:
 
     @staticmethod
     def _counterfactual_update(env, agent, state, current_u, action, done, next_state):
+        labels = env.get_labels(next_state, state)
+
+        if not labels:
+            return
+
         for u in agent.rm.states:
             if u != current_u and not agent.rm.is_state_terminal(u):
-                l = env.filter_labels(env.get_labels(next_state, state), u)
-                r = 0
-                u_temp, next_u = u, u
-                for e in l:
-                    # Get the new reward machine state and the reward of this step
-                    next_u = agent.rm.get_next_state(u_temp, e)
-                    r = r + agent.rm.get_reward(u_temp, next_u)
-                    # Update the reward machine state
-                    u_temp = next_u
+                l = env.filter_labels(labels, u)
+
+                next_u = agent.rm.get_next_state(u, l)
+                r = agent.rm.get_reward(u, next_u)
+
                 agent.learn(state, u, action, r, done, next_state, next_u)
 
     def save(self, path):

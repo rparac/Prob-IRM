@@ -10,6 +10,16 @@ LOGGER = getLogger(__name__)
 
 
 class ILASPLearner(RMLearner):
+    def __init__(self, agent_id, init_rm_num_states = None):
+        super().__init__(agent_id)
+
+        self.init_rm_num_states = init_rm_num_states
+        self.rm_num_states = init_rm_num_states
+        
+        self._previous_positive_examples = None
+        self._previous_negative_examples = None
+        self._previous_incomplete_examples = None
+
     def learn(
         self, observables, rm, positive_examples, negative_examples, incomplete_examples
     ):
@@ -22,7 +32,16 @@ class ILASPLearner(RMLearner):
         )
 
     def process_examples(self, examples):
-        return sorted(set(examples), key=len)[:10]
+        return sorted(set(examples), key=len)
+
+    def _have_changed(self, positive_examples, negative_examples, incomplete_examples):
+        if self._previous_positive_examples is None or set(positive_examples) != self._previous_positive_examples:
+            return True
+        if self._previous_negative_examples is None or set(negative_examples) != self._previous_negative_examples:
+            return True
+        if self._previous_incomplete_examples is None or set(incomplete_examples) != self._previous_incomplete_examples:
+            return True
+        return False
 
     def _update_reward_machine(
         self,
@@ -38,8 +57,16 @@ class ILASPLearner(RMLearner):
         if not positive_examples:
             LOGGER.debug(f"[{self.agent_id}] No positive examples")
             return
+        
+        if not self._have_changed(positive_examples, negative_examples, incomplete_examples):
+            LOGGER.debug(f"[{self.agent_id}] Examples haven't changed")
+            return
+        else:
+            self._previous_positive_examples = set(positive_examples)
+            self._previous_negative_examples = set(negative_examples)
+            self._previous_incomplete_examples = set(incomplete_examples)
 
-        rm_num_states = rm_num_states or min(len(t) for t in positive_examples) + 2
+        rm_num_states = rm_num_states or self.rm_num_states or min(len(t) for t in positive_examples) + 2
         LOGGER.debug(f"[{self.agent_id}] num_state: {rm_num_states}")
 
         self.rm_learning_counter += 1
@@ -80,12 +107,15 @@ class ILASPLearner(RMLearner):
                     return candidate_rm
             else:
                 LOGGER.debug(f"[{self.agent_id}] ILASP task unsolvable")
+                if self.init_rm_num_states:
+                    self.rm_num_states += 1
                 self._update_reward_machine(
                     observables,
+                    rm,
                     positive_examples,
                     negative_examples,
                     incomplete_examples,
-                    rm_num_states=rm_num_states + 1,
+                    rm_num_states=self.rm_num_states or (rm_num_states + 1)
                 )
         else:
             raise RuntimeError(
@@ -140,5 +170,5 @@ class ILASPLearner(RMLearner):
             version="2",
             max_body_literals=1,
             binary_folder_name=None,
-            compute_minimal=False,
+            compute_minimal=True,
         )

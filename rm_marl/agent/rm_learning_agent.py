@@ -33,7 +33,7 @@ class TraceTracker:
 
     def _process_label(self, labels):
         # TODO check or remove that
-        assert len(labels) < 2, "Assumption that there is only one label at a time"
+        # assert len(labels) < 2, f"Assumption that there is only one label at a time: [{labels}]"
         return labels or []
 
     def _process_obs(self, obs):
@@ -44,11 +44,19 @@ class TraceTracker:
 
     @property
     def labels_sequence(self):
-        return tuple(e for es in self.trace for e in es)
+        return tuple(tuple(es) for es in self.trace if es)
 
     @property
     def no_dups_labels_sequence(self):
-        return tuple(i[0] for i in groupby(self.labels_sequence or []))
+        return tuple(i[0] for i in groupby(self.labels_sequence or tuple()))
+
+    @property
+    def flatten_labels_sequence(self):
+        return tuple(e for es in self.trace for e in es)
+
+    @property
+    def no_dups_flatten_labels_sequence(self):
+        return tuple(i[0] for i in groupby(self.flatten_labels_sequence or tuple()))
 
     @property
     def sequence(self):
@@ -88,10 +96,11 @@ class RewardMachineLearningAgent(RewardMachineAgent):
 
     @property
     def observables(self):
-        union = set(self.incomplete_examples).union(set(self.positive_examples)).union(
-            set(self.negative_examples)
+        union = set((l for e in self.incomplete_examples for ls in e for l in ls)).union(
+            set((l for e in self.positive_examples for ls in e for l in ls))).union(
+            set((l for e in self.negative_examples for ls in e for l in ls))
         )
-        return {l for t in union for l in t}
+        return union
 
     def reset(self, seed: Optional[int] = None):
         self.trace.reset()
@@ -114,10 +123,12 @@ class RewardMachineLearningAgent(RewardMachineAgent):
 
         if learning:
             self.trace.update(labels, next_state)
-            if isinstance(self.rm_learner, (DAFSALearner,)):
+            if isinstance(self.rm_learner, (ILASPLearner, DAFSALearner, S2SLearner)):
                 seq = self.trace.no_dups_labels_sequence
+            # elif isinstance(self.rm_learner, (DAFSALearner,)):
+            #     seq = self.trace.no_dups_flatten_labels_sequence
             else:
-                seq = self.trace.labels_sequence
+                seq = self.trace.flatten_labels_sequence
             if terminated or truncated:
                 examples_updated = self._update_examples(
                     seq, terminated
@@ -133,13 +144,21 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                     if candidate_rm:
                         self.rm = candidate_rm
                         self.algo.reset()
-            # elif self.rm.is_state_terminal(self.u):
-            #     LOGGER.debug(f"[{self.agent_id}] the RM {self.rm_learning_counter} is wrong.")
-            #     examples_updated = self._update_examples(seq, False)
-            #     if examples_updated:
-            #         self.rm_num_states = 3
-            #         self._update_reward_machine()
-            #         interrupt = True
+            elif self.rm.is_state_terminal(self.u):
+                LOGGER.debug(f"[{self.agent_id}] the RM {self.rm_learner.rm_learning_counter} is wrong.")
+                examples_updated = self._update_examples(seq, False)
+                if examples_updated:
+                    candidate_rm = self.rm_learner.learn(
+                        self.observables,
+                        self.rm,
+                        self.positive_examples,
+                        self.negative_examples,
+                        self.incomplete_examples
+                    )
+                    if candidate_rm:
+                        self.rm = candidate_rm
+                        self.algo.reset()
+                    interrupt = True
 
         return loss, interrupt
 
@@ -150,19 +169,16 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         if not trace:
             return False
 
-        updated = False
-
         if complete:
             self.positive_examples.append(trace)
-            updated = True
+            for i in range(1, len(trace)):
+                self.incomplete_examples.append(trace[:i])
         else:
             self.incomplete_examples.append(trace)
-            updated = True
 
-        if updated:
-            self.incomplete_examples = [
-                e for e in self.incomplete_examples 
-                if e not in self.positive_examples
-            ]
+        self.incomplete_examples = [
+            e for e in self.incomplete_examples 
+            if e not in self.positive_examples
+        ]
 
-        return updated
+        return True

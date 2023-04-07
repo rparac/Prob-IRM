@@ -216,4 +216,4 @@ class ButtonsRandomLabelingFunctionWrapper(RandomLabelingFunctionWrapper):
 
     @staticmethod
     def can_open_wall_R_A1(e):
-        return e.active_flags["WR"]
+        return e.active_flags["WR"] and "by" in e.flatten_trace

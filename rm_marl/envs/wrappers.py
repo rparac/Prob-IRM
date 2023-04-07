@@ -147,14 +147,13 @@ class RewardMachineWrapper(gym.Wrapper):
 
         reward = 0
         for e in info["labels"]:
-            # if not self._is_valid_event(e):
-            #     continue
             # apply simulated updates to the environment
             if e in simulated_updates:
                 simulated_updates[e](self.unwrapped)
-            u_next = self.rm.get_next_state(self.u, e)
-            reward += self.rm.get_reward(self.u, u_next)
-            self.u = u_next
+        
+        u_next = self.rm.get_next_state(self.u, info["labels"])
+        reward += self.rm.get_reward(self.u, u_next)
+        self.u = u_next
 
         terminated = self.rm.is_state_terminal(self.u)
         info["rm_state"] = self.u
