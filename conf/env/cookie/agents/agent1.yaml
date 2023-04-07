@@ -1,0 +1,6 @@
+defaults:
+  - base
+
+config:
+  agent_id: A1
+  rm_file: data/cookie/rm_agent_1.txt

@@ -1,0 +1,5 @@
+config:
+  env_id: rm-marl/Cookie-v0
+  env_render_mode: rgb_array
+  env_file: data/cookie/env.txt
+  label_mode: ALL
