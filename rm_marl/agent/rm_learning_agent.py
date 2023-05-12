@@ -123,7 +123,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
 
         if learning:
             self.trace.update(labels, next_state)
-            if isinstance(self.rm_learner, (ILASPLearner, DAFSALearner, S2SLearner)):
+            if isinstance(self.rm_learner, (ILASPLearner, DAFSALearner)):#, S2SLearner)):
                 seq = self.trace.no_dups_labels_sequence
             # elif isinstance(self.rm_learner, (DAFSALearner,)):
             #     seq = self.trace.no_dups_flatten_labels_sequence
