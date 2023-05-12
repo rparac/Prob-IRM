@@ -49,7 +49,7 @@ class Trainer:
             episode_losses = defaultdict(list)
             episode_frames = defaultdict(list)
 
-            seed = base_seed + episode
+            seed = base_seed + episode - 1
 
             # reset and initial setup
             dones = {env_id: False for env_id in envs.keys()}
@@ -101,7 +101,8 @@ class Trainer:
                     _ = [agent_labels.update(self._project_labels(labels, a, aid)) for aid, a in env_agents[env_id].items()]
                     synchronized_labels = self._synchronize(shared_events[env_id], agent_labels)
 
-                    assert all(agent_labels[aid] == synchronized_labels[aid] for aid in env_agents[env_id].keys()), f"Not synchronized!! {agent_labels}, {synchronized_labels}"
+                    if run_config["synchronize"]:
+                        assert all(agent_labels[aid] == synchronized_labels[aid] for aid in env_agents[env_id].keys()), f"Not synchronized!! {agent_labels}, {synchronized_labels}"
 
                     # update the agent's RM and Q-functions
                     agent_loss = []
@@ -129,15 +130,16 @@ class Trainer:
                                 break
 
                             agent_loss.append(loss)
-                            self._counterfactual_update(
-                                env,
-                                a,
-                                self._project_obs(obs[env_id], a, aid),
-                                current_u,
-                                actions[aid],
-                                done,
-                                self._project_obs(next_obs, a, aid),
-                            )
+                            if run_config["counterfactual_update"]:
+                                self._counterfactual_update(
+                                    env,
+                                    a,
+                                    self._project_obs(obs[env_id], a, aid),
+                                    current_u,
+                                    actions[aid],
+                                    done,
+                                    self._project_obs(next_obs, a, aid),
+                                )
 
                     obs[env_id] = next_obs
                     infos[env_id] = info
@@ -180,22 +182,19 @@ class Trainer:
                     "recording_freq": 1,
                     "total_episodes": 1,
                     "greedy": run_config.get("greedy", True),
-                    "seed": run_config["seed"]
+                    "seed": run_config["seed"],
+                    "synchronize": run_config["synchronize"],
                 }, logger)
 
 
     @staticmethod
     def _project_labels(labels, a, aid):
-        # return {
-        #     aid: labels
-        # }
         return {
             aid: a.project_labels(labels)
         }
 
     @staticmethod
     def _project_obs(obs, _a, aid):
-        # return obs
         return {
             i: o for i, o in obs.items() if i == aid
         }

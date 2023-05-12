@@ -1,0 +1,14 @@
+0 # initial state 
+(0, 1, 'by') # yellow pushed
+(0, 2, 'br') # red pushed
+(0, 3, 'bg') # green pushed
+(1, 4, 'br') # yellow + red pushed
+(1, 5, 'bg') # yellow + green pushed
+(2, 4, 'br') # red + yellow pushed
+(2, 6, 'bg') # red + green pushed
+(3, 5, 'br') # green + yellow pushed
+(3, 6, 'bg') # green + red pushed
+(4, 7, 'bg') # yellow, red + green pushed
+(5, 7, 'br') # yellow, green + red pushed
+(6, 7, 'bg') # green, red + yellow pushed
+(7, 7, 'True') # Final

@@ -5,6 +5,8 @@ recording_freq: 50
 log_freq: 1
 testing_freq: 5
 greedy: False
+synchronize: True
+counterfactual_update: True
 seed: 123
 name: ???
 path: ???

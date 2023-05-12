@@ -9,3 +9,4 @@ algo_kws:
     _args_:
       - ${.....env}
       - action_space
+  seed: ${.....run.seed}

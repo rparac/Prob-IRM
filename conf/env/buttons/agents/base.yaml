@@ -1,11 +1,13 @@
 defaults:
   - ../base@_here_
-  - agent_type@agent: rm_learning
+  - agent_type@agent: rm
 
 config:
   agent_id: ???
   random_label_config: ???
   rm_file: ???
+  onestate_rm_file: ???
+  iql_rm_file: data/buttons/iql_rm_team.txt
 
 env:
   _target_: rm_marl.utils.gym.wrap_env

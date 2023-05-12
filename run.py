@@ -20,7 +20,7 @@ def run(cfg: DictConfig) -> None:
     
     if cfg.run.training:
         agents = _instantiate(cfg.env.agents)
-        local_envs = _instantiate(cfg.env)["local"]
+        local_envs = _instantiate(cfg.env).get("local")
     else:
         agents = Trainer.load(cfg.run.path).agents
         local_envs = None
@@ -28,8 +28,6 @@ def run(cfg: DictConfig) -> None:
     shared_envs = _instantiate(cfg.env)["shared"]
     
     trainer = Trainer(local_envs, shared_envs, agents)
-    # from copy import deepcopy
-    # trainer = Trainer(deepcopy(shared_envs), shared_envs, agents)
     trainer.run(cfg.run)
 
 if __name__ == "__main__":
