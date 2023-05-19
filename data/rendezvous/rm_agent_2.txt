@@ -2,5 +2,6 @@
 (0, 1, 'r2') # A2 reaches the RDV point
 (1, 0, 'nr2') # A2 leaves the RDV point
 (1, 2, 'r') # RDV is satisfied
+(0, 2, 'r') # RDV is satisfied
 (2, 3, 'g2') # A2 reaches its goal
 (3, 3, 'True') # A2 reached its goal

@@ -99,10 +99,12 @@ class Trainer:
                     labels = info["labels"]
                     agent_labels = {}
                     _ = [agent_labels.update(self._project_labels(labels, a, aid)) for aid, a in env_agents[env_id].items()]
-                    synchronized_labels = self._synchronize(shared_events[env_id], agent_labels)
 
                     if run_config["synchronize"]:
+                        synchronized_labels = self._synchronize(shared_events[env_id], agent_labels)
                         assert all(agent_labels[aid] == synchronized_labels[aid] for aid in env_agents[env_id].keys()), f"Not synchronized!! {agent_labels}, {synchronized_labels}"
+                    else:
+                        synchronized_labels = agent_labels
 
                     # update the agent's RM and Q-functions
                     agent_loss = []
@@ -130,7 +132,7 @@ class Trainer:
                                 break
 
                             agent_loss.append(loss)
-                            if run_config["counterfactual_update"]:
+                            if run_config["counterfactual_update"] and not interrupt_episode:
                                 self._counterfactual_update(
                                     env,
                                     a,

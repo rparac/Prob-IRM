@@ -1,0 +1,6 @@
+0 # initial state 
+(0, 0, 'r2') # A2 reaches the RDV point
+(0, 0, 'nr2') # A2 leaves the RDV point
+(0, 0, 'r') # RDV is satisfied
+(0, 1, 'g2') # A2 reaches its goal
+(1, 1, 'True') # A2 reached its goal

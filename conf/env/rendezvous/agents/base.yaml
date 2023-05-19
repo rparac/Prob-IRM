@@ -6,6 +6,7 @@ config:
   agent_id: ???
   random_label_config: ???
   rm_file: ???
+  onestate_rm_file: ???
 
 env:
   _target_: rm_marl.utils.gym.wrap_env

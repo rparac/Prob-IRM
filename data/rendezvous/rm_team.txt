@@ -5,8 +5,10 @@
 (0, 2, 'r2') # A2 reaches the RDV point
 (2, 0, 'nr2') # A2 leaves the RDV point
 (2, 4, 'r') # A1 reaches the RDV point
-(4, 5, 'g1') # A1 reaches its goal
+(0, 4, 'r')
+(4, 5, 'g1,~g2') # A1 reaches its goal
 (5, 7, 'g2') # A2 reaches its goal
-(4, 6, 'g2') # A2 reaches its goal
+(4, 6, 'g2,~g1') # A2 reaches its goal
 (6, 7, 'g1') # A1 reaches its goal
+(4, 7, 'g1,g2')
 (7, 7, 'True') # A1 reached its goal

@@ -52,7 +52,8 @@ class RewardMachineAgent:
             )
 
         self.u = next_u
-        return loss, terminated or truncated
+        return loss, False
 
     def project_labels(self, labels):
-        return tuple(e for e in labels if e in self.rm.get_valid_events(self.u))
+        # TODO check
+        return tuple(e for e in labels if e in self.rm.get_valid_events())

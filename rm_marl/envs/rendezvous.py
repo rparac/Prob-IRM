@@ -16,12 +16,19 @@ class RendezVousEnv(BaseGridEnv):
     ):
         super().__init__(render_mode, size, positions, file)
         self.rdv_satisfied = False
+        self.goal_satisfied = {aid: False for aid in self.agent_locations.keys()}
+
+    def reset(self, seed=None, options=None):
+        ret = super().reset(seed, options)
+        self.rdv_satisfied = False
+        self.goal_satisfied = {aid: False for aid in self.agent_locations.keys()}
+        return ret
 
     def _draw_component(self, label, pos, canvas):
         if label[0] == "R":
             pygame.draw.circle(
                 canvas,
-                self.COLOR_MAPPING["G"],
+                self.COLOR_MAPPING["R"] if not self.rdv_satisfied else self.COLOR_MAPPING["G"],
                 (pos + 0.5) * self.pix_square_size,
                 self.pix_square_size / 3,
             )
@@ -51,6 +58,7 @@ class RendezVousEnv(BaseGridEnv):
             self.positions[tuple(new_agent_pos)].append(aid)
 
         self._check_rdv()
+        self._check_goals()
 
         terminated = self._goal_is_reached()
         reward = 1 if terminated else 0  # Binary sparse rewards
@@ -68,19 +76,32 @@ class RendezVousEnv(BaseGridEnv):
             rdv_positions = self.postions_by_type("R")["RV"]
             self.rdv_satisfied = all(tuple(al) in rdv_positions for al in self.agent_locations.values())
 
+    def _check_goals(self):
+        goal_positions = self.postions_by_type("G")
+        for agent_id, agent_loc in self.agent_locations.items():
+            if not self.goal_satisfied[agent_id]:
+                gp = goal_positions.get(f"G{agent_id[-1]}")
+                if tuple(agent_loc) in gp:
+                    self.goal_satisfied[agent_id] = True
+
     @staticmethod
-    def satisfy_rdv(e):
+    def move_A1_to_rdv(e):
+        rdv_positions = e.postions_by_type("R")["RV"]
+        e.positions[tuple(e.agent_locations["A1"])].remove("A1")
+        e.positions[tuple(rdv_positions[0])].append("A1")
+        e.rdv_satisfied = True
+    
+    @staticmethod
+    def move_A2_to_rdv(e):
+        rdv_positions = e.postions_by_type("R")["RV"]
+        e.positions[tuple(e.agent_locations["A2"])].remove("A2")
+        e.positions[tuple(rdv_positions[0])].append("A2")
         e.rdv_satisfied = True
 
     def _goal_is_reached(self):
         if not self.rdv_satisfied:
             return False
-        goal_positions = self.postions_by_type("G")
-        for agent_id, agent_loc in self.agent_locations.items():
-            gp = goal_positions.get(f"G{agent_id[-1]}")
-            if tuple(agent_loc) not in gp:
-                return False
-        return True
+        return all(self.goal_satisfied.values())
 
 class RendezVousLabelingFunctionWrapper(LabelingFunctionWrapper):
     def get_labels(self, obs: dict = None, prev_obs: dict = None):
@@ -111,13 +132,28 @@ class RendezVousLabelingFunctionWrapper(LabelingFunctionWrapper):
             labels.append("nr2")
 
         if (
-            tuple(prev_agent_locations["A1"]) in rdv_positions
-            and tuple(agent_locations["A1"]) in rdv_positions
-            and tuple(prev_agent_locations["A2"]) in rdv_positions
-            and tuple(agent_locations["A2"]) in rdv_positions
+            "r1" in labels and "r2" in labels
         ):
+            labels.remove("r1")
+            labels.remove("r2")
             labels.append("r")
-
+        elif (
+            "r1" in labels and
+            tuple(agent_locations["A2"]) == tuple(prev_agent_locations["A2"]) and
+            tuple(agent_locations["A2"]) in rdv_positions
+        ):
+            assert "nr2" not in labels
+            labels.remove("r1")
+            labels.append("r")
+        elif (
+            "r2" in labels and
+            tuple(agent_locations["A1"]) == tuple(prev_agent_locations["A1"]) and
+            tuple(agent_locations["A1"]) in rdv_positions
+        ):
+            assert "nr1" not in labels
+            labels.remove("r2")
+            labels.append("r")
+        
         if self._agent_has_moved_to(
             "A1", prev_agent_locations, agent_locations, goal_positions["G1"]
         ):
@@ -139,10 +175,13 @@ class RendezVousLabelingFunctionWrapper(LabelingFunctionWrapper):
 
 
 class RendezVousRandomLabelingFunctionWrapper(RandomLabelingFunctionWrapper):
-    @staticmethod
-    def can_satisfy_rdv_A1(e):
-        return e.flatten_trace and e.flatten_trace[-1] == "r1"
 
     @staticmethod
-    def can_satisfy_rdv_A2(e):
-        return e.flatten_trace and e.flatten_trace[-1] == "r2"
+    def rdv_unsatisfied_AND_A1_rdv(e):
+        events = [l for l in e.flatten_trace if l in ("r1", "nr1")]
+        return not e.rdv_satisfied and events and events[-1] == "r1"
+    
+    @staticmethod
+    def rdv_unsatisfied_AND_A2_rdv(e):
+        events = [l for l in e.flatten_trace if l in ("r2", "nr2")]
+        return not e.rdv_satisfied and events and events[-1] == "r2"
