@@ -7,3 +7,5 @@ algo_kws:
       - ${.....env}
       - action_space
   seed: ${.....run.seed}
+rm_learner_kws:
+  init_rm_num_states: 3
