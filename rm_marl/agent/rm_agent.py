@@ -55,5 +55,4 @@ class RewardMachineAgent:
         return loss, False
 
     def project_labels(self, labels):
-        # TODO check
         return tuple(e for e in labels if e in self.rm.get_valid_events())

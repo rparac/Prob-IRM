@@ -22,3 +22,25 @@ Results (including the reward, the loss, the number of steps and a video of the 
 ```bash
 tensorboard --logdir logs/
 ```
+
+## Experiments
+
+### RendezVous
+
+```bash
+ENV=rendezvous AGENT_TYPE=rm ./run_all.sh
+
+ENV=rendezvous AGENT_TYPE=rm_learning ./run_all.sh
+
+ENV=rendezvous AGENT_TYPE=onestate ./run_all.sh
+```
+
+### ThreeButtons
+
+```bash
+ENV=threebuttons AGENT_TYPE=rm ./run_all.sh
+
+ENV=threebuttons AGENT_TYPE=rm_learning ./run_all.sh
+
+ENV=threebuttons AGENT_TYPE=onestate ./run_all.sh
+```
