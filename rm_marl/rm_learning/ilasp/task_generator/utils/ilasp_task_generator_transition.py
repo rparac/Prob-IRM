@@ -2,8 +2,8 @@ from ...ilasp_common import CONNECTED_STR, N_TRANSITION_STR, generate_injected_b
 from ..utils.ilasp_task_generator_example import get_longest_example_length
 
 
-def generate_timestep_statements(goal_examples, neg_examples, inc_examples):
-    stmt = "all_steps(0..%d).\n" % get_longest_example_length(goal_examples, neg_examples, inc_examples)
+def generate_timestep_statements(goal_examples, dend_examples, inc_examples):
+    stmt = "all_steps(0..%d).\n" % get_longest_example_length(goal_examples, dend_examples, inc_examples)
     stmt += "step(T) :- all_steps(T), last(U), T<U+1.\n\n"
     return stmt
 
