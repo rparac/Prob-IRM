@@ -91,6 +91,10 @@ class RewardMachine:
                 if to_state == self.u0:
                     to_state = f"{to_state} (u0)"
 
+                if from_state == self.uacc:
+                    from_state = f"{from_state} (uacc)"
+                elif from_state == self.urej:
+                    from_state = f"{from_state} (urej)"
                 if to_state == self.uacc:
                     to_state = f"{to_state} (uacc)"
                 elif to_state == self.urej:
