@@ -55,4 +55,8 @@ class RewardMachineAgent:
         return loss, False
 
     def project_labels(self, labels):
+        if isinstance(labels, dict):
+            # Note: Multi-agent case not implemented for noisy labelling function
+            return labels
+
         return tuple(e for e in labels if e in self.rm.get_valid_events())
