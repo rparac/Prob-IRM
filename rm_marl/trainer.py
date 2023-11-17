@@ -28,13 +28,12 @@ class Trainer:
 
         # Keeps track of all rm states to accurately log if a state was not reached
         # in a particular episode
-        # TODO: check if can be removed
         self.all_recorded_rm_states = set()
         # from env_id -> [(u -> last_timestep)]
         self.last_timestep_train_info = {}
         self.last_timestep_test_info = {}
 
-        # Contains episodes when rm was relearned
+        # Contains episodes when the rm was relearned
         self.rm_relearned_episodes = []
 
     def run(self, run_config: dict):
@@ -304,7 +303,11 @@ class Trainer:
             plt.xlabel('episode')
             plt.ylabel('last timestep in state u')
             plt.legend()
-            plt.savefig(f"{log_dir}/state_transition_train_{env_id}")
+            img_path = f"{log_dir}/state_transition_train_{env_id}"
+            plt.savefig(img_path)
+            # TODO: the line below fails https://github.com/pytorch/pytorch/issues/24175
+            #  we should try out to see if it does work on another machine
+            # logger.add_image(f"training/last_timestep_in_rm_state/{env_id}", img_path)
 
         for env_id, test_dicts in self.last_timestep_test_info.items():
             plt.figure(f"{env_id}_2")
@@ -317,7 +320,10 @@ class Trainer:
             plt.xlabel('episode')
             plt.ylabel('last timestep in state u')
             plt.legend()
-            plt.savefig(f"{log_dir}/state_transition_test_{env_id}")
+            img_path = f"{log_dir}/state_transition_test_{env_id}"
+            plt.savefig(img_path)
+            # TODO: same as above
+            # logger.add_image(f"eval/last_timestep_in_rm_state/{env_id}", img_path)
 
     def save(self, path):
         trainer_path = os.path.join(path, "trainer.pkl")
