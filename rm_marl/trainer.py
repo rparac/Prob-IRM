@@ -287,6 +287,7 @@ class Trainer:
     # lines signifying when we relearned the RM.
     # TODO: use summarywriter
     def create_rm_state_logs(self, logger: SummaryWriter, log_dir: str, total_episodes: int):
+        # train image generation
         for env_id, train_dicts in self.last_timestep_train_info.items():
             plt.figure(env_id)
             x_values = np.arange(1, total_episodes + 1)
@@ -294,7 +295,7 @@ class Trainer:
                 y_values = [u_timestep_dict.get(u, None) for u_timestep_dict in train_dicts]
                 y_values = np.array(y_values)
 
-                plt.plot(x_values, y_values, label=f"u{u}")
+                plt.plot(x_values, y_values, label=f"u{u}", marker='o', markersize=3)
 
             # Add vertical lines so we know rm state has changed
             for relearn_episode in self.rm_relearned_episodes:
@@ -309,6 +310,7 @@ class Trainer:
             #  we should try out to see if it does work on another machine
             # logger.add_image(f"training/last_timestep_in_rm_state/{env_id}", img_path)
 
+        # test image generation
         for env_id, test_dicts in self.last_timestep_test_info.items():
             plt.figure(f"{env_id}_2")
             x_values = np.arange(1, self.test_episodes + 1)
@@ -316,7 +318,7 @@ class Trainer:
                 y_values = [u_timestep_dict.get(u, None) for u_timestep_dict in test_dicts]
                 y_values = np.array(y_values)
 
-                plt.plot(x_values, y_values, label=f"u{u}")
+                plt.plot(x_values, y_values, label=f"u{u}", marker='o', markersize=3)
             plt.xlabel('episode')
             plt.ylabel('last timestep in state u')
             plt.legend()
