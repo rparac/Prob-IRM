@@ -53,7 +53,7 @@ class Trainer:
         except KeyboardInterrupt:
             pass
 
-        self.create_rm_state_logs(logger, log_dir, run_config["total_episodes"])
+        self.create_rm_state_logs(logger, log_dir, run_config["total_episodes"], run_config["testing_freq"])
 
         _ = [e.close() for e in self.envs.values()]
         logger.close()
@@ -142,7 +142,7 @@ class Trainer:
                     interrupt_episode = terminated or truncated
                     for aid, a in env_agents[env_id].items():
                         current_u = a.u
-                        loss, example_updated = a.update_agent(
+                        loss, interrupt, rm_updated = a.update_agent(
                             self._project_obs(obs[env_id], a, aid),
                             actions[aid],
                             reward,
@@ -153,10 +153,13 @@ class Trainer:
                             learning=run_config["training"],
                         )
 
+                        if rm_updated:
+                            self.rm_relearned_episodes.append(episode)
+
                         if run_config["training"]:
                             # TODO: try out state change logging with multiple envs
                             #  It will probably require that we track when RM was relearned per agent
-                            if example_updated:
+                            if interrupt:
                                 example_update_counter += 1
                                 interrupt_episode = True
                                 info["episode"] = {
@@ -285,8 +288,7 @@ class Trainer:
 
     # SummaryWriter alone was not general enough to create an image with multiple lines and vertical
     # lines signifying when we relearned the RM.
-    # TODO: use summarywriter
-    def create_rm_state_logs(self, logger: SummaryWriter, log_dir: str, total_episodes: int):
+    def create_rm_state_logs(self, logger: SummaryWriter, log_dir: str, total_episodes: int, testing_freq: int):
         # train image generation
         for env_id, train_dicts in self.last_timestep_train_info.items():
             plt.figure(env_id)
@@ -298,6 +300,7 @@ class Trainer:
                 plt.plot(x_values, y_values, label=f"u{u}", marker='o', markersize=3)
 
             # Add vertical lines so we know rm state has changed
+            # TODO: Need to make this per env_id
             for relearn_episode in self.rm_relearned_episodes:
                 plt.axvline(x=relearn_episode, color='r', linestyle='--')
 
@@ -319,6 +322,14 @@ class Trainer:
                 y_values = np.array(y_values)
 
                 plt.plot(x_values, y_values, label=f"u{u}", marker='o', markersize=3)
+
+            # TODO: Need to make this per env_id
+            for relearn_episode in self.rm_relearned_episodes:
+                first_ep_with_new_rm = ((relearn_episode - 1) // testing_freq) + 1
+                # Moving the line for better readability
+                first_ep_with_new_rm -= 0.1
+                plt.axvline(x=first_ep_with_new_rm, color='r', linestyle='--')
+
             plt.xlabel('episode')
             plt.ylabel('last timestep in state u')
             plt.legend()
@@ -326,6 +337,8 @@ class Trainer:
             plt.savefig(img_path)
             # TODO: same as above
             # logger.add_image(f"eval/last_timestep_in_rm_state/{env_id}", img_path)
+
+            # run_config["testing_freq"]
 
     def save(self, path):
         trainer_path = os.path.join(path, "trainer.pkl")

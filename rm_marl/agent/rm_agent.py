@@ -52,7 +52,7 @@ class RewardMachineAgent:
             )
 
         self.u = next_u
-        return loss, False
+        return loss, False, False
 
     def project_labels(self, labels):
         if isinstance(labels, dict):
