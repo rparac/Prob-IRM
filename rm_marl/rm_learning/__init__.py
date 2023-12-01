@@ -1,5 +1,17 @@
-from .alergia import AlergiaLearner
-from .dafsa import DAFSALearner
-from .ilasp import ILASPLearner
+try:
+    from .alergia import AlergiaLearner
+except ImportError:
+    AlergiaLearner = type(None)
+try:
+    from .dafsa import DAFSALearner
+except ImportError:
+    DAFSALearner = type(None)
+try:
+    from .ilasp import ILASPLearner
+except ImportError:
+    ILASPLearner = type(None)
 from .learner import RMLearner
-from .samp2symb import S2SLearner
+try:
+    from .samp2symb import S2SLearner
+except ImportError:
+    S2SLearner = type(None)

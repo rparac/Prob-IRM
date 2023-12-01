@@ -69,7 +69,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         agent_id: str,
         algo_cls: "Algo" = QRM,
         algo_kws: dict = None,
-        rm_learner_cls: "RMLearner" = S2SLearner,
+        rm_learner_cls: "RMLearner" = ILASPLearner,
         rm_learner_kws: dict = None,
     ):
         rm_learner_kws = rm_learner_kws or {}
