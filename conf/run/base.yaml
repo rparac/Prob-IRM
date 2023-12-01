@@ -9,4 +9,4 @@ synchronize: True
 counterfactual_update: True
 seed: 123
 name: ???
-path: ???
+path: ''

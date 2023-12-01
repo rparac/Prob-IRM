@@ -3,11 +3,12 @@ import datetime as dt
 import os
 from collections import defaultdict
 
-import gym
+import json
 import joblib
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+import warnings
 
 
 class Trainer:
@@ -25,6 +26,10 @@ class Trainer:
             dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
         )
         logger = SummaryWriter(log_dir)
+
+        config_path = os.path.join(log_dir, "run_config.json")
+        with open(config_path, 'w') as f:
+            json.dump(dict(run_config), f, indent=4)
 
         try:
             self._run(self.envs, run_config, logger)
@@ -146,7 +151,11 @@ class Trainer:
                     dones[env_id] = interrupt_episode
 
                     if agent_loss:
-                        episode_losses[env_id].append(np.mean(agent_loss))
+                        with warnings.catch_warnings():
+                            warnings.simplefilter("ignore", category=RuntimeWarning)
+                            mean_loss = np.nanmean(agent_loss)
+                        if not np.isnan(mean_loss):
+                            episode_losses[env_id].append(mean_loss)
 
             # track metrics and log them in TB
             for env_id in envs.keys():
