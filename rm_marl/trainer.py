@@ -228,9 +228,6 @@ class Trainer:
     def _counterfactual_update(env, agent, state, current_u, action, done, next_state):
         labels = env.get_labels(next_state, state)
 
-        if not labels:
-            return
-
         for u in agent.rm.states:
             if u != current_u and not agent.rm.is_state_terminal(u):
                 l = env.filter_labels(labels, u)
