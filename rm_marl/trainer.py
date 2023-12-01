@@ -68,9 +68,7 @@ class Trainer:
                 }
                 shared_events[env_id] = self._get_shared_events(env_agents[env_id])
 
-            steps_count = 0
             while not all(dones.values()):
-                steps_count += 1
 
                 if run_config["training"]:
                     self.total_steps += 1
@@ -126,8 +124,8 @@ class Trainer:
                             if interrupt:
                                 interrupt_episode = True
                                 info["episode"] = {
-                                    "l": steps_count,
-                                    "r": reward
+                                    "l": env.episode_lengths[0],
+                                    "r": env.episode_returns[0]
                                 }
                                 break
 
