@@ -145,7 +145,10 @@ class Trainer:
                         synchronized_labels = agent_labels
 
                     # track state metric for logging
-                    last_timestep_in_u[env_id][info["rm_state"]] = steps_count
+                    most_likely_state = info["rm_state"]
+                    if isinstance(most_likely_state, np.ndarray):
+                        most_likely_state = np.argmax(most_likely_state)
+                    last_timestep_in_u[most_likely_state] = steps_count
 
                     # update the agent's RM and Q-functions
                     agent_loss = []
@@ -287,6 +290,10 @@ class Trainer:
     @staticmethod
     def _counterfactual_update(env, agent, state, current_u, action, done, next_state):
         labels = env.get_labels(next_state, state)
+
+        if isinstance(labels, dict):
+            labels = [lbl for lbl, prob in labels.items() if prob > 0.5]
+            raise NotImplementedError("Need to implement Counterfactual reasoning")
 
         for u in agent.rm.states:
             if u != current_u and not agent.rm.is_state_terminal(u):

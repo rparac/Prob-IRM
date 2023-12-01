@@ -1,6 +1,8 @@
 import os
 from typing import TYPE_CHECKING, Optional
 
+import numpy as np
+
 from ..algo import QRM
 from ..rm_transition.rm_transitioner import RMTransitioner
 

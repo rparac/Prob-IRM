@@ -51,18 +51,32 @@ class QRM(Algo):
             sorted({k: tuple(v) for k, v in state.items()}.items(), key=lambda i: i[0])
         )
 
+    @staticmethod
+    def _to_hashable_rm_state(u):
+        if isinstance(u, (int, str)):
+            return u
+
+        # hashing np.ndarray[float]
+        # This case is very rare and mainly used for sanity check of the implementation
+        # In general, DeepQ should be used instead.
+
+        # Represent array as str -> can be hashed
+        u_str = ",".join([str(np.round(elem, decimals=3)) for elem in u])
+        return u_str
+
+
     def learn(self, state, u, action, reward, done, next_state, next_u):
-        next_q = np.amax(self.q[next_u][self._to_hashable_state_(next_state)])
+        next_q = np.amax(self.q[self._to_hashable_rm_state(next_u)][self._to_hashable_state_(next_state)])
         target_q = reward + (1 - int(done)) * self.gamma * next_q
 
-        current_q = self.q[u][self._to_hashable_state_(state)][action]
+        current_q = self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)][action]
 
         loss = np.abs(current_q - target_q)
 
         # Bellman update
-        self.q[u][self._to_hashable_state_(state)][action] = (
-            1 - self.alpha
-        ) * current_q + self.alpha * target_q
+        self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)][action] = (
+                                                                     1 - self.alpha
+                                                             ) * current_q + self.alpha * target_q
 
         return loss
 
@@ -72,11 +86,11 @@ class QRM(Algo):
             action = self._np_random.choice(range(self.action_space.n))
         elif not greedy:
             pr_sum = np.sum(
-                np.exp(self.q[u][self._to_hashable_state_(state)] * self.temperature)
+                np.exp(self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)] * self.temperature)
             )
             pr = (
-                np.exp(self.q[u][self._to_hashable_state_(state)] * self.temperature)
-                / pr_sum
+                    np.exp(self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)] * self.temperature)
+                    / pr_sum
             )
 
             # If any q-values are so large that the softmax function returns infinity,
@@ -95,8 +109,8 @@ class QRM(Algo):
                     break
         else:
             best_actions = np.where(
-                self.q[u][self._to_hashable_state_(state)]
-                == np.max(self.q[u][self._to_hashable_state_(state)])
+                self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)]
+                == np.max(self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)])
             )[0]
             action = self._np_random.choice(best_actions)
 
