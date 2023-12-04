@@ -1,5 +1,6 @@
 import abc
 import copy
+import random
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -25,10 +26,53 @@ class NumberStepsDiscountedRewardWrapper(gym.Wrapper):
 
 
 class LabelingFunctionWrapper(gym.Wrapper):
-    def __init__(self, env: gym.Env):
+    def __init__(self, env: gym.Env, noisy: bool = False, seed: int = 0, sensor_true_confidence: float = 1,
+                 sensor_false_confidence: float = 1):
         super().__init__(env)
 
         self.prev_obs = None
+
+        if noisy:
+            random.seed(seed)
+            # Note: When we are designing environment ourselves, we tend to know underlying true
+            #   values. So, it would be desirable to simulate "sensor" errors by simply using
+            #   a Bernoulli distribution with p=sensor_true(false)_confidence respectively.
+            self.sensor_true_confidence = sensor_true_confidence
+            self.sensor_false_confidence = sensor_false_confidence
+
+            self.sensor_true_prior = 0.5
+            self.sensor_false_prior = 1 - self.sensor_true_prior
+
+    """
+    We use the following binary sensor model:
+        - It takes in two parameters:
+            - p(true_value_predicated | true_value) = sensor_true_confidence
+                - can compute p(false_value_predicted | true_value) = 1 - sensor_true_confidence
+            - p(false_value_predicated | false_value) = sensor_false_confidence
+                - can compute p(true_value_predicted | false_value) = 1 - sensor_false_confidence
+        - Assumes the prior probabilities as 0.5, i.e p(true_value) = 0.5 (=sensor_true_prior), p(false_value) = 0.5
+        - We can see a sensor prediction, but need to compute our belief that the value is true.
+            - This can be done with Bayes rule
+            -   p(true_value | true_value_predicted) =
+                   p(true_value_predicated | true_value) * p(true_value) / 
+                   p(true_value_predicated | true_value) * p(true_value) 
+                      + p(true_value_predicted | false_value) * p(false_value)
+           - Opposite case p(true_value | false_value_predicted)  is similar
+    """
+
+    def get_label_confidence(self, label_true_pred: bool):
+        # case: p(true_value | true_value_predicted)
+        if label_true_pred:
+            p_true_and_true_pred = self.sensor_true_confidence * self.sensor_true_prior
+            p_true_pred = (self.sensor_true_confidence * self.sensor_true_prior +
+                           (1 - self.sensor_false_confidence) * self.sensor_false_prior)
+            return p_true_and_true_pred / p_true_pred
+        # case p(true_value | false_value_predicted)
+        else:
+            p_true_and_false_pred = (1 - self.sensor_true_confidence) * self.sensor_true_prior
+            p_false_pred = ((1 - self.sensor_true_confidence) * self.sensor_true_prior
+                            + self.sensor_false_confidence * self.sensor_false_prior)
+            return p_true_and_false_pred / p_false_pred
 
     @abc.abstractmethod
     def get_labels(self, obs: dict, prev_obs: dict):
@@ -50,6 +94,19 @@ class LabelingFunctionWrapper(gym.Wrapper):
         info["labels"] = self.get_labels(obs, None)
         self.prev_obs = copy.deepcopy(obs)
         return obs, info
+
+    """
+    Used in the counterfactual update.
+    RewardMachineWrapper/AutomataWrapper should be used if there is any filtering involved.
+    However, this implementation is included here if Learning agent is used (so it doesn't 
+    seem like it is using a ground truth RM.
+    """
+
+    # TODO: check if I want to keep this or revert to AutomataWrapper
+    #  THe AutomataWrapper with terminationMode.ENV and labelmode.ALL has the same behaviour
+    #  However, the issue is that it uses a reward machine
+    def filter_labels(self, labels, u):
+        return labels
 
 
 @dataclass
@@ -86,11 +143,11 @@ class RandomLabelingFunctionWrapper(gym.Wrapper):
             return [event]
 
         return []
-    
+
         # Generate multiple random event at a time
         # valid_events = [
-        #     e 
-        #     for e, c in self.random_events.items() 
+        #     e
+        #     for e, c in self.random_events.items()
         #     if c.condition(self) and self.np_random.random() <= c.proba
         # ]
         # return valid_events
@@ -130,7 +187,7 @@ class AutomataWrapper(gym.Wrapper):
         ENV = 1
 
     def __init__(
-        self, 
+        self,
         env: gym.Env,
         rm_transitioner: RMTransitioner,
         label_mode: LabelMode = LabelMode.ALL,
@@ -171,7 +228,7 @@ class AutomataWrapper(gym.Wrapper):
         simulated_updates = info.pop("env_simulated_updates", {})
 
         info["labels"] = self._apply_simulated_updates(info["labels"], simulated_updates)
-        
+
         u_next = self.rm_transitioner.get_next_state(self.u, info["labels"])
         reward = self._get_reward(reward, u_next)
         self.u = u_next
@@ -183,7 +240,7 @@ class AutomataWrapper(gym.Wrapper):
 
     def _get_reward(self, reward, u_next):
         return reward
-    
+
     def _get_terminated(self, terminated):
         if self.termination_mode == self.TerminationMode.ENV:
             return terminated
@@ -207,7 +264,7 @@ class AutomataWrapper(gym.Wrapper):
         info["labels"] = self.filter_labels(info.get("labels", {}), self.u)
         simulated_updates = info.pop("env_simulated_updates", {})
         info["labels"] = self._apply_simulated_updates(info["labels"], simulated_updates)
-        
+
         u_next = self.rm_transitioner.get_next_state(self.u, info["labels"])
         self.u = u_next
 
@@ -217,10 +274,10 @@ class AutomataWrapper(gym.Wrapper):
 class RewardMachineWrapper(AutomataWrapper):
 
     def __init__(
-            self, 
-            env: gym.Env, 
-            rm: RewardMachine, 
-            label_mode: AutomataWrapper.LabelMode = AutomataWrapper.LabelMode.ALL, 
+            self,
+            env: gym.Env,
+            rm: RewardMachine,
+            label_mode: AutomataWrapper.LabelMode = AutomataWrapper.LabelMode.ALL,
             termination_mode: AutomataWrapper.TerminationMode = AutomataWrapper.TerminationMode.RM,
             reward_function: callable = None
     ):

@@ -5,6 +5,7 @@ from collections import OrderedDict
 from ..algo import QRM
 from ..reward_machine import RewardMachine
 from ..rm_learning import ILASPLearner, DAFSALearner, AlergiaLearner, S2SLearner
+from ..rm_transition.rm_transitioner import RMTransitioner
 from ..utils.logging import getLogger
 from .rm_agent import RewardMachineAgent
 
@@ -67,6 +68,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
     def __init__(
         self,
         agent_id: str,
+        rm_transitioner: RMTransitioner,
         algo_cls: "Algo" = QRM,
         algo_kws: dict = None,
         rm_learner_cls: "RMLearner" = ILASPLearner,
@@ -79,9 +81,9 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         self.positive_examples = []
         self.negative_examples = []
 
-        rm = self._default_rm()
+        rm_transitioner.rm = self._default_rm()
 
-        super().__init__(agent_id, rm, algo_cls, algo_kws)
+        super().__init__(agent_id, rm_transitioner, algo_cls, algo_kws)
 
     def set_log_folder(self, folder):
         super().set_log_folder(folder)
@@ -166,7 +168,9 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         return loss, interrupt, rm_updated
 
     def project_labels(self, labels):
-        return tuple(labels)
+        if isinstance(labels, list):
+            return tuple(labels)
+        return labels
 
     def _update_examples(self, trace: tuple, complete: bool, positive: bool):
         if not trace:
