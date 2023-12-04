@@ -104,6 +104,15 @@ class RewardMachine:
 
         dot.render(file_name)
 
+    def to_idx(self, state_name: str) -> int:
+        try:
+            return self.states.index(state_name)
+        except ValueError:
+            return -1
+
+    def from_idx(self, state_idx: int) -> str:
+        return self.states[state_idx]
+
     def add_states(self, u_list):
         _ = [self.states.append(u) for u in u_list if u not in self.states]
 
@@ -144,7 +153,24 @@ class RewardMachine:
         return tuple(l for e in self.transitions[u1].keys() for l in e)
 
     def is_state_terminal(self, u):
-        return u in (self.uacc, self.urej)
+        if isinstance(u, (int, str)):
+            return u in (self.uacc, self.urej)
+
+        raise NotImplementedError("is_state_terminal is not supported for probabilistic RM")
+
+    def is_accepting_state(self, u):
+        if isinstance(u, (int, str)):
+            return u == self.uacc
+
+        #  50% chance we are in one.
+        accept_threshold = 0.5
+        return u[self.to_idx(self.uacc)] > accept_threshold
+
+    def is_rejecting_state(self, u):
+        if isinstance(u, (int, str)):
+            return u == self.urej
+        reject_threshold = 0.5
+        return u[self.to_idx(self.urej)] > reject_threshold
 
     @staticmethod
     def _is_event_satisfied(condition, observations):
@@ -212,5 +238,3 @@ class RewardMachine:
         lines[-1] = lines[-1].strip("\n")
         with open(file, "w") as f:
             f.writelines(lines)
-
-            

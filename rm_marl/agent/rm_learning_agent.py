@@ -39,7 +39,7 @@ class TraceTracker:
 
     def _process_obs(self, obs):
         state_hash = hash(str(obs))
-        if state_hash not in self._hash_state_mapping: 
+        if state_hash not in self._hash_state_mapping:
             self._hash_state_mapping[state_hash] = obs
         return list(self._hash_state_mapping.keys()).index(state_hash) + 1
 
@@ -66,13 +66,13 @@ class TraceTracker:
 
 class RewardMachineLearningAgent(RewardMachineAgent):
     def __init__(
-        self,
-        agent_id: str,
-        rm_transitioner: RMTransitioner,
-        algo_cls: "Algo" = QRM,
-        algo_kws: dict = None,
-        rm_learner_cls: "RMLearner" = ILASPLearner,
-        rm_learner_kws: dict = None,
+            self,
+            agent_id: str,
+            rm_transitioner: RMTransitioner,
+            algo_cls: "Algo" = QRM,
+            algo_kws: dict = None,
+            rm_learner_cls: "RMLearner" = ILASPLearner,
+            rm_learner_kws: dict = None,
     ):
         rm_learner_kws = rm_learner_kws or {}
         self.rm_learner = rm_learner_cls(agent_id, **rm_learner_kws)
@@ -109,15 +109,15 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         return super().reset(seed)
 
     def update_agent(
-        self,
-        state,
-        action,
-        reward,
-        terminated,
-        truncated,
-        next_state,
-        labels,
-        learning=True,
+            self,
+            state,
+            action,
+            reward,
+            terminated,
+            truncated,
+            next_state,
+            labels,
+            learning=True,
     ):
         loss, interrupt, rm_updated = super().update_agent(
             state, action, reward, terminated, truncated, next_state, labels, learning
@@ -136,7 +136,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                 examples_updated = self._update_examples(
                     seq, terminated, is_positive
                 )
-                if examples_updated:
+                if examples_updated and self._should_relearn_rm(terminated, is_positive):
                     candidate_rm = self.rm_learner.learn(
                         self.observables,
                         self.rm,
@@ -148,22 +148,25 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                         self.rm = candidate_rm
                         self.algo.reset()
                         rm_updated = True
-            elif self.rm.is_state_terminal(self.u):
-                LOGGER.debug(f"[{self.agent_id}] the RM {self.rm_learner.rm_learning_counter} is wrong.")
-                examples_updated = self._update_examples(seq, complete=False, positive=False)
-                if examples_updated:
-                    candidate_rm = self.rm_learner.learn(
-                        self.observables,
-                        self.rm,
-                        self.positive_examples,
-                        self.negative_examples,
-                        self.incomplete_examples
-                    )
-                    if candidate_rm:
-                        self.rm = candidate_rm
-                        self.algo.reset()
-                        rm_updated = True
-                    interrupt = True
+            # TODO: discuss with Leo why we need this part
+            # elif self.rm.is_state_terminal(self.u):
+            #     LOGGER.debug(
+            #         f"[{self.agent_id}] the RM {self.rm_learner.rm_learning_counter} is wrong "
+            #         f"or the state belief is wrong.")
+            #     examples_updated = self._update_examples(seq, complete=False, positive=False)
+            #     if examples_updated:
+            #         candidate_rm = self.rm_learner.learn(
+            #             self.observables,
+            #             self.rm,
+            #             self.positive_examples,
+            #             self.negative_examples,
+            #             self.incomplete_examples
+            #         )
+            #         if candidate_rm:
+            #             self.rm = candidate_rm
+            #             self.algo.reset()
+            #             rm_updated = True
+            #         interrupt = True
 
         return loss, interrupt, rm_updated
 
@@ -187,8 +190,20 @@ class RewardMachineLearningAgent(RewardMachineAgent):
             self.incomplete_examples.append(trace)
 
         self.incomplete_examples = [
-            e for e in self.incomplete_examples 
+            e for e in self.incomplete_examples
             if e not in self.positive_examples
         ]
 
         return True
+
+    # RM should be relearned if there is a mismatch between
+    #  environment and the current RM
+    def _should_relearn_rm(self, terminated: bool, is_positive: bool):
+        if not terminated:
+            # TODO: check if this is fine
+            # We can't determine if there is a mismatch
+            return False
+
+        if is_positive:
+            return not self.rm.is_accepting_state(self.u)
+        return not self.rm.is_rejecting_state(self.u)

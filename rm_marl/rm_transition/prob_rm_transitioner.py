@@ -1,5 +1,5 @@
 import math
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Optional
 
 import numpy as np
 
@@ -8,7 +8,7 @@ from rm_marl.rm_transition.rm_transitioner import RMTransitioner
 
 
 class ProbRMTransitioner(RMTransitioner):
-    def __init__(self, rm: RewardMachine):
+    def __init__(self, rm: Optional[RewardMachine]):
         super().__init__(rm)
 
     def get_initial_state(self):
@@ -36,12 +36,13 @@ class ProbRMTransitioner(RMTransitioner):
             u_from = self.rm.states[u_from_idx]
             transition_prob_sum = 0
             for transition_labels, u_out in self.rm.transitions[u_from].items():
+                u_out_idx = self.rm.to_idx(u_out)
                 transition_prob = self.compute_transition_probability(transition_labels, label_probs)
-                belief_out[u_out] += transition_prob * curr_state[u_from]
+                belief_out[u_out_idx] += transition_prob * curr_state[u_from_idx]
                 transition_prob_sum += transition_prob
             # The transitions to the same state are not captured with the transitions variable.
             # So, 1 - transition_prob_sum -> the probability of transitioning to the same state
-            belief_out[u_from] += (1 - transition_prob_sum) * curr_state[u_from]
+            belief_out[u_from_idx] += (1 - transition_prob_sum) * curr_state[u_from_idx]
 
         return belief_out
 

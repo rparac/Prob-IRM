@@ -147,7 +147,10 @@ class Trainer:
                     # track state metric for logging
                     most_likely_state = info["rm_state"]
                     if isinstance(most_likely_state, np.ndarray):
-                        most_likely_state = np.argmax(most_likely_state)
+                        # TODO: not working with multi agent case
+                        most_likely_state_idx = np.argmax(most_likely_state)
+                        curr_a = list(env_agents[env_id].values())[0]
+                        most_likely_state = curr_a.rm.states[most_likely_state_idx]
                     last_timestep_in_u[most_likely_state] = steps_count
 
                     # update the agent's RM and Q-functions
