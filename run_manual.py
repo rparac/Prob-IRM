@@ -11,31 +11,31 @@ AGENT_RANDOM_LABEL_CONFIG = {
         "br": RandomLabelingConfig(
             proba=0.3,
             condition=RandomLabelingFunctionWrapper.condition_true,
-            update=ButtonsEnv.open_walls_R,
+            env_update=ButtonsEnv.open_walls_R,
         )
     },
     2: {
         "by": RandomLabelingConfig(
             proba=0.3,
             condition=RandomLabelingFunctionWrapper.condition_true,
-            update=ButtonsEnv.open_walls_Y,
+            env_update=ButtonsEnv.open_walls_Y,
         ),
         "br": RandomLabelingConfig(
             proba=0.3,
             condition=ButtonsRandomLabelingFunctionWrapper.can_open_wall_R_A2_A3,
-            update=ButtonsEnv.open_walls_R,
+            env_update=ButtonsEnv.open_walls_R,
         ),
     },
     3: {
         "bg": RandomLabelingConfig(
             proba=0.3,
             condition=RandomLabelingFunctionWrapper.condition_true,
-            update=ButtonsEnv.open_walls_G,
+            env_update=ButtonsEnv.open_walls_G,
         ),
         "br": RandomLabelingConfig(
             proba=0.3,
             condition=ButtonsRandomLabelingFunctionWrapper.can_open_wall_R_A2_A3,
-            update=ButtonsEnv.open_walls_R,
+            env_update=ButtonsEnv.open_walls_R,
         ),
     },
 }
@@ -45,7 +45,7 @@ def _create_env(agent_id):
     env = gym.make(
         "rm-marl/Buttons-v0",
         render_mode="rgb_array",
-        file="/Users/leo/dev/phd/rm-marl/data/buttons/env.txt",
+        file=f"{os.getcwd()}/data/buttons/env.txt",
     )
     env = SingleAgentEnvWrapper(env, f"A{agent_id}")
     env = ButtonsLabelingFunctionWrapper(env)
@@ -67,13 +67,13 @@ def create_shared_env():
     env = gym.make(
         "rm-marl/Buttons-v0",
         render_mode="rgb_array",
-        file="/Users/leo/dev/phd/rm-marl/data/buttons/env.txt",
+        file=f"{os.getcwd()}/data/buttons/env.txt",
     )
     env = ButtonsLabelingFunctionWrapper(env)
     env = RewardMachineWrapper(
         env,
         RewardMachine.load_from_file(
-            "/Users/leo/dev/phd/rm-marl/data/buttons/rm_team.txt"
+            f"{os.getcwd()}/data/buttons/rm_team.txt"
         ),
         label_mode=RewardMachineWrapper.LabelMode.STATE,
     )
@@ -86,21 +86,21 @@ def create_rm_agents(envs):
         "A1": RewardMachineAgent(
             "A1",
             RewardMachine.load_from_file(
-                "/Users/leo/dev/phd/rm-marl/data/buttons/rm_agent_1.txt"
+                f"{os.getcwd()}/data/buttons/rm_agent_1.txt"
             ),
             algo_kws={"action_space": envs["E1"].action_space},
         ),
         "A2": RewardMachineAgent(
             "A2",
             RewardMachine.load_from_file(
-                "/Users/leo/dev/phd/rm-marl/data/buttons/rm_agent_2.txt"
+                f"{os.getcwd()}/data/buttons/rm_agent_2.txt"
             ),
             algo_kws={"action_space": envs["E2"].action_space},
         ),
         "A3": RewardMachineAgent(
             "A3",
             RewardMachine.load_from_file(
-                "/Users/leo/dev/phd/rm-marl/data/buttons/rm_agent_3.txt"
+                f"{os.getcwd()}/data/buttons/rm_agent_3.txt"
             ),
             algo_kws={"action_space": envs["E3"].action_space},
         ),
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     env = gym.make(
         "rm-marl/Buttons-v0",
         render_mode="rgb_array",
-        file="/Users/leo/dev/phd/rm-marl/data/buttons/env.txt",
+        file=f"{os.getcwd()}/data/buttons/env.txt",
     )
     env.unwrapped.render_mode = "human"
 
