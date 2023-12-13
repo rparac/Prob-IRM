@@ -1,4 +1,5 @@
 import random
+import copy
 import abc
 import gym
 import numpy as np
@@ -32,8 +33,10 @@ class LabelTampering(gym.Wrapper):
         a labeling function tamperer is not required to tamper with every event: based on the case at hand, the output
         of this method can be the same exact events  that were received as input.
 
+        CARE: This method is assumed to modify the events list in-place.
+
         :param events: The LF output to be tampered with
-        :return: The tampered event string
+        :return: True if the tampering took place
         """
 
         raise NotImplementedError('LF tamperers must inherit from this class and override this method')
@@ -67,20 +70,19 @@ class LabelTampering(gym.Wrapper):
 
         obs, reward, terminated, truncated, info = self.env.step(action)
 
-        # Apply the tampering logic
-        true_events = info['labels']
-
-        if self._is_tamperable(true_events):
+        if self._is_tamperable(info['labels']):
 
             self._n_candidates += 1
 
-            tampered_events = self._tamper_events(true_events)
+            # Deepcopy the original LF output to avoid modifying it by error in _tamper_events() implementations
+            events = copy.deepcopy(info['labels'])
 
-            if tampered_events != true_events:
+            # Apply the tampering logic
+            did_tamper = self._tamper_events(events)
+
+            if did_tamper:
                 self._n_tamperings += 1
-
-            # Substitute the labels returned in step() output
-            info['labels'] = tampered_events
+                info['labels'] = events
 
         return obs, reward, terminated, truncated, info
 
@@ -160,7 +162,10 @@ class RandomHallucinationNoise(LabelTampering):
             else:
                 events[target_index] = substitute
 
-        return events
+            return True
+
+        else:
+            return False
 
 
 class RandomBlindingNoise(LabelTampering):
@@ -188,12 +193,12 @@ class RandomBlindingNoise(LabelTampering):
 
             # Remove the event string as a whole (compound tampering)
             if target_index == len(events):
-                return []
+                events.clear()
             # Remove the event at the specified index
             else:
-                tampered_events = events[:target_index] + events[target_index + 1:]
-                return tampered_events
+                del events[target_index]
+
+            return True
 
         else:
-
-            return events
+            return False
