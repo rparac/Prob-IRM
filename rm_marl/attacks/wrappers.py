@@ -1,6 +1,7 @@
 import random
 import abc
 import gym
+import numpy as np
 
 
 class LabelTampering(gym.Wrapper):
@@ -20,6 +21,7 @@ class LabelTampering(gym.Wrapper):
 
         self._all_events = env.get_all_labels()
         self._n_tamperings = 0
+        self._n_candidates = 0
 
     @abc.abstractmethod
     def _tamper_events(self, events):
@@ -28,10 +30,29 @@ class LabelTampering(gym.Wrapper):
 
         This method must be implemented by concrete subclasses to implement the actual tampering logic. Note that
         a labeling function tamperer is not required to tamper with every event: based on the case at hand, the output
-        of this method can be the same exact event string that was received as input.
+        of this method can be the same exact events  that were received as input.
 
-        :param events: The event string to be tampered with
+        :param events: The LF output to be tampered with
         :return: The tampered event string
+        """
+
+        raise NotImplementedError('LF tamperers must inherit from this class and override this method')
+
+    @abc.abstractmethod
+    def _is_tamperable(self, events):
+        """
+        Logic for choosing potential candidate LF outputs that could be tampered with
+
+        This method must be implemented by concrete subclasses to filter between the LF outputs that could be subject
+        to the desired tampering logic. For instance, a blinding-style tamperer can only consider as candidates the LF
+        outputs that contain at least one event.
+
+        Note that this method returning True *does not* mean that a given LF output will actually be modified: it simply
+        means that it is a valid candidate that could, in theory, be subject to the tampering logic. Choosing whether
+        the LF output will actually be tampered with is left as a responsibility of the _tamper_events() method.
+
+        :param events: The LF output to be examined
+        :return: True, if the given LF output is a valid tampering cadidate
         """
 
         raise NotImplementedError('LF tamperers must inherit from this class and override this method')
@@ -48,13 +69,18 @@ class LabelTampering(gym.Wrapper):
 
         # Apply the tampering logic
         true_events = info['labels']
-        tampered_events = self._tamper_events(true_events)
 
-        if tampered_events != true_events:
-            self._n_tamperings += 1
+        if self._is_tamperable(true_events):
 
-        # Substitute the labels returned in step() output
-        info['labels'] = tampered_events
+            self._n_candidates += 1
+
+            tampered_events = self._tamper_events(true_events)
+
+            if tampered_events != true_events:
+                self._n_tamperings += 1
+
+            # Substitute the labels returned in step() output
+            info['labels'] = tampered_events
 
         return obs, reward, terminated, truncated, info
 
@@ -67,6 +93,29 @@ class LabelTampering(gym.Wrapper):
         :return: Number of labelling function output tamperings so far
         """
         return self._n_tamperings
+
+    @property
+    def n_candidates(self):
+        """
+        Returns the number of times the tamperer has seen a potentially tamperable LF output so far.
+        Note that the reported value IS NOT reset to zero when an episode terminates.
+
+        :return: Number of temperable LF outputs observed so far
+        """
+
+        return self._n_candidates
+
+    @property
+    def tampering_rate(self):
+        """
+        Returns the overall tampering rate so far, ie: the ratio of the number of tampered LF outputs and the number of
+        potentially tamperable LF outputs so far
+        """
+
+        if self.n_candidates == 0:
+            return np.nan
+
+        return self.n_tamperings / self.n_candidates
 
 
 class RandomHallucinationNoise(LabelTampering):
@@ -89,9 +138,13 @@ class RandomHallucinationNoise(LabelTampering):
         self._seed = seed
         self._random = random.Random(self._seed)
 
+    def _is_tamperable(self, events):
+
+        return len(events) > 0
+
     def _tamper_events(self, events):
 
-        if self._random.random() < self._noise_quantity and len(events) > 0:
+        if self._random.random() < self._noise_quantity:
 
             # Chose a random position in the event string to tamper
             target_index = self._random.randint(0, len(events) - 1)
@@ -121,10 +174,14 @@ class RandomBlindingNoise(LabelTampering):
         self._seed = seed
         self._random = random.Random(self._seed)
 
+    def _is_tamperable(self, events):
+
+        return len(events) > 0
+
     def _tamper_events(self, events):
 
         # Determine if this labelling function output will be tampered
-        if self._random.random() < self._noise_quantity and len(events) > 0:
+        if self._random.random() < self._noise_quantity:
 
             # Chose a random position in the event string to tamper
             target_index = self._random.randint(0, len(events))
