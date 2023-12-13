@@ -138,11 +138,14 @@ class CookieEnv(BaseGridEnv):
             self.positions[(6,4)] = ["G"]
 
 class CookieLabelingFunctionWrapper(LabelingFunctionWrapper):
-    def get_labels(self, obs: dict = None, prev_obs: dict = None):
+    def get_labels(self, obs: dict, prev_obs: dict):
         """Returns a modified observation."""
-        agent_locations = obs or self.agent_locations
-        prev_agent_locations = prev_obs or self.prev_agent_locations
+        agent_locations = obs
+        prev_agent_locations = prev_obs or {}
         labels = []
+
+        if "A1" not in agent_locations:
+            return labels
 
         if self.is_in_top_room(agent_locations["A1"]):
             labels.append("t")
@@ -190,6 +193,6 @@ class CookieLabelingFunctionWrapper(LabelingFunctionWrapper):
     @staticmethod
     def _agent_has_moved_to(agent, from_loc, to_loc, positions):
         return (
-            tuple(from_loc[agent]) not in positions
-            and tuple(to_loc[agent]) in positions
+            tuple(from_loc.get(agent, [])) not in positions
+            and tuple(to_loc.get(agent, [])) in positions
         )
