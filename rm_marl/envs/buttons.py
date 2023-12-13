@@ -138,6 +138,20 @@ class ButtonsEnv(BaseGridEnv):
 
 
 class ButtonsLabelingFunctionWrapper(LabelingFunctionWrapper):
+
+    def get_all_labels(self):
+
+        return [
+            "by",
+            "bg",
+            "br"
+            "a2br",
+            "a2lr",
+            "a3br",
+            "a3lr",
+            "g"
+        ]
+
     def get_labels(self, obs: dict = None, prev_obs: dict = None):
         """Returns a modified observation."""
         agent_locations = obs or self.agent_locations
