@@ -138,10 +138,10 @@ class ButtonsEnv(BaseGridEnv):
 
 
 class ButtonsLabelingFunctionWrapper(LabelingFunctionWrapper):
-    def get_labels(self, obs: dict = None, prev_obs: dict = None):
+    def get_labels(self, obs: dict, prev_obs: dict):
         """Returns a modified observation."""
-        agent_locations = obs or self.agent_locations
-        prev_agent_locations = prev_obs or self.prev_agent_locations
+        agent_locations = obs
+        prev_agent_locations = prev_obs or {}
         labels = []
 
         by_positions = self.postions_by_type("B").get("BY", [])
@@ -178,10 +178,10 @@ class ButtonsLabelingFunctionWrapper(LabelingFunctionWrapper):
             labels.append("a3lr")
 
         if (
-            tuple(prev_agent_locations["A2"]) in br_positions
-            and tuple(agent_locations["A2"]) in br_positions
-            and tuple(prev_agent_locations["A3"]) in br_positions
-            and tuple(agent_locations["A3"]) in br_positions
+            tuple(prev_agent_locations.get("A2", [])) in br_positions
+            and tuple(agent_locations.get("A2", [])) in br_positions
+            and tuple(prev_agent_locations.get("A3", [])) in br_positions
+            and tuple(agent_locations.get("A3", [])) in br_positions
         ):
             labels.append("br")
 
@@ -195,8 +195,8 @@ class ButtonsLabelingFunctionWrapper(LabelingFunctionWrapper):
     @staticmethod
     def _agent_has_moved_to(agent, from_loc, to_loc, positions):
         return (
-            tuple(from_loc[agent]) not in positions
-            and tuple(to_loc[agent]) in positions
+            tuple(from_loc.get(agent, [])) not in positions
+            and tuple(to_loc.get(agent, [])) in positions
         )
 
 

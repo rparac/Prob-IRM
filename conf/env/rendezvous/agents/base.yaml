@@ -19,11 +19,6 @@ env:
     -
       - cls: 
           _target_: rm_marl.utils.imports.import_cls
-          path: rm_marl.envs.wrappers.SingleAgentEnvWrapper
-        args: 
-          - ${......config.agent_id}
-      - cls: 
-          _target_: rm_marl.utils.imports.import_cls
           path: rm_marl.envs.rendezvous.RendezVousLabelingFunctionWrapper
       - cls: 
           _target_: rm_marl.utils.imports.import_cls
@@ -46,6 +41,11 @@ env:
                    path: rm_marl.envs.wrappers.RewardMachineWrapper
                  - LabelMode
               - ${........config.label_mode}
+      - cls: 
+          _target_: rm_marl.utils.imports.import_cls
+          path: rm_marl.envs.wrappers.SingleAgentEnvWrapper
+        args: 
+          - ${......config.agent_id}
       - cls: 
           _target_: rm_marl.utils.imports.import_cls
           path: rm_marl.envs.wrappers.RecordEpisodeStatistics
