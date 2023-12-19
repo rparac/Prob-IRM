@@ -104,6 +104,19 @@ class RendezVousEnv(BaseGridEnv):
         return all(self.goal_satisfied.values())
 
 class RendezVousLabelingFunctionWrapper(LabelingFunctionWrapper):
+
+    def get_all_labels(self):
+
+        return [
+            "r1",
+            "nr1",
+            "r2",
+            "nr2",
+            "r",
+            "g1",
+            "g2"
+        ]
+
     def get_labels(self, obs: dict = None, prev_obs: dict = None):
         """Returns a modified observation."""
         agent_locations = obs or self.agent_locations
