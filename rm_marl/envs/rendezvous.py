@@ -117,10 +117,11 @@ class RendezVousLabelingFunctionWrapper(LabelingFunctionWrapper):
             "g2"
         ]
 
-    def get_labels(self, obs: dict = None, prev_obs: dict = None):
+    def get_labels(self, obs: dict, prev_obs: dict):
         """Returns a modified observation."""
-        agent_locations = obs or self.agent_locations
-        prev_agent_locations = prev_obs or self.prev_agent_locations
+
+        agent_locations = obs
+        prev_agent_locations = prev_obs or {}
         labels = []
 
         rdv_positions = self.postions_by_type("R")["RV"]
@@ -152,16 +153,16 @@ class RendezVousLabelingFunctionWrapper(LabelingFunctionWrapper):
             labels.append("r")
         elif (
             "r1" in labels and
-            tuple(agent_locations["A2"]) == tuple(prev_agent_locations["A2"]) and
-            tuple(agent_locations["A2"]) in rdv_positions
+            tuple(agent_locations.get("A2", [])) == tuple(prev_agent_locations.get("A2", [])) and
+            tuple(agent_locations.get("A2", [])) in rdv_positions
         ):
             assert "nr2" not in labels
             labels.remove("r1")
             labels.append("r")
         elif (
             "r2" in labels and
-            tuple(agent_locations["A1"]) == tuple(prev_agent_locations["A1"]) and
-            tuple(agent_locations["A1"]) in rdv_positions
+            tuple(agent_locations.get("A1", [])) == tuple(prev_agent_locations.get("A1", [])) and
+            tuple(agent_locations.get("A1", [])) in rdv_positions
         ):
             assert "nr1" not in labels
             labels.remove("r2")
@@ -182,8 +183,8 @@ class RendezVousLabelingFunctionWrapper(LabelingFunctionWrapper):
     @staticmethod
     def _agent_has_moved_to(agent, from_loc, to_loc, positions):
         return (
-            tuple(from_loc[agent]) not in positions
-            and tuple(to_loc[agent]) in positions
+            tuple(from_loc.get(agent, [])) not in positions
+            and tuple(to_loc.get(agent, [])) in positions
         )
 
 

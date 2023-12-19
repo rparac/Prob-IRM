@@ -27,10 +27,10 @@ class LabelingFunctionWrapper(gym.Wrapper):
     def __init__(self, env: gym.Env):
         super().__init__(env)
 
-        self.prev_agent_locations = self.unwrapped.agent_locations
+        self.prev_obs = None
 
     @abc.abstractmethod
-    def get_labels(self, obs: dict = None, prev_obs: dict = None):
+    def get_labels(self, obs: dict, prev_obs: dict):
         raise NotImplementedError("get_labels")
 
     @abc.abstractmethod
@@ -39,15 +39,16 @@ class LabelingFunctionWrapper(gym.Wrapper):
 
     def step(self, action):
         observation, reward, terminated, truncated, info = super().step(action)
-        info["labels"] = self.get_labels()
-        self.prev_agent_locations = copy.deepcopy(self.agent_locations)
+        info["labels"] = self.get_labels(observation, self.prev_obs)
+        self.prev_obs = copy.deepcopy(observation)
         return observation, reward, terminated, truncated, info
 
     def reset(self, **kwargs):
         """Resets the environment with kwargs."""
-        ret = super().reset(**kwargs)
-        self.prev_agent_locations = self.unwrapped.agent_locations
-        return ret
+        obs, info = super().reset(**kwargs)
+        info["labels"] = self.get_labels(obs, None)
+        self.prev_obs = copy.deepcopy(obs)
+        return obs, info
 
 
 @dataclass
@@ -72,7 +73,7 @@ class RandomLabelingFunctionWrapper(gym.Wrapper):
     def flatten_trace(self):
         return tuple(e for es in self.trace for e in es)
 
-    def get_labels(self, _obs: dict = None, _prev_obs: dict = None):
+    def get_labels(self, _obs, _prev_obs):
         # Generate one random event at a time
         valid_events = [e for e, c in self.random_events.items() if c.condition(self)]
         if not valid_events:
@@ -97,7 +98,7 @@ class RandomLabelingFunctionWrapper(gym.Wrapper):
         observation, reward, terminated, truncated, info = super().step(action)
         labels, simulated_env_updates = info.get("labels", []), {}
 
-        random_labels = self.get_labels()
+        random_labels = self.get_labels(observation, self.prev_obs)
         for l in random_labels:
             simulated_env_updates[l] = self.random_events[l].env_update
             labels.append(l)
