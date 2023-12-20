@@ -146,26 +146,24 @@ class RandomHallucinationNoise(LabelTampering):
 
     def _tamper_events(self, events):
 
-        if self._random.random() < self._noise_quantity:
-
-            # Chose a random position in the event string to tamper
-            target_index = self._random.randint(0, len(events) - 1)
-
-            # Chose a random substitute event
-            substitute = self._random.choice(self._all_events)
-
-            # If the chosen substitute is already present in the true events, simply remove the original one
-            if substitute in events:
-                del events[target_index]
-
-            # If not, carry out the substitution
-            else:
-                events[target_index] = substitute
-
-            return True
-
-        else:
+        if self._random.random() >= self._noise_quantity:
             return False
+
+        # Chose a random position in the event string to tamper
+        target_index = self._random.randint(0, len(events) - 1)
+
+        # Chose a random substitute event
+        substitute = self._random.choice(self._all_events)
+
+        # If the chosen substitute is already present in the true events, simply remove the original one
+        if substitute in events:
+            del events[target_index]
+
+        # If not, carry out the substitution
+        else:
+            events[target_index] = substitute
+
+        return True
 
 
 class RandomBlindingNoise(LabelTampering):
@@ -186,19 +184,17 @@ class RandomBlindingNoise(LabelTampering):
     def _tamper_events(self, events):
 
         # Determine if this labelling function output will be tampered
-        if self._random.random() < self._noise_quantity:
-
-            # Chose a random position in the event string to tamper
-            target_index = self._random.randint(0, len(events))
-
-            # Remove the event string as a whole (compound tampering)
-            if target_index == len(events):
-                events.clear()
-            # Remove the event at the specified index
-            else:
-                del events[target_index]
-
-            return True
-
-        else:
+        if self._random.random() >= self._noise_quantity:
             return False
+
+        # Chose a random position in the event string to tamper
+        target_index = self._random.randint(0, len(events))
+
+        # Remove the event string as a whole (compound tampering)
+        if target_index == len(events):
+            events.clear()
+        # Remove the event at the specified index
+        else:
+            del events[target_index]
+
+        return True
