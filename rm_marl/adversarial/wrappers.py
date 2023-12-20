@@ -31,12 +31,10 @@ class LabelTampering(gym.Wrapper):
 
         This method must be implemented by concrete subclasses to implement the actual tampering logic. Note that
         a labeling function tamperer is not required to tamper with every event: based on the case at hand, the output
-        of this method can be the same exact events  that were received as input.
-
-        CARE: This method is assumed to modify the events list in-place.
+        of this method can be the same exact events that were received as input.
 
         :param events: The LF output to be tampered with
-        :return: True if the tampering took place
+        :return: A tuple containing the -- possibly -- modified events and a boolean flag indicating if the tampering took place
         """
 
         raise NotImplementedError('LF tamperers must inherit from this class and override this method')
@@ -74,11 +72,8 @@ class LabelTampering(gym.Wrapper):
 
             self._n_candidates += 1
 
-            # Deepcopy the original LF output to avoid modifying it by error in _tamper_events() implementations
-            events = copy.deepcopy(info['labels'])
-
             # Apply the tampering logic
-            did_tamper = self._tamper_events(events)
+            events, did_tamper = self._tamper_events(info["labels"])
 
             if did_tamper:
                 self._n_tamperings += 1
@@ -147,7 +142,9 @@ class RandomHallucinationNoise(LabelTampering):
     def _tamper_events(self, events):
 
         if self._random.random() >= self._noise_quantity:
-            return False
+            return events, False
+
+        tampered_events = copy.copy(events)
 
         # Chose a random position in the event string to tamper
         target_index = self._random.randint(0, len(events) - 1)
@@ -157,13 +154,13 @@ class RandomHallucinationNoise(LabelTampering):
 
         # If the chosen substitute is already present in the true events, simply remove the original one
         if substitute in events:
-            del events[target_index]
+            del tampered_events[target_index]
 
         # If not, carry out the substitution
         else:
-            events[target_index] = substitute
+            tampered_events[target_index] = substitute
 
-        return True
+        return tampered_events, True
 
 
 class RandomBlindingNoise(LabelTampering):
@@ -185,16 +182,18 @@ class RandomBlindingNoise(LabelTampering):
 
         # Determine if this labelling function output will be tampered
         if self._random.random() >= self._noise_quantity:
-            return False
+            return events, False
+
+        tampered_events = copy.copy(events)
 
         # Chose a random position in the event string to tamper
         target_index = self._random.randint(0, len(events))
 
         # Remove the event string as a whole (compound tampering)
         if target_index == len(events):
-            events.clear()
+            tampered_events.clear()
         # Remove the event at the specified index
         else:
-            del events[target_index]
+            del tampered_events[target_index]
 
-        return True
+        return tampered_events, True
