@@ -142,12 +142,12 @@ class CookieLabelingFunctionWrapper(LabelingFunctionWrapper):
     def get_all_labels(self):
 
         return [
-            "t",
-            "l",
-            "r",
-            "b",
-            "ce",
-            "cv"
+            "t",  # The agent is in the top room
+            "l",  # The agent is in the left room
+            "r",  # The agent is in the right room
+            "b",  # The agent pressed the button
+            "ce",  # The cookie was eaten by the agent
+            "cv"  # The cookie is visible to the agent
         ]
 
     def get_labels(self, obs: dict, prev_obs: dict):

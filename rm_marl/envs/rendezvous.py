@@ -108,13 +108,13 @@ class RendezVousLabelingFunctionWrapper(LabelingFunctionWrapper):
     def get_all_labels(self):
 
         return [
-            "r1",
-            "nr1",
-            "r2",
-            "nr2",
-            "r",
-            "g1",
-            "g2"
+            "r1",  # Agent 1 is at the randezvous point
+            "nr1",  # Agent 1 left the randezvous point
+            "r2",  # Agent 2 is at the randezvous point
+            "nr2",  # Agent 2 left the randezvous point
+            "r",  # Both agents are at the randezvous point
+            "g1",  # Agent 1 reached its goal
+            "g2"  # Agent 2 reached its goal
         ]
 
     def get_labels(self, obs: dict, prev_obs: dict):
