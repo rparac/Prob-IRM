@@ -11,3 +11,7 @@ class Algo:
     @abc.abstractmethod
     def action(self, *args, **kwargs):
         raise NotImplementedError("action")
+
+    @abc.abstractmethod
+    def reset(self, *args, **kwargs):
+        raise NotImplementedError("reset")
