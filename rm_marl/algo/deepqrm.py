@@ -3,12 +3,6 @@ from collections import namedtuple, deque
 import random
 
 
-Experience = namedtuple('Experience', [
-    'state',
-    'action',
-    'next_state',
-    'reward'
-])
 
 
 class ReplayMemory:
@@ -16,8 +10,15 @@ class ReplayMemory:
     Experience Replay Memory buffer implementation
 
     This class implements the circular buffer used to implement the Experience Replay mechanism described by
-    Minh et al. in their seminal paper "Playing Atari with Deep Reinforcement Learning" from 2013.
+    Minh et al. in their seminal paper "Playing Atari with Deep Reinforcement Learning" from 2015.
     """
+
+    Experience = namedtuple('Experience', [
+        'state',
+        'action',
+        'next_state',
+        'reward'
+    ])
 
     def __init__(self, size):
         """
@@ -34,6 +35,13 @@ class ReplayMemory:
         self._size = size
         self._buffer = deque(maxlen=size)
 
+    def __len__(self):
+        """
+        Return the current number of experience entries in the Replay Memory
+        """
+
+        return len(self._buffer)
+
     def push(self, state, action, new_state, reward):
         """
         Push a new experience sample into the replay memory
@@ -47,7 +55,7 @@ class ReplayMemory:
 
         """
 
-        experience_sample = Experience(state, action, new_state, reward)
+        experience_sample = ReplayMemory.Experience(state, action, new_state, reward)
         self._buffer.append(experience_sample)
 
     def sample(self, batch_size):
