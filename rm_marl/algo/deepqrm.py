@@ -1,23 +1,28 @@
-from collections import namedtuple, deque
 
+from collections import namedtuple, deque, defaultdict
 import random
 
 
 
 
-class ReplayMemory:
+class ReplayMemoryRM:
     """
-    Experience Replay Memory buffer implementation
+    Experience Replay Memory buffer implementation for Reward Machines
 
     This class implements the circular buffer used to implement the Experience Replay mechanism described by
-    Minh et al. in their seminal paper "Playing Atari with Deep Reinforcement Learning" from 2015.
+    Minh et al. in their seminal paper "Playing Atari with Deep Reinforcement Learning" from 2015. However, it also
+    includes a few modifications that allow it to be conveniently used with in reward machine-based scenarios.
+    Specifically, this implementation grants its users the ability to sample only from the experiences that relate to
+    a specific RM state.
     """
 
     Experience = namedtuple('Experience', [
         'state',
         'action',
-        'next_state',
-        'reward'
+        'reward',
+        'done',
+        'new_state',
+        'new_u'
     ])
 
     def __init__(self, size):
@@ -33,34 +38,68 @@ class ReplayMemory:
         """
 
         self._size = size
-        self._buffer = deque(maxlen=size)
+        self._buffers = defaultdict(self._init_buffer)
+
+    def _init_buffer(self):
+        """
+        Initialize a replay buffer, which can be used to store the experiences relating to any RM state.
+        The size of the buffer is the same specified when this ReplayMemoryRM instance was created.
+
+        Returns
+        -------
+        A new replay buffer
+
+        """
+
+        return deque(maxlen=self._size)
 
     def __len__(self):
         """
-        Return the current number of experience entries in the Replay Memory
+        Return the current total number of experience entries stored in the replay memory
+
+        Returns
+        -------
+        The total number of entries in the memory
         """
 
-        return len(self._buffer)
+        return sum(len(buffer) for buffer in self._buffers.values())
 
-    def push(self, state, action, new_state, reward):
+    def n_entries_for_state(self, u):
+        """
+        Return the number of entries in the memory associated with the given RM state
+
+        Parameters
+        ----------
+        u The RM state of interest
+
+        Returns
+        -------
+        The number of entries associated with the given RM state
+        """
+
+        return len(self._buffers[u])
+
+    def push(self, state, u, action, reward, done, new_state, new_u):
         """
         Push a new experience sample into the replay memory
 
         Parameters
         ----------
-        state The environmental state where the experience began
-        action The action taken by the agent
-        new_state The new state reached by the agent after executing its action
-        reward The reward obtained by the agent in this experience
-
+        state       The environmental state where the experience began
+        u           The reward machine state where the experience began
+        action      The action taken by the agent
+        reward      The reward obtained by the agent in this experience
+        done        True if the episode ended after this experience
+        new_state   The new state reached by the agent after executing its action
+        new_u       The new state reached by the agent's RM after this experience
         """
 
-        experience_sample = ReplayMemory.Experience(state, action, new_state, reward)
-        self._buffer.append(experience_sample)
+        experience_sample = ReplayMemoryRM.Experience(state, action, reward, done, new_state, new_u)
+        self._buffers[u].append(experience_sample)
 
-    def sample(self, batch_size):
+    def sample(self, u, batch_size):
         """
-        Sample a random batch of experiences from the replay memory
+        Sample a random batch of experiences relating to a specific RM state from the replay memory
 
         Note that if a batch is requested with a bigger size than the current number of entries in the replay memory,
         an exception is raised. This makes sure that, if the method returns, the user is always provided an actual
@@ -68,18 +107,19 @@ class ReplayMemory:
 
         Parameters
         ----------
+        u          The RM state of interest
         batch_size The size of the requested batch, in number of samples
 
         Returns
         -------
-        A list of Experience instances
+        A list of Experience instances relating to the given RM state
 
         """
 
-        if len(self._buffer) < batch_size:
-            raise NotEnoughExperiencesError(requested=batch_size, available=len(self._buffer))
+        if len(self._buffers[u]) < batch_size:
+            raise NotEnoughExperiencesError(requested=batch_size, available=len(self._buffers[u]))
 
-        return random.sample(self._buffer, batch_size)
+        return random.sample(self._buffers[u], batch_size)
 
 
 class NotEnoughExperiencesError(Exception):
