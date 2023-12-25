@@ -121,6 +121,14 @@ class ReplayMemoryRM:
 
         return random.sample(self._buffers[u], batch_size)
 
+    def clear(self):
+        """
+        Empty out the replay memory, eliminating every experience it contains for any RM state
+
+        """
+
+        self._buffers.clear()
+
 
 class NotEnoughExperiencesError(Exception):
 
