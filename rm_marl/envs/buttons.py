@@ -204,7 +204,15 @@ class ButtonsRandomLabelingFunctionWrapper(RandomLabelingFunctionWrapper):
     @staticmethod
     def can_open_wall_R_A2_A3(e):
         events = [l for l in e.flatten_trace if l in ("bg", "a2br", "a2lr", "a3br", "a3lr")]
-        return events and "bg" in events and any(l == events[-1] for l in ("a2br", "a3br"))
+        last_events = e.trace[-1]
+        return (
+            # check that a2br or a3br were not just raised in this timestep
+            not any(l in last_events for l in ("a2br", "a3br")) and 
+            # make sure that bg has been pressed in the past
+            events and "bg" in events and 
+            # make sure that the last seen event was the button pressed
+            any(l == events[-1] for l in ("a2br", "a3br"))
+        )
 
     @staticmethod
     def can_open_wall_G_A3(e):
