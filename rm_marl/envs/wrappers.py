@@ -33,6 +33,10 @@ class LabelingFunctionWrapper(gym.Wrapper):
     def get_labels(self, obs: dict, prev_obs: dict):
         raise NotImplementedError("get_labels")
 
+    @abc.abstractmethod
+    def get_all_labels(self):
+        raise NotImplementedError("get_all_labels")
+
     def step(self, action):
         observation, reward, terminated, truncated, info = super().step(action)
         info["labels"] = self.get_labels(observation, self.prev_obs)

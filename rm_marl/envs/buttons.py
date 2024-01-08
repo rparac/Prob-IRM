@@ -138,8 +138,23 @@ class ButtonsEnv(BaseGridEnv):
 
 
 class ButtonsLabelingFunctionWrapper(LabelingFunctionWrapper):
+
+    def get_all_labels(self):
+
+        return [
+            "by",  # Yellow button is pressed
+            "bg",  # Green button is pressed
+            "br"  # Red button is pressed
+            "a2br",  # Agent 2 is on the red button
+            "a2lr",  # Agent 2 left the red button
+            "a3br",  # Agent 3 is on the red button
+            "a3lr",  # Agent 3 left the red button
+            "g"  # The goal was reached
+        ]
+
     def get_labels(self, obs: dict, prev_obs: dict):
         """Returns a modified observation."""
+
         agent_locations = obs
         prev_agent_locations = prev_obs or {}
         labels = []
