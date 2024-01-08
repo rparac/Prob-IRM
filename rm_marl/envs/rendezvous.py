@@ -104,8 +104,22 @@ class RendezVousEnv(BaseGridEnv):
         return all(self.goal_satisfied.values())
 
 class RendezVousLabelingFunctionWrapper(LabelingFunctionWrapper):
+
+    def get_all_labels(self):
+
+        return [
+            "r1",  # Agent 1 is at the randezvous point
+            "nr1",  # Agent 1 left the randezvous point
+            "r2",  # Agent 2 is at the randezvous point
+            "nr2",  # Agent 2 left the randezvous point
+            "r",  # Both agents are at the randezvous point
+            "g1",  # Agent 1 reached its goal
+            "g2"  # Agent 2 reached its goal
+        ]
+
     def get_labels(self, obs: dict, prev_obs: dict):
         """Returns a modified observation."""
+
         agent_locations = obs
         prev_agent_locations = prev_obs or {}
         labels = []
@@ -179,9 +193,21 @@ class RendezVousRandomLabelingFunctionWrapper(RandomLabelingFunctionWrapper):
     @staticmethod
     def rdv_unsatisfied_AND_A1_rdv(e):
         events = [l for l in e.flatten_trace if l in ("r1", "nr1")]
-        return not e.rdv_satisfied and events and events[-1] == "r1"
+        last_events = e.trace[-1]
+        return (
+            not e.rdv_satisfied and 
+            # check that r1 were not just raised in this timestep
+            not "r1" in last_events and 
+            events and events[-1] == "r1"
+        )
     
     @staticmethod
     def rdv_unsatisfied_AND_A2_rdv(e):
         events = [l for l in e.flatten_trace if l in ("r2", "nr2")]
-        return not e.rdv_satisfied and events and events[-1] == "r2"
+        last_events = e.trace[-1]
+        return (
+            not e.rdv_satisfied and 
+            # check that r2 were not just raised in this timestep
+            not "r2" in last_events and 
+            events and events[-1] == "r2"
+        )

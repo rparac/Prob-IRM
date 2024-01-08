@@ -33,6 +33,10 @@ class LabelingFunctionWrapper(gym.Wrapper):
     def get_labels(self, obs: dict, prev_obs: dict):
         raise NotImplementedError("get_labels")
 
+    @abc.abstractmethod
+    def get_all_labels(self):
+        raise NotImplementedError("get_all_labels")
+
     def step(self, action):
         observation, reward, terminated, truncated, info = super().step(action)
         info["labels"] = self.get_labels(observation, self.prev_obs)
@@ -93,14 +97,15 @@ class RandomLabelingFunctionWrapper(gym.Wrapper):
     def step(self, action):
         observation, reward, terminated, truncated, info = super().step(action)
         labels, simulated_env_updates = info.get("labels", []), {}
+        self.trace.append(labels or [])
 
         random_labels = self.get_labels(observation, self.prev_obs)
         for l in random_labels:
             simulated_env_updates[l] = self.random_events[l].env_update
             labels.append(l)
-        
-        self.trace.append(labels or [])
-        info["labels"] = labels
+            self.trace[-1].append(l)
+
+        info["labels"] = self.trace[-1]
         info["env_simulated_updates"] = simulated_env_updates
         return observation, reward, terminated, truncated, info
 
