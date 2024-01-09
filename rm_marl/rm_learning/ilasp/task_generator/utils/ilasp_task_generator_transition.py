@@ -26,7 +26,9 @@ def _generate_initial_state_at_timestep(num_states):
 def _generate_acceptance_rejection_rules(accepting_state, rejecting_state):
     # a trace is accepted if it is at the accepting state in the last timestep (or reject if it is at the rejecting
     # state in the last timestep)
-    stmt = "accept :- last(T), st(T+1, %s).\n" % accepting_state
+    stmt = ""
+    if accepting_state is not None:
+        stmt += "accept :- last(T), st(T+1, %s).\n" % accepting_state
     if rejecting_state is not None:
         stmt += "reject :- last(T), st(T+1, %s).\n\n" % rejecting_state
     return stmt

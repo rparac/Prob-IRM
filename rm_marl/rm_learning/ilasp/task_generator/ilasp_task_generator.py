@@ -13,6 +13,9 @@ def generate_ilasp_task(num_states, accepting_state, rejecting_state, observable
     # statements will not be generated for the rejecting state if there are not deadend examples
     if len(dend_examples) == 0:
         rejecting_state = None
+    # it is possible to have only negative examples. there should not be an accepting state in that case
+    if len(goal_examples) == 0:
+        accepting_state = None
 
     with open(os.path.join(output_folder, output_filename), 'w') as f:
         task = _generate_ilasp_task_str(num_states, accepting_state, rejecting_state, observables, goal_examples,
