@@ -72,7 +72,6 @@ class Trainer:
 
         _ = [a.set_log_folder(os.path.join(logger.log_dir, aid)) for aid, a in self.agents.items()]
 
-        example_update_counter = 0
         for episode in tqdm(range(1, 1 + run_config["total_episodes"])):
             if not run_config["training"]:
                 self.test_episodes += 1
@@ -170,10 +169,7 @@ class Trainer:
                             self.rm_relearned_episodes[env_id] = curr_relearned_episodes
 
                         if run_config["training"]:
-                            # TODO: try out state change logging with multiple envs
-                            #  It will probably require that we track when RM was relearned per agent
                             if interrupt:
-                                example_update_counter += 1
                                 interrupt_episode = True
                                 info["episode"] = {
                                     "l": env.episode_lengths[0],
