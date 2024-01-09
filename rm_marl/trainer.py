@@ -4,6 +4,8 @@ import os
 from collections import defaultdict
 
 import json
+from typing import Dict, Any, List
+
 import joblib
 
 # import joblib
@@ -26,15 +28,16 @@ class Trainer:
 
         # Logs for plots more that SummaryWriter can't represent, so we use matplotlib + SummaryWritter add image
 
-        # Keeps track of all rm states to accurately log if a state was not reached
-        # in a particular episode
-        self.all_recorded_rm_states = set()
-        # from env_id -> [(u -> last_timestep)]
-        self.last_timestep_train_info = {}
-        self.last_timestep_test_info = {}
+        # Keeps track of all rm states in each environment. Used for logging of state transition diagram.
+        self.all_recorded_rm_states: Dict[str, set] = dict()
+        # Stores for each episode in an environment a dictionary of (RM state, timestep) pairs
+        # from env_id -> [{u -> last_timestep}]
+        self.last_timestep_train_info: Dict[str, List[Dict[str, int]]] = {}
+        self.last_timestep_test_info: Dict[str, List[Dict[str, int]]] = {}
 
-        # Contains episodes when the rm was relearned
-        self.rm_relearned_episodes = []
+        # Contains episodes when a RM was relearned:
+        #  Dict[env_id -> List[episode_when_relearned]]
+        self.rm_relearned_episodes: Dict[str, List[int]] = {}
 
     def run(self, run_config: dict):
         log_dir = os.path.join(
@@ -77,6 +80,7 @@ class Trainer:
             episode_losses = defaultdict(list)
             episode_frames = defaultdict(list)
 
+            # seperate for each env_id
             last_timestep_in_u = {}
 
             seed = base_seed + episode - 1
@@ -97,8 +101,13 @@ class Trainer:
                     aid: a for aid, a in self.agents.items() if aid in obs[env_id]
                 }
                 shared_events[env_id] = self._get_shared_events(env_agents[env_id])
+                last_timestep_in_u[env_id] = {}
 
+                self.all_recorded_rm_states[env_id] = set()
+
+            steps_count = 0
             while not all(dones.values()):
+                steps_count += 1
 
                 if run_config["training"]:
                     self.total_steps += 1
@@ -126,16 +135,18 @@ class Trainer:
 
                     labels = info["labels"]
                     agent_labels = {}
-                    _ = [agent_labels.update(self._project_labels(labels, a, aid)) for aid, a in env_agents[env_id].items()]
+                    _ = [agent_labels.update(self._project_labels(labels, a, aid)) for aid, a in
+                         env_agents[env_id].items()]
 
                     if run_config["synchronize"]:
                         synchronized_labels = self._synchronize(shared_events[env_id], agent_labels)
-                        assert all(agent_labels[aid] == synchronized_labels[aid] for aid in env_agents[env_id].keys()), f"Not synchronized!! {agent_labels}, {synchronized_labels}"
+                        assert all(agent_labels[aid] == synchronized_labels[aid] for aid in env_agents[
+                            env_id].keys()), f"Not synchronized!! {agent_labels}, {synchronized_labels}"
                     else:
                         synchronized_labels = agent_labels
 
                     # track state metric for logging
-                    last_timestep_in_u[info["rm_state"]] = steps_count
+                    last_timestep_in_u[env_id][info["rm_state"]] = steps_count
 
                     # update the agent's RM and Q-functions
                     agent_loss = []
@@ -154,7 +165,9 @@ class Trainer:
                         )
 
                         if rm_updated:
-                            self.rm_relearned_episodes.append(episode)
+                            curr_relearned_episodes = self.rm_relearned_episodes.get(env_id, [])
+                            curr_relearned_episodes.append(episode)
+                            self.rm_relearned_episodes[env_id] = curr_relearned_episodes
 
                         if run_config["training"]:
                             # TODO: try out state change logging with multiple envs
@@ -211,19 +224,22 @@ class Trainer:
                     logger.add_scalar(
                         f"{prefix}/reward/{env_id}", np.mean(rewards[env_id]), self.total_steps
                     )
-                    self.all_recorded_rm_states = self.all_recorded_rm_states.union(last_timestep_in_u.keys())
-                    if env_id not in self.last_timestep_train_info:
-                        self.last_timestep_train_info[env_id] = []
-                        self.last_timestep_test_info[env_id] = []
+                    self.all_recorded_rm_states[env_id] = self.all_recorded_rm_states[env_id].union(
+                        last_timestep_in_u[env_id].keys())
+
                     if run_config["training"]:
-                        self.last_timestep_train_info[env_id].append(last_timestep_in_u)
+                        timestep_train_info = self.last_timestep_train_info.get(env_id, [])
+                        timestep_train_info.append(last_timestep_in_u[env_id])
+                        self.last_timestep_train_info[env_id] = timestep_train_info
                     else:
-                        self.last_timestep_test_info[env_id].append(last_timestep_in_u)
+                        timestep_test_info = self.last_timestep_test_info.get(env_id, [])
+                        timestep_test_info.append(last_timestep_in_u[env_id])
+                        self.last_timestep_test_info[env_id] = timestep_test_info
 
                 if episode_frames[env_id]:
                     video = np.array(episode_frames[env_id]).transpose(0, 3, 1, 2)[
-                        np.newaxis, :
-                    ]
+                            np.newaxis, :
+                            ]
                     logger.add_video(f"{prefix}/replay/{env_id}", video, self.total_steps)
 
             if run_config["training"] and episode % run_config["testing_freq"] == 0:
@@ -236,7 +252,6 @@ class Trainer:
                     "seed": run_config["seed"],
                     "synchronize": run_config["synchronize"],
                 }, logger)
-
 
     @staticmethod
     def _project_labels(labels, a, aid):
@@ -291,17 +306,19 @@ class Trainer:
     def create_rm_state_logs(self, logger: SummaryWriter, log_dir: str, total_episodes: int, testing_freq: int):
         # train image generation
         for env_id, train_dicts in self.last_timestep_train_info.items():
-            plt.figure(env_id)
             x_values = np.arange(1, total_episodes + 1)
-            for u in self.all_recorded_rm_states:
+
+            fig_width, fig_height = max(len(x_values) / 8, 6), 6
+            plt.figure(env_id, figsize=(fig_width, fig_height))
+
+            for u in self.all_recorded_rm_states[env_id]:
                 y_values = [u_timestep_dict.get(u, None) for u_timestep_dict in train_dicts]
                 y_values = np.array(y_values)
 
                 plt.plot(x_values, y_values, label=f"u{u}", marker='o', markersize=3)
 
             # Add vertical lines so we know rm state has changed
-            # TODO: Need to make this per env_id
-            for relearn_episode in self.rm_relearned_episodes:
+            for relearn_episode in self.rm_relearned_episodes.get(env_id, []):
                 plt.axvline(x=relearn_episode, color='r', linestyle='--')
 
             plt.xlabel('episode')
@@ -315,16 +332,16 @@ class Trainer:
 
         # test image generation
         for env_id, test_dicts in self.last_timestep_test_info.items():
-            plt.figure(f"{env_id}_2")
             x_values = np.arange(1, self.test_episodes + 1)
-            for u in self.all_recorded_rm_states:
+            fig_width, fig_height = max(len(x_values) / 8, 6), 6
+            plt.figure(f"{env_id}_test", figsize=(fig_width, fig_height))
+            for u in self.all_recorded_rm_states[env_id]:
                 y_values = [u_timestep_dict.get(u, None) for u_timestep_dict in test_dicts]
                 y_values = np.array(y_values)
 
                 plt.plot(x_values, y_values, label=f"u{u}", marker='o', markersize=3)
 
-            # TODO: Need to make this per env_id
-            for relearn_episode in self.rm_relearned_episodes:
+            for relearn_episode in self.rm_relearned_episodes.get(env_id, []):
                 first_ep_with_new_rm = ((relearn_episode - 1) // testing_freq) + 1
                 # Moving the line for better readability
                 first_ep_with_new_rm -= 0.1
@@ -337,8 +354,6 @@ class Trainer:
             plt.savefig(img_path)
             # TODO: same as above
             # logger.add_image(f"eval/last_timestep_in_rm_state/{env_id}", img_path)
-
-            # run_config["testing_freq"]
 
     def save(self, path):
         trainer_path = os.path.join(path, "trainer.pkl")
