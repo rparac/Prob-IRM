@@ -307,7 +307,7 @@ class Trainer:
                                    testing_freq=testing_freq)
 
     def _create_rm_state_logs(self, n_episodes: int, log_dir: str, last_timestep_info: dict, is_test_log: bool,
-                              testing_freq=1):
+                              testing_freq: int=1):
         for env_id, test_dicts in last_timestep_info.items():
             x_values = np.arange(1, n_episodes + 1)
             fig_width, fig_height = max(len(x_values) / 8, 6), 6
