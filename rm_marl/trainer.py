@@ -301,36 +301,17 @@ class Trainer:
     # lines signifying when we relearned the RM.
     def create_rm_state_logs(self, logger: SummaryWriter, log_dir: str, total_episodes: int, testing_freq: int):
         # train image generation
-        for env_id, train_dicts in self.last_timestep_train_info.items():
-            x_values = np.arange(1, total_episodes + 1)
-
-            fig_width, fig_height = max(len(x_values) / 8, 6), 6
-            plt.figure(env_id, figsize=(fig_width, fig_height))
-
-            for u in self.all_recorded_rm_states[env_id]:
-                y_values = [u_timestep_dict.get(u, None) for u_timestep_dict in train_dicts]
-                y_values = np.array(y_values)
-
-                plt.plot(x_values, y_values, label=f"u{u}", marker='o', markersize=3)
-
-            # Add vertical lines so we know rm state has changed
-            for relearn_episode in self.rm_relearned_episodes.get(env_id, []):
-                plt.axvline(x=relearn_episode, color='r', linestyle='--')
-
-            plt.xlabel('episode')
-            plt.ylabel('last timestep in state u')
-            plt.legend()
-            img_path = f"{log_dir}/state_transition_train_{env_id}"
-            plt.savefig(img_path)
-            # TODO: the line below fails https://github.com/pytorch/pytorch/issues/24175
-            #  we should try out to see if it does work on another machine
-            # logger.add_image(f"training/last_timestep_in_rm_state/{env_id}", img_path)
-
+        self._create_rm_state_logs(total_episodes, log_dir, self.last_timestep_train_info, is_test_log=False)
         # test image generation
-        for env_id, test_dicts in self.last_timestep_test_info.items():
-            x_values = np.arange(1, self.test_episodes + 1)
+        self._create_rm_state_logs(self.test_episodes, log_dir, self.last_timestep_test_info, is_test_log=True,
+                                   testing_freq=testing_freq)
+
+    def _create_rm_state_logs(self, n_episodes: int, log_dir: str, last_timestep_info: dict, is_test_log: bool,
+                              testing_freq=1):
+        for env_id, test_dicts in last_timestep_info.items():
+            x_values = np.arange(1, n_episodes + 1)
             fig_width, fig_height = max(len(x_values) / 8, 6), 6
-            plt.figure(f"{env_id}_test", figsize=(fig_width, fig_height))
+            plt.figure(f"{env_id}{'_test' if is_test_log else ''}", figsize=(fig_width, fig_height))
             for u in self.all_recorded_rm_states[env_id]:
                 y_values = [u_timestep_dict.get(u, None) for u_timestep_dict in test_dicts]
                 y_values = np.array(y_values)
@@ -346,10 +327,11 @@ class Trainer:
             plt.xlabel('episode')
             plt.ylabel('last timestep in state u')
             plt.legend()
-            img_path = f"{log_dir}/state_transition_test_{env_id}"
+            img_path = f"{log_dir}/state_transition_{'test' if is_test_log else 'train'}_{env_id}"
             plt.savefig(img_path)
-            # TODO: same as above
-            # logger.add_image(f"eval/last_timestep_in_rm_state/{env_id}", img_path)
+            # TODO: the line below fails https://github.com/pytorch/pytorch/issues/24175
+            #  we should try out to see if it does work on another machine
+            # logger.add_image(f"training/last_timestep_in_rm_state/{env_id}", img_path)
 
     def save(self, path):
         trainer_path = os.path.join(path, "trainer.pkl")
