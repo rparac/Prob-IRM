@@ -412,6 +412,9 @@ class ReplayMemoryRM:
         new_u       The new state reached by the agent's RM after this experience
         """
 
+        assert new_state is not None, 'Tried to push an experience leading to a "None" new env state'
+        assert new_u is not None, 'Tried to push an experience leading to a "None" new RM state'
+
         experience_sample = ReplayMemoryRM.Experience(state, action, reward, done, new_state, new_u)
         self._buffers[u].append(experience_sample)
 
