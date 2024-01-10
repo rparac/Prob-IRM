@@ -6,6 +6,8 @@ import gym
 
 from collections import namedtuple, deque, defaultdict
 import random
+import os
+import os.path
 
 
 from ._base import Algo
@@ -49,7 +51,8 @@ class DeepQRM(Algo):
         self._q_networks = defaultdict(self._init_q_network_pair)
 
         # Replay Memory
-        self._replay_memory = ReplayMemoryRM(replay_size)
+        self._replay_size = replay_size
+        self._replay_memory = ReplayMemoryRM(self._replay_size)
 
         # Learning parameters
         self._batch_size = batch_size
@@ -71,6 +74,9 @@ class DeepQRM(Algo):
         self._learn_calls = 0
         self._target_updates = 0
         self._subpolicy_updates = defaultdict(lambda: 0)
+
+        # Save path to store/load instances
+        self._save_path = None
 
     def _init_q_network(self):
         """
@@ -290,6 +296,70 @@ class DeepQRM(Algo):
         self._target_update_timer = self._target_update_freq
 
         self._np_random, _ = gym.utils.seeding.np_random()
+
+    def set_save_path(self, path, **kwargs):
+
+        assert os.path.isdir(path), f"An invalid save path was specified: {path}"
+        self._save_path = path
+
+    def __getstate__(self):
+        """
+        Pickle-related: return the serializable portion of the instances' state
+
+        See https://docs.python.org/3/library/pickle.html#pickle-state for more info
+        """
+
+        state = self.__dict__.copy()
+
+        # Since the policy and target networks are implemented via PyTorch, we want to
+        # manually handle their loading and saving
+        del state['_q_networks']
+
+        # Similarly, we do not want to store the entire replay buffer
+        del state['_replay_memory']
+
+        # We also need to manually handle the serialization of this attribue
+        # as it relies on a lambda function
+        state['_subpolicy_updates'] = dict(self._subpolicy_updates)
+
+        # Manually store only the policy network parameters as they can be used
+        # to also restore the target networks as well
+        for rm_state, (q_net, _, _) in self._q_networks.items():
+            file = os.path.join(self._save_path, f'subpolicy_{rm_state}.pth')
+            torch.save(q_net.state_dict(), file)
+
+        return state
+
+    def __setstate__(self, state):
+        """
+        Pickle-related: restore the additional state required by the instance
+
+        See https://docs.python.org/3/library/pickle.html#pickle-state for more info
+        """
+
+        self.__dict__.update(state)
+
+        # Create a new, empty Replay Buffer
+        self._replay_memory = ReplayMemoryRM(self._replay_size)
+
+        # Restore the _subpolicy_updates statistics
+        self._subpolicy_updates = defaultdict(lambda: 0, self._subpolicy_updates)
+
+        # Restore the Q-networks based on the files found in the save path
+        self._q_networks = defaultdict(self._init_q_network_pair)
+        for subpolicy_state_file in [f for f in os.listdir(self._save_path) if f.endswith('.pth')]:
+
+            # Load the state dictionary
+            full_path = os.path.join(self._save_path, subpolicy_state_file)
+            subpolicy_state = torch.load(full_path)
+
+            rm_state = int(subpolicy_state_file.removeprefix('subpolicy_').removesuffix('.pth'))
+            subpolicy_network = self._q_networks[rm_state].policy_network
+            subpolicy_network.load_state_dict(subpolicy_state)
+
+        # Finally, propagate all the parameters to the target networks
+        self._update_target_networks()
+        self._target_updates -= 1  # Compensate for the +1 made in _update_target_networks()
 
 
 class DeepQNetwork(nn.Module):

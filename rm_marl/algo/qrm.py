@@ -101,3 +101,14 @@ class QRM(Algo):
             action = self._np_random.choice(best_actions)
 
         return action
+
+    def set_save_path(self, path, **kwargs):
+        """
+        Do nothing
+
+        Since QRM instances can simply be serialized and restore with python's default
+        pickle behaviour, this method is effectively useless. It is, however, implemented to
+        both document this detail and to comply with the Algo interface.
+
+        """
+        pass
