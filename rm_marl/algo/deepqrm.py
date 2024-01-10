@@ -1,8 +1,326 @@
+import numpy as np
+import torch.nn as nn
+import torch
+import gym
+
 
 from collections import namedtuple, deque, defaultdict
 import random
 
 
+from ._base import Algo
+
+
+class DeepQRM(Algo):
+
+    # TODO: Seeding
+
+    RMStatePolicy = namedtuple("RMStatePolicy", [
+        'policy_network',
+        'policy_optimizer',
+        'target_network'
+    ])
+
+    def __init__(
+        self,
+        obs_space: "gym.spaces.Space",
+        action_space: "gym.spaces.Discrete",
+        policy_layers: int = 5,
+        policy_layer_size: int = 64,
+        replay_size: int = 10000,
+        batch_size: int = 32,
+        policy_train_freq: int = 1,
+        target_update_freq: int = 100,
+        gamma: float = 0.9,
+        epsilon: float = 0.1,
+        lr: float = 1e-4
+    ):
+
+        super().__init__()
+
+        # Sub-policies-related parameters
+        self._obs_space = obs_space
+        self._dim_obs = gym.spaces.utils.flatdim(obs_space)
+        self._policy_layers = policy_layers
+        self._layers_size = policy_layer_size
+        self._num_actions = action_space.n
+
+        # Mappings from RM states to RMStatePolicy instances
+        self._q_networks = defaultdict(self._init_q_network_pair)
+
+        # Replay Memory
+        self._replay_memory = ReplayMemoryRM(replay_size)
+
+        # Learning parameters
+        self._batch_size = batch_size
+        self._target_update_freq = target_update_freq
+        self._policy_train_freq = policy_train_freq
+        self._gamma = gamma
+        self._epsilon = epsilon
+        self._learning_rate = lr
+
+        # Internal parameters used to make decisions
+        self._policies_train_timer = self._policy_train_freq
+        self._target_update_timer = self._target_update_freq
+
+        # PRNGs
+        self._np_random, _ = gym.utils.seeding.np_random()
+
+        # Statistics
+        self._learn_calls = 0
+        self._target_updates = 0
+        self._subpolicy_updates = defaultdict(lambda: 0)
+
+    def _init_q_network(self):
+        """
+        Initialize a new Q-Network, using the structural parameters given when this DeepQRM instance
+        was created.
+
+        Returns
+        -------
+        A newly created DeepQNetwork instance
+        """
+
+        return DeepQNetwork(
+            self._dim_obs,
+            self._policy_layers,
+            self._layers_size,
+            self._num_actions
+        )
+
+    def _init_q_network_pair(self):
+        """
+        Initialize a pair of Q-network
+
+        Specifically, this method returns a pair of two Q-networks, where the first can be used as a policy
+        network for any given RM state, while the second can be used as its associated target network.
+
+        Returns
+        -------
+        A pair of DeepQNetworks (policy_network, target_network)
+        """
+
+        # Create the neural networks
+        policy_network = self._init_q_network()
+        target_network = self._init_q_network()
+
+        # Create the optimizer that will update the policy network parameters
+        policy_optimizer = torch.optim.AdamW(
+            policy_network.parameters(),
+            lr=self._learning_rate,
+            amsgrad=True
+        )
+
+        # Synch the weights from the policy network to the target network
+        policy_state = policy_network.state_dict()
+        target_network.load_state_dict(policy_state)
+
+        # Disable computation for gradients for target network, as its weights
+        # are not trained but copied periodically from the policy network
+        target_network.requires_grad_(False)
+
+        return DeepQRM.RMStatePolicy(policy_network, policy_optimizer, target_network)
+
+    def _update_target_networks(self):
+        """
+        Update the weghts of each target network by copying the weights of their associated policy networks.
+        """
+
+        self._target_updates += 1
+
+        for rm_state, (q_net, _, t_net) in self._q_networks.items():
+            q_net_state = q_net.state_dict()
+            t_net.load_state_dict(q_net_state)
+
+    def learn(self, state, u, action, reward, done, next_state, next_u):
+
+        self._learn_calls += 1
+
+        # Convert s, s' and reward to torch.Tensor before storing them, to avoid the need for
+        # carrying out the conversion when sampling from the replay memory
+        flat_state = torch.as_tensor(
+            gym.spaces.utils.flatten(self._obs_space, state),
+            dtype=torch.float
+        )
+        flat_next_state = torch.as_tensor(
+            gym.spaces.utils.flatten(self._obs_space, next_state),
+            dtype=torch.float
+        )
+        reward = torch.as_tensor([reward])
+        action = torch.as_tensor([action])
+
+        # Add experience to the replay buffer
+        self._replay_memory.push(flat_state, u, action, reward, done, flat_next_state, next_u)
+
+        # Check if the sub-policies need to be trained
+        self._policies_train_timer -= 1
+        if self._policies_train_timer > 0:
+            return np.NAN
+
+        # On each actual learning step, update the policy associated with every RM state
+        losses = []
+        for rm_state in self._q_networks.copy().keys():
+            loss = self._subpolicy_training_step(rm_state)
+            losses.append(loss)
+
+        # Training has been done: reset the corresponding timer
+        self._policies_train_timer = self._policy_train_freq
+
+        # Check if the target networks need to be updated
+        self._target_update_timer -= 1
+        if self._target_update_timer == 0:
+            self._update_target_networks()
+            self._target_update_timer = self._target_update_freq
+
+        # The overall loss is the mean loss obtained among all sub-policies
+        valid_losses = [loss for loss in losses if loss is not None]
+        return sum(valid_losses) / len(valid_losses) if len(valid_losses) > 0 else np.NAN
+
+    def _subpolicy_training_step(self, rm_state):
+        """
+        Perform a training iteration for the sub-policy associated with the given RM state
+
+        Note that the sub-policy will only be trained if the replay memory contains a number of experiences
+        associated with the given RM state higher than the batch size requested when the DeepQRM instance
+        was initialized.
+
+        Parameters
+        ----------
+        rm_state The reward machine state associated with the sub-policy that needs to be trained.
+
+        Returns
+        -------
+        The value for the loss function obtained in the training step
+
+        """
+
+        self._subpolicy_updates[rm_state] += 1
+
+        # Only learn if we have enough experiences to form a batch
+        if self._replay_memory.n_entries_for_state(rm_state) < self._batch_size:
+            return None
+
+        q_net, optimizer, _ = self._q_networks[rm_state]
+
+        batch = self._replay_memory.sample(rm_state, self._batch_size)
+        states, actions, rewards, dones, next_states, next_rm_states = tuple(zip(*batch))
+        states = torch.stack(states)
+        rewards = torch.stack(rewards)
+        actions = torch.stack(actions)
+        next_states = torch.stack(next_states)
+
+        # Use the policy network to compute the Q-value estimates for each (s, a) pair
+        q_estimates = q_net(states).gather(1, actions)
+
+        # Determine which s' and u' are not terminal states
+        non_terminal_mask = [not d for d in dones]
+        non_terminal_next_states = next_states[non_terminal_mask]
+        non_terminal_next_rm_states = [u for u, d in zip(next_rm_states, dones) if not d]
+
+        # Gather the values predicted by the target network associated with the next RM states of each experience
+        target_values = torch.stack([
+            self._q_networks[u].target_network(s).max().unsqueeze(0)
+            for s, u
+            in zip(non_terminal_next_states, non_terminal_next_rm_states)
+        ])
+
+        # Compute the value estimates V(s') = max_{a'} Q(s', a') for next states according to the target network
+        # By definition, V(s) = 0 for a terminal state s
+        next_states_values = torch.zeros((self._batch_size, 1))
+        next_states_values[non_terminal_mask] = target_values
+
+        # Compute the Q-values we expected to produce with our policy network
+        expected_q_estimates = (self._gamma * next_states_values) + rewards
+        loss = nn.MSELoss()(q_estimates, expected_q_estimates)
+
+        # Reset gradients to zero to avoid being influenced by previous batches
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        return loss.item()
+
+    def action(self, state, u, greedy: bool = True):
+        """
+        Compute an action to be taken based on the state of the policy
+
+        The action is computed following an epsilon-greedy strategy based on the value for epsilon given at the time
+        the DeepQRM instance was created.
+
+        Parameters
+        ----------
+        state The current environmental state
+        u The current agent's RM state
+        greedy Ignored parameter; needed for compatibility with Trainer code # TODO: Add action-selection softmax
+
+        Returns
+        -------
+        An action, selected according to an epsilon-greedy strategy
+
+        """
+
+        if self._np_random.random() < self._epsilon:
+            return self._np_random.choice(range(self._num_actions))
+
+        else:
+            flat_state = torch.as_tensor(
+                gym.spaces.utils.flatten(self._obs_space, state),
+                dtype=torch.float
+            )
+            action_values = self._q_networks[u].policy_network(flat_state)
+            best_action_value = action_values.max()
+            best_actions_mask = action_values == best_action_value
+            best_actions = [t.item() for t in torch.nonzero(best_actions_mask, as_tuple=True)]
+            return self._np_random.choice(best_actions)
+
+    def reset(self):
+        """
+        Resets the DeepQRM policy to its initial state
+
+        Invoking this method discards all the experiences contained in the replay memory and every sub-policy
+        trained so far. This allows the instance to be re-used without the need for creating a new one.
+
+        """
+
+        self._q_networks.clear()
+        self._replay_memory.clear()
+
+        self._policies_train_timer = self._policy_train_freq
+        self._target_update_timer = self._target_update_freq
+
+        self._np_random, _ = gym.utils.seeding.np_random()
+
+
+class DeepQNetwork(nn.Module):
+
+    def __init__(self, dim_obs, num_layers, layer_size, num_actions):
+        super().__init__()
+
+        # Initialize input layer
+        self._input_layer = nn.Sequential(
+            nn.Linear(dim_obs, layer_size),
+            nn.ReLU()
+        )
+
+        # Initialize hidden layers
+        self._hidden_layers = nn.Sequential()
+        for i in range(num_layers):
+            self._hidden_layers.append(nn.Linear(layer_size, layer_size))
+            self._hidden_layers.append(nn.ReLU())
+
+        # Initialize output layer: since we produce Q-values, not action probabilities,
+        # we resort to a linear output layer
+        self._output_layer = nn.Linear(layer_size, num_actions)
+
+        # For ease of use, concatenate all the layers in a single Sequential module
+        self._model = nn.Sequential(
+            self._input_layer,
+            self._hidden_layers,
+            self._output_layer
+        )
+
+    def forward(self, x):
+        return self._model(x)
 
 
 class ReplayMemoryRM:
