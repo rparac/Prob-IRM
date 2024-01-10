@@ -67,6 +67,7 @@ class DeepQRM(Algo):
         self._np_random, _ = gym.utils.seeding.np_random()
 
         # Statistics
+        # NB: These are NOT reset when self.reset() is called
         self._learn_calls = 0
         self._target_updates = 0
         self._subpolicy_updates = defaultdict(lambda: 0)
