@@ -1,3 +1,13 @@
+"""
+Implements the Mining environment introduced in the paper
+Noisy Symbolic Abstractions for Deep RL: A case study with Reward Machines.
+
+This is a simple single agent environment. The goal of the task is to dig gold and bring it
+back to the depot(goal). The episode terminates when the agent reaches the depot. The agent
+gets a positive reward only when it is back in the terminal state with gold
+"""
+
+
 from enum import IntEnum
 
 import gymnasium
