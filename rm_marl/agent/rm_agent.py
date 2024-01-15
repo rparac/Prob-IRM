@@ -2,6 +2,7 @@ import os
 from typing import TYPE_CHECKING, Optional
 
 from ..algo import QRM
+from ..rm_transition.rm_transitioner import RMTransitioner
 
 if TYPE_CHECKING:
     from ..algo import Algo
@@ -10,13 +11,14 @@ if TYPE_CHECKING:
 
 class RewardMachineAgent:
     def __init__(
-        self, agent_id: str, rm: "RewardMachine", algo_cls: "Algo" = QRM, algo_kws: dict = None
+            self, agent_id: str, rm_transitioner: RMTransitioner, algo_cls: "Algo" = QRM, algo_kws: dict = None
     ):
         self.agent_id = agent_id
         algo_kws = algo_kws or {}
         self.algo = algo_cls(**algo_kws)
-        self.rm = rm
+        self.rm_transitioner = rm_transitioner
         self._log_folder = None
+        self.u = None
 
         self.reset()
 
@@ -32,7 +34,7 @@ class RewardMachineAgent:
         self._log_folder = folder
 
     def reset(self, seed: Optional[int] = None):
-        self.u = self.rm.u0
+        self.u = self.rm_transitioner.get_initial_state()
 
     def action(self, state, greedy: bool = False, **algo_args):
         return self.algo.action(state, self.u, greedy=greedy, **algo_args)
@@ -41,10 +43,10 @@ class RewardMachineAgent:
         return self.algo.learn(state, u, action, reward, done, next_state, next_u)
 
     def update_agent(
-        self, state, action, reward, terminated, truncated, next_state, labels, learning=True
+            self, state, action, reward, terminated, truncated, next_state, labels, learning=True
     ):
         loss = None
-        next_u = self.rm.get_next_state(self.u, labels)
+        next_u = self.rm_transitioner.get_next_state(self.u, labels)
 
         if learning:
             loss = self.learn(
@@ -56,3 +58,11 @@ class RewardMachineAgent:
 
     def project_labels(self, labels):
         return tuple(e for e in labels if e in self.rm.get_valid_events())
+
+    @property
+    def rm(self):
+        return self.rm_transitioner.rm
+
+    @rm.setter
+    def rm(self, new_value):
+        self.rm_transitioner.rm = new_value

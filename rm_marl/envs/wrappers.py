@@ -8,6 +8,7 @@ import gym
 from gym.wrappers import RecordEpisodeStatistics, TimeLimit
 
 from ..reward_machine import RewardMachine
+from ..rm_transition.rm_transitioner import RMTransitioner
 
 
 class NumberStepsDiscountedRewardWrapper(gym.Wrapper):
@@ -130,8 +131,8 @@ class AutomataWrapper(gym.Wrapper):
 
     def __init__(
         self, 
-        env: gym.Env, 
-        rm: "RewardMachine", 
+        env: gym.Env,
+        rm_transitioner: RMTransitioner,
         label_mode: LabelMode = LabelMode.ALL,
         termination_mode: TerminationMode = TerminationMode.RM
     ):
@@ -149,8 +150,8 @@ class AutomataWrapper(gym.Wrapper):
         self.label_mode = label_mode
         self.termination_mode = termination_mode
 
-        self.rm = rm
-        self.u = self.rm.u0
+        self.rm_transitioner = rm_transitioner
+        self.u = None
         super().__init__(env)
 
     def filter_labels(self, labels, u):
@@ -171,7 +172,7 @@ class AutomataWrapper(gym.Wrapper):
 
         info["labels"] = self._apply_simulated_updates(info["labels"], simulated_updates)
         
-        u_next = self.rm.get_next_state(self.u, info["labels"])
+        u_next = self.rm_transitioner.get_next_state(self.u, info["labels"])
         reward = self._get_reward(reward, u_next)
         self.u = u_next
 
@@ -201,13 +202,13 @@ class AutomataWrapper(gym.Wrapper):
 
     def reset(self, **kwargs):
         obs, info = super().reset(**kwargs)
-        self.u = self.rm.u0
+        self.u = self.rm_transitioner.get_initial_state()
 
         info["labels"] = self.filter_labels(info.get("labels", {}), self.u)
         simulated_updates = info.pop("env_simulated_updates", {})
         info["labels"] = self._apply_simulated_updates(info["labels"], simulated_updates)
         
-        u_next = self.rm.get_next_state(self.u, info["labels"])
+        u_next = self.rm_transitioner.get_next_state(self.u, info["labels"])
         self.u = u_next
 
         info["rm_state"] = self.u
