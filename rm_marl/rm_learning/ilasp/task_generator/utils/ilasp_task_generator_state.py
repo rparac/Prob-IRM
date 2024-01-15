@@ -2,7 +2,8 @@
 
 def get_state_names(num_states, accepting_state, rejecting_state):
     states = ["u" + str(i) for i in range(num_states - 2)]
-    states.append(accepting_state)
+    if accepting_state is not None:
+        states.append(accepting_state)
     if rejecting_state is not None:
         states.append(rejecting_state)
     return states
