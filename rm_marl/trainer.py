@@ -70,6 +70,8 @@ class Trainer:
         losses = defaultdict(list)
         rewards = defaultdict(list)
 
+        self.all_recorded_rm_states = self.all_recorded_rm_states or {env_id: set() for env_id in envs.keys()}
+
         _ = [a.set_log_folder(os.path.join(logger.log_dir, aid)) for aid, a in self.agents.items()]
 
         for episode in tqdm(range(1, 1 + run_config["total_episodes"])):
@@ -101,8 +103,6 @@ class Trainer:
                 }
                 shared_events[env_id] = self._get_shared_events(env_agents[env_id])
                 last_timestep_in_u[env_id] = {}
-
-                self.all_recorded_rm_states[env_id] = set()
 
             steps_count = 0
             while not all(dones.values()):
