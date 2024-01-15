@@ -11,19 +11,19 @@ LOGGER = getLogger(__name__)
 
 
 class ILASPLearner(RMLearner):
-    def __init__(self, agent_id, init_rm_num_states = None):
+    def __init__(self, agent_id, init_rm_num_states=None):
         super().__init__(agent_id)
 
         self.init_rm_num_states = init_rm_num_states
         self.rm_num_states = init_rm_num_states
-        
+
         self._previous_positive_examples = None
         self._previous_negative_examples = None
         self._previous_incomplete_examples = None
         self._previous_rm_num_states = None
 
     def learn(
-        self, observables, rm, positive_examples, negative_examples, incomplete_examples
+            self, observables, rm, positive_examples, negative_examples, incomplete_examples
     ):
         return self._update_reward_machine(
             observables,
@@ -36,30 +36,35 @@ class ILASPLearner(RMLearner):
     def process_examples(self, examples):
         return sorted(set(examples), key=len)
 
+    # We assume that the set of examples is strictly increasing. So, length checking is sufficient to check for
+    # equality.
     def _have_changed(self, positive_examples, negative_examples, incomplete_examples):
-        if self._previous_positive_examples is None or set(positive_examples) != self._previous_positive_examples:
+        # if self._previous_positive_examples is None or set(positive_examples) != self._previous_positive_examples:
+        if self._previous_positive_examples is None or len(positive_examples) != len(self._previous_positive_examples):
             return True
-        if self._previous_negative_examples is None or set(negative_examples) != self._previous_negative_examples:
+        if self._previous_negative_examples is None or len(negative_examples) != len(self._previous_negative_examples):
             return True
-        if self._previous_incomplete_examples is None or set(incomplete_examples) != self._previous_incomplete_examples:
+        if self._previous_incomplete_examples is None or len(incomplete_examples) != len(
+                self._previous_incomplete_examples):
             return True
         return False
 
     def _update_reward_machine(
-        self,
-        observables,
-        rm,
-        positive_examples,
-        negative_examples,
-        incomplete_examples,
-        rm_num_states=None,
+            self,
+            observables,
+            rm,
+            positive_examples,
+            negative_examples,
+            incomplete_examples,
+            rm_num_states=None,
     ):
         LOGGER.debug(f"[{self.agent_id}]`_update_reward_machine`")
 
         if not positive_examples and not negative_examples:
             LOGGER.debug(f"[{self.agent_id}] No positive and no negative examples")
 
-        rm_num_states = (rm_num_states or self.rm_num_states or min(len(t) for t in itertools.chain(positive_examples, negative_examples)) + 2)
+        rm_num_states = (rm_num_states or self.rm_num_states or min(
+            len(t) for t in itertools.chain(positive_examples, negative_examples)) + 2)
         # Keep track of the number of states used.
         # Otherwise, iterative deepening would be rerun for every state
         self.rm_num_states = rm_num_states
@@ -133,12 +138,12 @@ class ILASPLearner(RMLearner):
             )
 
     def _generate_ilasp_task(
-        self,
-        observables,
-        positive_examples,
-        negative_examples,
-        incomplete_examples,
-        rm_num_states,
+            self,
+            observables,
+            positive_examples,
+            negative_examples,
+            incomplete_examples,
+            rm_num_states,
     ):
         ilasp_task_filename = f"task_{self.rm_learning_counter}"
 
