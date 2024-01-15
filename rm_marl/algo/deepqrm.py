@@ -353,7 +353,14 @@ class DeepQRM(Algo):
             full_path = os.path.join(self._save_path, subpolicy_state_file)
             subpolicy_state = torch.load(full_path)
 
-            rm_state = int(subpolicy_state_file.removeprefix('subpolicy_').removesuffix('.pth'))
+            rm_state_str = subpolicy_state_file.removeprefix('subpolicy_').removesuffix('.pth')
+
+            # Handle both integer and string-based RM state IDs
+            try:
+                rm_state = int(rm_state_str)
+            except ValueError:
+                rm_state = rm_state_str
+
             subpolicy_network = self._q_networks[rm_state].policy_network
             subpolicy_network.load_state_dict(subpolicy_state)
 
