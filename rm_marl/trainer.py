@@ -151,7 +151,7 @@ class Trainer:
                         most_likely_state_idx = np.argmax(most_likely_state)
                         curr_a = list(env_agents[env_id].values())[0]
                         most_likely_state = curr_a.rm.states[most_likely_state_idx]
-                    last_timestep_in_u[most_likely_state] = steps_count
+                    last_timestep_in_u[env_id][most_likely_state] = steps_count
 
                     # update the agent's RM and Q-functions
                     agent_loss = []
