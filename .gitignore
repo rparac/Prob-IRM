@@ -139,3 +139,6 @@ outputs/
 
 # Logs
 logs/
+
+# Pycharm
+.idea/
