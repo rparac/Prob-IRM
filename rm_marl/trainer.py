@@ -326,7 +326,8 @@ class Trainer:
                 y_values = [u_timestep_dict.get(u, None) for u_timestep_dict in test_dicts]
                 y_values = np.array(y_values)
 
-                plt.plot(x_values, y_values, label=f"u{u}", marker='o', markersize=3)
+                label = f"u{u}" if isinstance(u, int) else u
+                plt.plot(x_values, y_values, label=label, marker='o', markersize=3)
 
             for relearn_episode in self.rm_relearned_episodes.get(env_id, []):
                 first_ep_with_new_rm = ((relearn_episode - 1) // testing_freq) + 1
