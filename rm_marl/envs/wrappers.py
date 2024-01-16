@@ -178,6 +178,10 @@ class AutomataWrapper(gym.Wrapper):
         terminated = self._get_terminated(terminated)
         info["rm_state"] = self.u
 
+        # Assume every trace is positive unless otherwise defined
+        if "is_positive_trace" not in info:
+            info["is_positive_trace"] = True
+
         return observation, reward, terminated, truncated, info
 
     def _get_reward(self, reward, u_next):

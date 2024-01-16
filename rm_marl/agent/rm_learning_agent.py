@@ -113,12 +113,13 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         reward,
         terminated,
         truncated,
+        is_positive_trace,
         next_state,
         labels,
         learning=True,
     ):
         loss, interrupt = super().update_agent(
-            state, action, reward, terminated, truncated, next_state, labels, learning
+            state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning
         )
 
         if learning:
@@ -130,9 +131,8 @@ class RewardMachineLearningAgent(RewardMachineAgent):
             else:
                 seq = self.trace.flatten_labels_sequence
             if terminated or truncated:
-                is_positive = reward > 0
                 examples_updated = self._update_examples(
-                    seq, terminated, is_positive
+                    seq, terminated, is_positive_trace
                 )
                 if examples_updated:
                     candidate_rm = self.rm_learner.learn(
