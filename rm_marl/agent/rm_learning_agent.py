@@ -77,7 +77,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         self.trace = TraceTracker()
         self.incomplete_examples = []
         self.positive_examples = []
-        self.negative_examples = []
+        self.dend_examples = []
 
         rm = self._default_rm()
 
@@ -98,7 +98,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
     def observables(self):
         union = set((l for e in self.incomplete_examples for ls in e for l in ls)).union(
             set((l for e in self.positive_examples for ls in e for l in ls))).union(
-            set((l for e in self.negative_examples for ls in e for l in ls))
+            set((l for e in self.dend_examples for ls in e for l in ls))
         )
         return union
 
@@ -139,7 +139,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                         self.observables,
                         self.rm,
                         self.positive_examples,
-                        self.negative_examples,
+                        self.dend_examples,
                         self.incomplete_examples,
                     )
                     if candidate_rm:
@@ -153,7 +153,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                         self.observables,
                         self.rm,
                         self.positive_examples,
-                        self.negative_examples,
+                        self.dend_examples,
                         self.incomplete_examples
                     )
                     if candidate_rm:
@@ -174,7 +174,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
             if positive:
                 self.positive_examples.append(trace)
             else:
-                self.negative_examples.append(trace)
+                self.dend_examples.append(trace)
             for i in range(1, len(trace)):
                 self.incomplete_examples.append(trace[:i])
         else:

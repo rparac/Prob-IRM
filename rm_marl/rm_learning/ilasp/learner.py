@@ -18,18 +18,18 @@ class ILASPLearner(RMLearner):
         self.rm_num_states = init_rm_num_states
 
         self._previous_positive_examples = None
-        self._previous_negative_examples = None
+        self._previous_dend_examples = None
         self._previous_incomplete_examples = None
         self._previous_rm_num_states = None
 
     def learn(
-            self, observables, rm, positive_examples, negative_examples, incomplete_examples
+            self, observables, rm, positive_examples, dend_examples, incomplete_examples
     ):
         return self._update_reward_machine(
             observables,
             rm,
             self.process_examples(positive_examples),
-            self.process_examples(negative_examples),
+            self.process_examples(dend_examples),
             self.process_examples(incomplete_examples),
         )
 
@@ -38,11 +38,11 @@ class ILASPLearner(RMLearner):
 
     # We assume that the set of examples is strictly increasing. So, length checking is sufficient to check for
     # equality.
-    def _have_changed(self, positive_examples, negative_examples, incomplete_examples):
+    def _have_changed(self, positive_examples, dend_examples, incomplete_examples):
         # if self._previous_positive_examples is None or set(positive_examples) != self._previous_positive_examples:
         if self._previous_positive_examples is None or len(positive_examples) != len(self._previous_positive_examples):
             return True
-        if self._previous_negative_examples is None or len(negative_examples) != len(self._previous_negative_examples):
+        if self._previous_dend_examples is None or len(dend_examples) != len(self._previous_dend_examples):
             return True
         if self._previous_incomplete_examples is None or len(incomplete_examples) != len(
                 self._previous_incomplete_examples):
@@ -54,28 +54,28 @@ class ILASPLearner(RMLearner):
             observables,
             rm,
             positive_examples,
-            negative_examples,
+            dend_examples,
             incomplete_examples,
             rm_num_states=None,
     ):
         LOGGER.debug(f"[{self.agent_id}]`_update_reward_machine`")
 
-        if not positive_examples and not negative_examples:
-            LOGGER.debug(f"[{self.agent_id}] No positive and no negative examples")
+        if not positive_examples and not dend_examples:
+            LOGGER.debug(f"[{self.agent_id}] No positive and no dend examples")
 
         rm_num_states = (rm_num_states or self.rm_num_states or min(
-            len(t) for t in itertools.chain(positive_examples, negative_examples)) + 2)
+            len(t) for t in itertools.chain(positive_examples, dend_examples)) + 2)
         # Keep track of the number of states used.
         # Otherwise, iterative deepening would be rerun for every state
         self.rm_num_states = rm_num_states
 
-        if (not self._have_changed(positive_examples, negative_examples, incomplete_examples)
+        if (not self._have_changed(positive_examples, dend_examples, incomplete_examples)
                 and rm_num_states == self._previous_rm_num_states):
             LOGGER.debug(f"[{self.agent_id}] Examples haven't changed")
             return
         else:
             self._previous_positive_examples = set(positive_examples)
-            self._previous_negative_examples = set(negative_examples)
+            self._previous_dend_examples = set(dend_examples)
             self._previous_incomplete_examples = set(incomplete_examples)
             self._previous_rm_num_states = rm_num_states
 
@@ -89,7 +89,7 @@ class ILASPLearner(RMLearner):
         self._generate_ilasp_task(
             observables,
             positive_examples,
-            negative_examples,
+            dend_examples,
             incomplete_examples,
             rm_num_states,
         )
@@ -111,7 +111,7 @@ class ILASPLearner(RMLearner):
                 candidate_rm.set_u0("u0")
                 if positive_examples:
                     candidate_rm.set_uacc("u_acc")
-                if negative_examples:
+                if dend_examples:
                     candidate_rm.set_urej("u_rej")
 
                 if candidate_rm != rm:
@@ -128,7 +128,7 @@ class ILASPLearner(RMLearner):
                     observables,
                     rm,
                     positive_examples,
-                    negative_examples,
+                    dend_examples,
                     incomplete_examples,
                     rm_num_states=(rm_num_states + 1) or self.rm_num_states,
                 )
@@ -141,7 +141,7 @@ class ILASPLearner(RMLearner):
             self,
             observables,
             positive_examples,
-            negative_examples,
+            dend_examples,
             incomplete_examples,
             rm_num_states,
     ):
@@ -155,7 +155,7 @@ class ILASPLearner(RMLearner):
             "u_rej",
             observables,
             sorted(positive_examples),
-            sorted(negative_examples),
+            sorted(dend_examples),
             sorted(incomplete_examples),
             self.log_folder,
             ilasp_task_filename,
