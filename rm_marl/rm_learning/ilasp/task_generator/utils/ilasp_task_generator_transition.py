@@ -2,8 +2,8 @@ from ...ilasp_common import CONNECTED_STR, N_TRANSITION_STR, generate_injected_b
 from ..utils.ilasp_task_generator_example import get_longest_example_length
 
 
-def generate_timestep_statements(goal_examples, neg_examples, inc_examples):
-    stmt = "all_steps(0..%d).\n" % get_longest_example_length(goal_examples, neg_examples, inc_examples)
+def generate_timestep_statements(goal_examples, dend_examples, inc_examples):
+    stmt = "all_steps(0..%d).\n" % get_longest_example_length(goal_examples, dend_examples, inc_examples)
     stmt += "step(T) :- all_steps(T), last(U), T<U+1.\n\n"
     return stmt
 
@@ -26,7 +26,9 @@ def _generate_initial_state_at_timestep(num_states):
 def _generate_acceptance_rejection_rules(accepting_state, rejecting_state):
     # a trace is accepted if it is at the accepting state in the last timestep (or reject if it is at the rejecting
     # state in the last timestep)
-    stmt = "accept :- last(T), st(T+1, %s).\n" % accepting_state
+    stmt = ""
+    if accepting_state is not None:
+        stmt += "accept :- last(T), st(T+1, %s).\n" % accepting_state
     if rejecting_state is not None:
         stmt += "reject :- last(T), st(T+1, %s).\n\n" % rejecting_state
     return stmt

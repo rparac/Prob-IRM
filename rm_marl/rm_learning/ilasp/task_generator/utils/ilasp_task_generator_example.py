@@ -1,14 +1,14 @@
 from ...ilasp_common import OBS_STR, generate_injected_statement
 
 
-def generate_examples(goal_examples, neg_examples, inc_examples):
-    is_rejecting = False
+def generate_examples(goal_examples, dend_examples, inc_examples):
+    is_rejecting = len(dend_examples) > 0
 
     examples = _generate_goal_examples(goal_examples, is_rejecting)
-    examples += _generate_neg_examples(neg_examples)
+    examples += _generate_dend_examples(dend_examples)
     examples += _generate_incomplete_examples(inc_examples, is_rejecting) + "\n"
     examples += (
-        _generate_examples_injection(goal_examples, neg_examples, inc_examples) + "\n"
+            _generate_examples_injection(goal_examples, dend_examples, inc_examples) + "\n"
     )
     return examples
 
@@ -37,10 +37,10 @@ def _generate_goal_examples(examples, is_rejecting):
     return example_str
 
 
-def _generate_neg_examples(examples):
+def _generate_dend_examples(examples):
     example_str = ""
     for example in examples:
-        example_str += "#neg({accept}, {}, {\n"
+        example_str += "#pos({reject}, {accept}, {\n"
         example_str += _generate_example(example)
         example_str += "}).\n\n"
     return example_str

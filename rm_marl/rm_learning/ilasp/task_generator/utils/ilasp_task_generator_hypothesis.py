@@ -76,7 +76,8 @@ def _generate_mode_bias(accepting_state, rejecting_state):
     stmt += "#bias(\":- head(%s(X, X, _, _)).\").\n" % N_TRANSITION_STR
 
     # avoid learning transitions from accepting and rejecting states
-    stmt += "#bias(\":- head(%s(%s, _, _, _)).\").\n" % (N_TRANSITION_STR, accepting_state)
+    if accepting_state is not None:
+        stmt += "#bias(\":- head(%s(%s, _, _, _)).\").\n" % (N_TRANSITION_STR, accepting_state)
     if rejecting_state is not None:
         stmt += "#bias(\":- head(%s(%s, _, _, _)).\").\n" % (N_TRANSITION_STR, rejecting_state)
     stmt += "\n"
