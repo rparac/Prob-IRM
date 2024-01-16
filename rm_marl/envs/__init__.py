@@ -23,3 +23,10 @@ register(
     max_episode_steps=300,
     disable_env_checker=True
 )
+
+register(
+    id='rm-marl/Mining-v0',
+    entry_point='rm_marl.envs.mining:MiningEnv',
+    max_episode_steps=300,
+    disable_env_checker=True,
+)
