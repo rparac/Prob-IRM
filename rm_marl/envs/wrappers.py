@@ -212,6 +212,9 @@ class AutomataWrapper(gym.Wrapper):
         super().__init__(env)
 
     def filter_labels(self, labels, u):
+        if isinstance(labels, dict):
+            return {e: v for e, v in labels.items() if self._is_valid_event(e, u)}
+
         return [e for e in labels if self._is_valid_event(e, u)]
 
     def _is_valid_event(self, event, u):

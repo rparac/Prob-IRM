@@ -1,67 +1,18 @@
-from itertools import groupby
-from typing import TYPE_CHECKING, Optional
-from collections import OrderedDict
+from typing import TYPE_CHECKING, Optional, Callable
 
 from ..algo import QRM
 from ..reward_machine import RewardMachine
-from ..rm_learning import ILASPLearner, DAFSALearner, AlergiaLearner, S2SLearner
+from ..rm_learning import ILASPLearner, DAFSALearner, S2SLearner
 from ..rm_transition.rm_transitioner import RMTransitioner
 from ..utils.logging import getLogger
 from .rm_agent import RewardMachineAgent
+from rm_marl.rm_learning.trace_tracker import TraceTracker
 
 if TYPE_CHECKING:
     from ..algo import Algo
-    from ..reward_machine import RewardMachine
     from ..rm_learning import RMLearner
 
 LOGGER = getLogger(__name__)
-
-
-class TraceTracker:
-    def __init__(self) -> None:
-        self.trace = []
-        self.obs = []
-
-        self._hash_state_mapping = OrderedDict()
-
-    def reset(self):
-        self.trace.clear()
-        self.obs.clear()
-
-    def update(self, labels, obs):
-        self.trace.append(self._process_label(labels))
-        self.obs.append(self._process_obs(obs))
-
-    def _process_label(self, labels):
-        # TODO check or remove that
-        # assert len(labels) < 2, f"Assumption that there is only one label at a time: [{labels}]"
-        return labels or []
-
-    def _process_obs(self, obs):
-        state_hash = hash(str(obs))
-        if state_hash not in self._hash_state_mapping:
-            self._hash_state_mapping[state_hash] = obs
-        return list(self._hash_state_mapping.keys()).index(state_hash) + 1
-
-    @property
-    def labels_sequence(self):
-        return tuple(tuple(es) for es in self.trace if es)
-
-    @property
-    def no_dups_labels_sequence(self):
-        return tuple(i[0] for i in groupby(self.labels_sequence or tuple()))
-
-    @property
-    def flatten_labels_sequence(self):
-        return tuple(e for es in self.trace for e in es)
-
-    @property
-    def no_dups_flatten_labels_sequence(self):
-        return tuple(i[0] for i in groupby(self.flatten_labels_sequence or tuple()))
-
-    @property
-    def sequence(self):
-        return tuple((l[0], o) for l, o in zip(self.trace, self.obs) if l)
 
 
 class RewardMachineLearningAgent(RewardMachineAgent):
@@ -77,9 +28,12 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         rm_learner_kws = rm_learner_kws or {}
         self.rm_learner = rm_learner_cls(agent_id, **rm_learner_kws)
         self.trace = TraceTracker()
-        self.incomplete_examples = []
-        self.positive_examples = []
-        self.negative_examples = []
+        # self.incomplete_examples = []
+        self.incomplete_examples = {}
+        # self.positive_examples = []
+        self.positive_examples = {}
+        # self.negative_examples = []
+        self.negative_examples = {}
 
         rm_transitioner.rm = self._default_rm()
 
@@ -175,15 +129,56 @@ class RewardMachineLearningAgent(RewardMachineAgent):
             return tuple(labels)
         return labels
 
+    # Convert [a,a,a,a,b] -> [a,b] & [a,a,a,b,a,a] -> [a,b,a]
+    def _deduplicate_list(self, l):
+        sol = [l[0]]
+        for elem1, elem2 in zip(l, l[1:]):
+            if elem1 != elem2:
+                sol.append(elem2)
+        return sol
+
+    def _deduplicate_trace_w_penalties(self, trace: list, penalties: list, t_norm_fn: Callable[[float, float], float]):
+        elems = [trace[0]]
+        pens = [penalties[0]]
+        curr_pen = penalties[0]
+
+        for elem1, elem2, pen in zip(trace, trace[1:], penalties[1:]):
+            curr_pen = t_norm_fn(curr_pen, pen)
+            if elem1 != elem2:
+                elems.append(elem2)
+                pens.append(curr_pen)
+        return elems, pens
+
+
+    def _noisy_update_examples(self, trace: list, penalties: list, complete: bool, positive: bool):
+        if not trace:
+            return False
+
+        t_trace, red_pens = self._deduplicate_trace_w_penalties(trace, penalties, min)
+        t_trace = tuple(t_trace)
+
+        if complete:
+            if t_trace in self.incomplete_examples:
+                del self.incomplete_examples[t_trace]
+            if positive:
+                self.positive_examples[t_trace] = red_pens[-1] + self.positive_examples.get(t_trace, 0)
+            else:
+                self.negative_examples[t_trace] = red_pens[-1] + self.negative_examples.get(t_trace, 0)
+            for i in range(1, len(trace) - 1):
+                if t_trace[:i] not in self.positive_examples and t_trace[:i] not in self.negative_examples:
+                    self.incomplete_examples[t_trace[:i]] = red_pens[i - 1] + self.incomplete_examples.get(t_trace, 0)
+        else:
+            self.incomplete_examples[t_trace] = red_pens[-1] + self.incomplete_examples.get(t_trace, 0)
+
     def _update_examples(self, trace: tuple, complete: bool, positive: bool):
         if not trace:
             return False
 
         if complete:
             if positive:
-                self.positive_examples.append(trace)
+                self.positive_examples[trace] = None
             else:
-                self.negative_examples.append(trace)
+                self.negative_examples[trace] = None
             for i in range(1, len(trace)):
                 self.incomplete_examples.append(trace[:i])
         else:

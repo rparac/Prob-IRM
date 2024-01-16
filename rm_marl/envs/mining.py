@@ -185,3 +185,28 @@ class MiningLabelingFunctionWrapper(LabelingFunctionWrapper):
             labels.append('g')
 
         return labels
+
+
+class MiningNoisyLabelingFunctionWrapper(LabelingFunctionWrapper):
+    # Constructor to ensure type safety
+    def __init__(self, env: MiningEnv, sensor_true_confidence: float, sensor_false_confidence: float):
+        super().__init__(env, noisy=True, sensor_true_confidence=sensor_true_confidence,
+                         sensor_false_confidence=sensor_false_confidence)
+        self.env = env
+
+    # TODO: simulate sensor errors
+    def get_labels(self, obs: dict = None, prev_obs: dict = None):
+        """Returns a modified observation."""
+        labels = {'by': 0, 'g': 0}
+
+        unwrapped_obs = gym.spaces.unflatten(self.env.unflatten_obs_space, obs["A1"])
+        labels['by'] = 0
+        if unwrapped_obs["dug_gold"]:
+            labels['by'] = 1
+        # if unwrapped_obs["tried_digging"]:
+        #     labels['by'] = self.get_label_confidence(label_true=unwrapped_obs["dug_gold"])
+
+        if unwrapped_obs["goal_reached"]:
+            labels['g'] = 1
+
+        return labels

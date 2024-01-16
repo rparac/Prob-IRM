@@ -58,7 +58,11 @@ class RewardMachineAgent:
         self.u = next_u
         return loss, False, False
 
+    # TODO: check if this is this truly necessary given that filter labels exists
     def project_labels(self, labels):
+        if isinstance(labels, dict):
+            return {e: v for e, v in labels.items() if self.rm.get_valid_events()}
+
         return tuple(e for e in labels if e in self.rm.get_valid_events())
 
     @property
