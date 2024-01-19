@@ -77,7 +77,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         self.trace = TraceTracker()
         self.incomplete_examples = []
         self.positive_examples = []
-        self.negative_examples = []
+        self.dend_examples = []
 
         rm = self._default_rm()
 
@@ -98,7 +98,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
     def observables(self):
         union = set((l for e in self.incomplete_examples for ls in e for l in ls)).union(
             set((l for e in self.positive_examples for ls in e for l in ls))).union(
-            set((l for e in self.negative_examples for ls in e for l in ls))
+            set((l for e in self.dend_examples for ls in e for l in ls))
         )
         return union
 
@@ -113,12 +113,13 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         reward,
         terminated,
         truncated,
+        is_positive_trace,
         next_state,
         labels,
         learning=True,
     ):
         loss, interrupt, rm_updated = super().update_agent(
-            state, action, reward, terminated, truncated, next_state, labels, learning
+            state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning
         )
 
         if learning:
@@ -131,14 +132,14 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                 seq = self.trace.flatten_labels_sequence
             if terminated or truncated:
                 examples_updated = self._update_examples(
-                    seq, terminated
+                    seq, terminated, is_positive_trace
                 )
                 if examples_updated:
                     candidate_rm = self.rm_learner.learn(
                         self.observables,
                         self.rm,
                         self.positive_examples,
-                        self.negative_examples,
+                        self.dend_examples,
                         self.incomplete_examples,
                     )
                     if candidate_rm:
@@ -147,13 +148,13 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                         rm_updated = True
             elif self.rm.is_state_terminal(self.u):
                 LOGGER.debug(f"[{self.agent_id}] the RM {self.rm_learner.rm_learning_counter} is wrong.")
-                examples_updated = self._update_examples(seq, False)
+                examples_updated = self._update_examples(seq, complete=False, positive=False)
                 if examples_updated:
                     candidate_rm = self.rm_learner.learn(
                         self.observables,
                         self.rm,
                         self.positive_examples,
-                        self.negative_examples,
+                        self.dend_examples,
                         self.incomplete_examples
                     )
                     if candidate_rm:
@@ -167,12 +168,15 @@ class RewardMachineLearningAgent(RewardMachineAgent):
     def project_labels(self, labels):
         return tuple(labels)
 
-    def _update_examples(self, trace: tuple, complete: bool):
+    def _update_examples(self, trace: tuple, complete: bool, positive: bool):
         if not trace:
             return False
 
         if complete:
-            self.positive_examples.append(trace)
+            if positive:
+                self.positive_examples.append(trace)
+            else:
+                self.dend_examples.append(trace)
             for i in range(1, len(trace)):
                 self.incomplete_examples.append(trace[:i])
         else:

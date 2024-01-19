@@ -138,8 +138,21 @@ class CookieEnv(BaseGridEnv):
             self.positions[(6,4)] = ["G"]
 
 class CookieLabelingFunctionWrapper(LabelingFunctionWrapper):
+
+    def get_all_labels(self):
+
+        return [
+            "t",  # The agent is in the top room
+            "l",  # The agent is in the left room
+            "r",  # The agent is in the right room
+            "b",  # The agent pressed the button
+            "ce",  # The cookie was eaten by the agent
+            "cv"  # The cookie is visible to the agent
+        ]
+
     def get_labels(self, obs: dict, prev_obs: dict):
         """Returns a modified observation."""
+
         agent_locations = obs
         prev_agent_locations = prev_obs or {}
         labels = []
