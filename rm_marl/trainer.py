@@ -54,9 +54,10 @@ class Trainer:
         except KeyboardInterrupt:
             pass
 
-        create_rm_state_logs(log_dir, run_config["total_episodes"], self.test_episodes,
-                             run_config["testing_freq"], self.last_timestep_train_info, self.last_timestep_test_info,
-                             self.all_recorded_rm_states, self.rm_relearned_episodes)
+        if run_config["extra_debug_information"]:
+            create_rm_state_logs(log_dir, run_config["total_episodes"], self.test_episodes,
+                                 run_config["testing_freq"], self.last_timestep_train_info, self.last_timestep_test_info,
+                                 self.all_recorded_rm_states, self.rm_relearned_episodes)
 
         _ = [e.close() for e in self.envs.values()]
         logger.close()

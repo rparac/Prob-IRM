@@ -8,5 +8,6 @@ greedy: False
 synchronize: True
 counterfactual_update: True
 seed: 123
+extra_debug_information: False
 name: ???
 path: ''
