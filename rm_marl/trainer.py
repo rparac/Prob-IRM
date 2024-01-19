@@ -1,14 +1,18 @@
 import copy
 import datetime as dt
-import os
-from collections import defaultdict
-
 import json
+import os
+import warnings
+from collections import defaultdict
+from typing import Dict, List
+
 import joblib
+# import joblib
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-import warnings
+
+from rm_marl.utils.logging import create_rm_state_logs
 
 
 class Trainer:
@@ -18,6 +22,20 @@ class Trainer:
         self.agents = agents
 
         self.total_steps = 0
+        self.test_episodes = 0
+
+        # Logs for plots more that SummaryWriter can't represent, so we use matplotlib + SummaryWritter add image
+
+        # Keeps track of all rm states in each environment. Used for logging of state transition diagram.
+        self.all_recorded_rm_states: Dict[str, set] = dict()
+        # Stores for each episode in an environment a dictionary of (RM state, timestep) pairs
+        # from env_id -> [{u -> last_timestep}]
+        self.last_timestep_train_info: Dict[str, List[Dict[str, int]]] = {}
+        self.last_timestep_test_info: Dict[str, List[Dict[str, int]]] = {}
+
+        # Contains episodes when a RM was relearned:
+        #  Dict[env_id -> List[episode_when_relearned]]
+        self.rm_relearned_episodes: Dict[str, List[int]] = {}
 
     def run(self, run_config: dict):
         log_dir = os.path.join(
@@ -36,6 +54,11 @@ class Trainer:
         except KeyboardInterrupt:
             pass
 
+        if run_config["extra_debug_information"]:
+            create_rm_state_logs(log_dir, run_config["total_episodes"], self.test_episodes,
+                                 run_config["testing_freq"], self.last_timestep_train_info, self.last_timestep_test_info,
+                                 self.all_recorded_rm_states, self.rm_relearned_episodes)
+
         _ = [e.close() for e in self.envs.values()]
         logger.close()
         if run_config["training"]:
@@ -48,11 +71,19 @@ class Trainer:
         losses = defaultdict(list)
         rewards = defaultdict(list)
 
+        self.all_recorded_rm_states = self.all_recorded_rm_states or {env_id: set() for env_id in envs.keys()}
+
         _ = [a.set_log_folder(os.path.join(logger.log_dir, aid)) for aid, a in self.agents.items()]
 
         for episode in tqdm(range(1, 1 + run_config["total_episodes"])):
+            if not run_config["training"]:
+                self.test_episodes += 1
+
             episode_losses = defaultdict(list)
             episode_frames = defaultdict(list)
+
+            # seperate for each env_id
+            last_timestep_in_u = {}
 
             seed = base_seed + episode - 1
 
@@ -72,8 +103,11 @@ class Trainer:
                     aid: a for aid, a in self.agents.items() if aid in obs[env_id]
                 }
                 shared_events[env_id] = self._get_shared_events(env_agents[env_id])
+                last_timestep_in_u[env_id] = {}
 
+            steps_count = 0
             while not all(dones.values()):
+                steps_count += 1
 
                 if run_config["training"]:
                     self.total_steps += 1
@@ -96,25 +130,30 @@ class Trainer:
                         for aid, a in env_agents[env_id].items()
                     }
                     next_obs, reward, terminated, truncated, info = env.step(actions)
-                    
+
                     done = terminated or truncated
 
                     labels = info["labels"]
                     agent_labels = {}
-                    _ = [agent_labels.update(self._project_labels(labels, a, aid)) for aid, a in env_agents[env_id].items()]
+                    _ = [agent_labels.update(self._project_labels(labels, a, aid)) for aid, a in
+                         env_agents[env_id].items()]
 
                     if run_config["synchronize"]:
                         synchronized_labels = self._synchronize(shared_events[env_id], agent_labels)
-                        assert all(agent_labels[aid] == synchronized_labels[aid] for aid in env_agents[env_id].keys()), f"Not synchronized!! {agent_labels}, {synchronized_labels}"
+                        assert all(agent_labels[aid] == synchronized_labels[aid] for aid in env_agents[
+                            env_id].keys()), f"Not synchronized!! {agent_labels}, {synchronized_labels}"
                     else:
                         synchronized_labels = agent_labels
+
+                    # track state metric for logging
+                    last_timestep_in_u[env_id][info["rm_state"]] = steps_count
 
                     # update the agent's RM and Q-functions
                     agent_loss = []
                     interrupt_episode = terminated or truncated
                     for aid, a in env_agents[env_id].items():
                         current_u = a.u
-                        loss, interrupt = a.update_agent(
+                        loss, interrupt, rm_updated = a.update_agent(
                             self._project_obs(obs[env_id], a, aid),
                             actions[aid],
                             reward,
@@ -125,6 +164,11 @@ class Trainer:
                             synchronized_labels[aid],
                             learning=run_config["training"],
                         )
+
+                        if rm_updated:
+                            curr_relearned_episodes = self.rm_relearned_episodes.get(env_id, [])
+                            curr_relearned_episodes.append(episode)
+                            self.rm_relearned_episodes[env_id] = curr_relearned_episodes
 
                         if run_config["training"]:
                             if interrupt:
@@ -178,11 +222,22 @@ class Trainer:
                     logger.add_scalar(
                         f"{prefix}/reward/{env_id}", np.mean(rewards[env_id]), self.total_steps
                     )
+                    self.all_recorded_rm_states[env_id] = self.all_recorded_rm_states[env_id].union(
+                        last_timestep_in_u[env_id].keys())
+
+                    if run_config["training"]:
+                        timestep_train_info = self.last_timestep_train_info.get(env_id, [])
+                        timestep_train_info.append(last_timestep_in_u[env_id])
+                        self.last_timestep_train_info[env_id] = timestep_train_info
+                    else:
+                        timestep_test_info = self.last_timestep_test_info.get(env_id, [])
+                        timestep_test_info.append(last_timestep_in_u[env_id])
+                        self.last_timestep_test_info[env_id] = timestep_test_info
 
                 if episode_frames[env_id]:
                     video = np.array(episode_frames[env_id]).transpose(0, 3, 1, 2)[
-                        np.newaxis, :
-                    ]
+                            np.newaxis, :
+                            ]
                     logger.add_video(f"{prefix}/replay/{env_id}", video, self.total_steps)
 
             if run_config["training"] and episode % run_config["testing_freq"] == 0:
@@ -195,7 +250,6 @@ class Trainer:
                     "seed": run_config["seed"],
                     "synchronize": run_config["synchronize"],
                 }, logger)
-
 
     @staticmethod
     def _project_labels(labels, a, aid):
@@ -214,7 +268,7 @@ class Trainer:
         shared_events = {}
         for aid1, agent1 in env_agents.items():
             for aid2, agent2 in env_agents.items():
-                if aid1 >= aid2: 
+                if aid1 >= aid2:
                     continue
                 intersection = set(agent1.rm.get_valid_events()).intersection(agent2.rm.get_valid_events())
                 shared_events[tuple(sorted([aid1, aid2]))] = intersection
@@ -229,7 +283,7 @@ class Trainer:
                 if not all(e in agent_labels[aid] for aid in (aid1, aid2)):
                     agent_labels[aid1] = tuple(l for l in agent_labels[aid1] if l != e)
                     agent_labels[aid2] = tuple(l for l in agent_labels[aid2] if l != e)
-        
+
         return agent_labels
 
     @staticmethod

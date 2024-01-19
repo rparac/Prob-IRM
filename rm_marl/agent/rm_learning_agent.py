@@ -118,7 +118,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         labels,
         learning=True,
     ):
-        loss, interrupt = super().update_agent(
+        loss, interrupt, rm_updated = super().update_agent(
             state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning
         )
 
@@ -145,6 +145,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                     if candidate_rm:
                         self.rm = candidate_rm
                         self.algo.reset()
+                        rm_updated = True
             elif self.rm.is_state_terminal(self.u):
                 LOGGER.debug(f"[{self.agent_id}] the RM {self.rm_learner.rm_learning_counter} is wrong.")
                 examples_updated = self._update_examples(seq, complete=False, positive=False)
@@ -159,9 +160,10 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                     if candidate_rm:
                         self.rm = candidate_rm
                         self.algo.reset()
+                        rm_updated = True
                     interrupt = True
 
-        return loss, interrupt
+        return loss, interrupt, rm_updated
 
     def project_labels(self, labels):
         return tuple(labels)

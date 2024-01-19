@@ -50,7 +50,7 @@ class NoRMAgent:
             )
 
         self.u = next_u
-        return loss, False
+        return loss, False, False
 
     def project_labels(self, labels):
         return tuple(labels)
