@@ -43,7 +43,7 @@ class DeepQRM(Algo):
         self,
         obs_space: "gym.spaces.Space",
         action_space: "gym.spaces.Discrete",
-        policy_layers: int = 5,
+        num_policy_layers: int = 5,
         policy_layer_size: int = 64,
         replay_size: int = 10000,
         batch_size: int = 32,
@@ -59,7 +59,7 @@ class DeepQRM(Algo):
         # Sub-policies-related parameters
         self._obs_space = obs_space
         self._dim_obs = gym.spaces.utils.flatdim(obs_space)
-        self._policy_layers = policy_layers
+        self._num_policy_layers = num_policy_layers
         self._layers_size = policy_layer_size
         self._num_actions = action_space.n
 
@@ -106,7 +106,7 @@ class DeepQRM(Algo):
 
         return DeepQNetwork(
             self._dim_obs,
-            self._policy_layers,
+            self._num_policy_layers,
             self._layers_size,
             self._num_actions
         )
