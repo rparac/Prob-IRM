@@ -1,5 +1,5 @@
 from itertools import groupby
-from typing import TYPE_CHECKING, Optional, Type
+from typing import Optional, Type
 from collections import OrderedDict
 
 from ..algo import QRM
@@ -7,10 +7,8 @@ from ..algo import Algo
 from ..rm_learning import ILASPLearner, DAFSALearner, S2SLearner
 from ..utils.logging import getLogger
 from .rm_agent import RewardMachineAgent
-
-if TYPE_CHECKING:
-    from ..reward_machine import RewardMachine
-    from ..rm_learning import RMLearner
+from ..reward_machine import RewardMachine
+from ..rm_learning import RMLearner
 
 LOGGER = getLogger(__name__)
 
