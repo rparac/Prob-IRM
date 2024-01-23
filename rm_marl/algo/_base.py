@@ -1,7 +1,7 @@
 import abc
 
 
-class Algo:
+class Algo(abc.ABC):
     """
     Base class for agent training algorithms
 

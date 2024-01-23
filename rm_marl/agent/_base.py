@@ -2,7 +2,7 @@ import abc
 import os
 
 
-class Agent:
+class Agent(abc.ABC):
     """
     Base class for agents
 
