@@ -1,5 +1,5 @@
 from itertools import groupby
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Type
 from collections import OrderedDict
 
 from ..algo import QRM
@@ -67,9 +67,9 @@ class RewardMachineLearningAgent(RewardMachineAgent):
     def __init__(
         self,
         agent_id: str,
-        algo_cls: "Algo" = QRM,
+        algo_cls: Type[Algo] = QRM,
         algo_kws: dict = None,
-        rm_learner_cls: "RMLearner" = ILASPLearner,
+        rm_learner_cls: Type[RMLearner] = ILASPLearner,
         rm_learner_kws: dict = None,
     ):
         rm_learner_kws = rm_learner_kws or {}

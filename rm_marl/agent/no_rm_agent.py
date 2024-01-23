@@ -1,5 +1,5 @@
 import os
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Type
 
 from ..algo import QRM
 from ._base import Agent
@@ -10,13 +10,10 @@ if TYPE_CHECKING:
 
 class NoRMAgent(Agent):
     def __init__(
-        self, agent_id: str, algo_cls: "Algo" = QRM, algo_kws: dict = None
+        self, agent_id: str, algo_cls: Type[Algo] = QRM, algo_kws: dict = None
     ):
 
-        super().__init__(agent_id)
-
-        algo_kws = algo_kws or {}
-        self.algo = algo_cls(**algo_kws)
+        super().__init__(agent_id, algo_cls, algo_kws)
 
         self.reset()
 

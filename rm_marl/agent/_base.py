@@ -1,5 +1,11 @@
+from typing import TYPE_CHECKING, Optional, Type
 import abc
 import os
+
+if TYPE_CHECKING:
+    from ..algo import Algo
+
+from ..algo import QRM
 
 
 class Agent(abc.ABC):
@@ -11,10 +17,18 @@ class Agent(abc.ABC):
 
     """
 
-    def __init__(self, agent_id):
+    def __init__(
+        self,
+        agent_id: str,
+        algo_cls: Type[Algo] = QRM,
+        algo_kws: dict = None
+    ):
+
         self.agent_id = agent_id
         self._log_folder = None
-        self.algo = None  # Handled by subclasses
+
+        algo_kws = algo_kws or {}
+        self.algo = algo_cls(**algo_kws)
 
     @property
     def log_folder(self):
