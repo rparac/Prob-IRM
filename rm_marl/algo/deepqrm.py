@@ -277,7 +277,7 @@ class DeepQRM(Algo):
             action_values = self._q_networks[u].policy_network(flat_state)
             best_action_value = action_values.max()
             best_actions_mask = action_values == best_action_value
-            best_actions = [t.item() for t in torch.nonzero(best_actions_mask, as_tuple=True)]
+            best_actions = [t.item() for t in torch.nonzero(best_actions_mask)]
             return self._np_random.choice(best_actions)
 
     def reset(self):
