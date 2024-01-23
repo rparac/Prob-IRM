@@ -1,3 +1,19 @@
+"""
+Deep Q-Learning with Reward Machines (DQRM) algorithm implementation.
+
+This implementation is based on the algorithm described by Icarte et al. in their awesome paper:
+
+"Using Reward Machines for High-Level Task Specification and Decomposition in Reinforcement Learning
+ Rodrigo Toro Icarte, Toryn Klassen, Richard Valenzano, Sheila McIlraith
+ Proceedings of the 35th International Conference on Machine Learning, PMLR 80:2107-2116, 2018."
+
+Moreover, the code of this module was developed using, as a guide, the implementation of the DQRM algorithm as provided
+Icarte himself in this repository: https://bitbucket.org/RToroIcarte/lrm/src
+
+We kindly thank the original authors for their amazing contribution to the neuro-symbolic reinforcement learning
+literature and for making their code freely available for the research community.
+"""
+
 import numpy as np
 import torch.nn as nn
 import torch
