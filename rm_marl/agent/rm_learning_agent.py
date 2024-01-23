@@ -3,13 +3,12 @@ from typing import TYPE_CHECKING, Optional, Type
 from collections import OrderedDict
 
 from ..algo import QRM
-from ..reward_machine import RewardMachine
-from ..rm_learning import ILASPLearner, DAFSALearner, AlergiaLearner, S2SLearner
+from ..algo import Algo
+from ..rm_learning import ILASPLearner, DAFSALearner, S2SLearner
 from ..utils.logging import getLogger
 from .rm_agent import RewardMachineAgent
 
 if TYPE_CHECKING:
-    from ..algo import Algo
     from ..reward_machine import RewardMachine
     from ..rm_learning import RMLearner
 

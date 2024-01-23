@@ -1,11 +1,8 @@
-import os
-from typing import TYPE_CHECKING, Optional, Type
+from typing import Optional, Type
 
 from ..algo import QRM
 from ._base import Agent
-
-if TYPE_CHECKING:
-    from ..algo import Algo
+from ..algo import Algo
 
 
 class NoRMAgent(Agent):

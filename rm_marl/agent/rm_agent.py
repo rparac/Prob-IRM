@@ -1,12 +1,9 @@
-import os
-from typing import TYPE_CHECKING, Optional, Type
+from typing import Optional, Type
 
 from ..algo import QRM
 from ._base import Agent
-
-if TYPE_CHECKING:
-    from ..algo import Algo
-    from ..reward_machine import RewardMachine
+from ..algo import Algo
+from ..reward_machine import RewardMachine
 
 
 class RewardMachineAgent(Agent):

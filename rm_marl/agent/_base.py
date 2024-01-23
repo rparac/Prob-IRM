@@ -1,10 +1,8 @@
-from typing import TYPE_CHECKING, Optional, Type
+from typing import Type
 import abc
 import os
 
-if TYPE_CHECKING:
-    from ..algo import Algo
-
+from ..algo import Algo
 from ..algo import QRM
 
 
