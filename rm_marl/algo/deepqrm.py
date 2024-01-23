@@ -17,9 +17,10 @@ literature and for making their code freely available for the research community
 import numpy as np
 import torch.nn as nn
 import torch
+from torch.optim import Optimizer, AdamW
 import gym
 
-
+from typing import Type
 from collections import namedtuple, deque, defaultdict
 import random
 import os
@@ -51,7 +52,8 @@ class DeepQRM(Algo):
         target_update_freq: int = 100,
         gamma: float = 0.9,
         epsilon: float = 0.1,
-        lr: float = 1e-4
+        optimizer_cls: Type[Optimizer] = AdamW,
+        optimizer_kws: dict = None
     ):
 
         super().__init__()
@@ -76,7 +78,10 @@ class DeepQRM(Algo):
         self._policy_train_freq = policy_train_freq
         self._gamma = gamma
         self._epsilon = epsilon
-        self._learning_rate = lr
+
+        # Optimizers
+        self._optimizer_cls = optimizer_cls
+        self._optimizer_kws = optimizer_kws or {"lr": 1e-4, "asmgrad": True}  # Defaults assume AdamW
 
         # Internal parameters used to make decisions
         self._policies_train_timer = self._policy_train_freq
@@ -128,10 +133,9 @@ class DeepQRM(Algo):
         target_network = self._init_q_network()
 
         # Create the optimizer that will update the policy network parameters
-        policy_optimizer = torch.optim.AdamW(
+        policy_optimizer = self._optimizer_cls(
             policy_network.parameters(),
-            lr=self._learning_rate,
-            amsgrad=True
+            **self._optimizer_kws
         )
 
         # Synch the weights from the policy network to the target network
