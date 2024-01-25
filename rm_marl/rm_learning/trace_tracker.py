@@ -4,6 +4,7 @@ from collections import OrderedDict
 from typing import Dict, List, Tuple
 
 
+# TODO: delete obs; it is unused
 class TraceTracker:
     def __init__(self) -> None:
         self.trace = []
@@ -48,42 +49,27 @@ class TraceTracker:
         return tuple(i[0] for i in groupby(self.flatten_labels_sequence or tuple()))
 
 
-class NoisyTraceTracker():
+class NoisyTraceTracker:
     def __init__(self):
         self.trace = []
-        self.penalties = []
+        self.probabilities = []
+
+        self.is_positive = False
+        self.is_complete = False
 
         self.penalty_scale_factor = 10
 
     def reset(self):
         self.trace.clear()
-        self.penalties.clear()
+        self.probabilities.clear()
 
     def update(self, labels: Dict[str, float]):
-        tr, pen = self._process_labels(labels)
-        self.trace.append(tr)
-        self.penalties.append(pen)
-
-    def get_compact_trace(self):
-        pass
-
-    def _process_labels(self, labels):
-        step_used = False
-        curr_step_trace = []
-        curr_penalty = None
-        for label, prob in labels.items():
-            # How certain are we in the grounding chosen
-            # The higher the value the better
-            cert_value = abs(prob - 0.5) * self.penalty_scale_factor + 1
-            curr_penalty = min(curr_penalty or cert_value, cert_value)
-            if prob >= 0.5:
-                curr_step_trace.append(label)
-        return curr_step_trace, curr_penalty * self.penalty_scale_factor
+        self.trace.append(labels)
 
     def labels_sequence(self):
         ret_labels = []
         ret_penalties = []
-        for es, val in zip(self.trace, self.penalties):
+        for es, val in zip(self.trace, self.probabilities):
             if es:
                 ret_labels.append(tuple(es))
                 ret_penalties.append(val)

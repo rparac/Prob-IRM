@@ -16,6 +16,7 @@ from rm_marl.algo import QRM
 from rm_marl.envs.mining import MiningLabelingFunctionWrapper, MiningNoisyLabelingFunctionWrapper
 from rm_marl.envs.wrappers import AutomataWrapper
 from rm_marl.reward_machine import RewardMachine
+from rm_marl.rm_learning.ilasp.noisy_learner.ProbFFNSLLearner import ProbFFNSLLearner
 from rm_marl.rm_transition.deterministic_rm_transitioner import DeterministicRMTransitioner
 from rm_marl.rm_transition.prob_rm_transitioner import ProbRMTransitioner
 from rm_marl.trainer import Trainer
@@ -50,8 +51,8 @@ rm = RewardMachine.load_from_file("data/mining/rm_agent_1.txt")
 rm_transitioner = DeterministicRMTransitioner(rm)
 # rm_transitioner = ProbRMTransitioner(rm)
 
-# env = MiningNoisyLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)  # type: ignore
-env = MiningLabelingFunctionWrapper(env) # type: ignore
+env = MiningNoisyLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)  # type: ignore
+# env = MiningLabelingFunctionWrapper(env) # type: ignore
 
 # AutomataWrapper here only provides the filter_label function (used in counter_factual update).
 #  It also logs RM states
@@ -72,6 +73,7 @@ ag = RewardMachineLearningAgent(
         "action_space": env.action_space,
         "seed": 123,
     },
+    rm_learner_cls=ProbFFNSLLearner,
 )
 
 agent_dict = {"A1": ag}

@@ -29,6 +29,11 @@ class RMLearner(metaclass=abc.ABCMeta):
     def learn(self):
         raise NotImplementedError("learn")
 
+    # TODO: remove the old learn method
+    @abc.abstractmethod
+    def update_rm(self):
+        raise NotImplementedError("update_rm")
+
     def process_examples(self, examples):
         return examples
 

@@ -6,7 +6,7 @@ from ..rm_learning import ILASPLearner, DAFSALearner, S2SLearner
 from ..rm_transition.rm_transitioner import RMTransitioner
 from ..utils.logging import getLogger
 from .rm_agent import RewardMachineAgent
-from rm_marl.rm_learning.trace_tracker import TraceTracker
+from rm_marl.rm_learning.trace_tracker import TraceTracker, NoisyTraceTracker
 
 if TYPE_CHECKING:
     from ..algo import Algo
@@ -27,7 +27,8 @@ class RewardMachineLearningAgent(RewardMachineAgent):
     ):
         rm_learner_kws = rm_learner_kws or {}
         self.rm_learner = rm_learner_cls(agent_id, **rm_learner_kws)
-        self.trace = TraceTracker()
+        # self.trace = TraceTracker()
+        self.trace = NoisyTraceTracker()
         # self.incomplete_examples = []
         self.incomplete_examples = {}
         # self.positive_examples = []
@@ -63,16 +64,41 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         return super().reset(seed)
 
     def update_agent(
-        self,
-        state,
-        action,
-        reward,
-        terminated,
-        truncated,
-        is_positive_trace,
-        next_state,
-        labels,
-        learning=True,
+            self,
+            state,
+            action,
+            reward,
+            terminated,
+            truncated,
+            is_positive_trace,
+            next_state,
+            labels,
+            learning=True,
+    ):
+        loss, interrupt, rm_updated = super().update_agent(
+            state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning
+        )
+
+        if learning:
+            self.trace.update(labels)
+
+            if terminated or truncated:
+                candidate_rm = self.rm_learner.update_rm(self.observables, self.rm, self.trace)
+
+        return loss, interrupt, rm_updated
+
+    # TODO: delete
+    def old_update_agent(
+            self,
+            state,
+            action,
+            reward,
+            terminated,
+            truncated,
+            is_positive_trace,
+            next_state,
+            labels,
+            learning=True,
     ):
         loss, interrupt, rm_updated = super().update_agent(
             state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning
@@ -90,7 +116,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                 examples_updated = self._update_examples(
                     seq, terminated, is_positive_trace
                 )
-                if examples_updated and self._should_relearn_rm(terminated, is_positive):
+                if examples_updated and self._should_relearn_rm(terminated, is_positive_trace):
                     candidate_rm = self.rm_learner.learn(
                         self.observables,
                         self.rm,
@@ -149,7 +175,6 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                 pens.append(curr_pen)
         return elems, pens
 
-
     def _noisy_update_examples(self, trace: list, penalties: list, complete: bool, positive: bool):
         if not trace:
             return False
@@ -163,9 +188,9 @@ class RewardMachineLearningAgent(RewardMachineAgent):
             if positive:
                 self.positive_examples[t_trace] = red_pens[-1] + self.positive_examples.get(t_trace, 0)
             else:
-                self.negative_examples[t_trace] = red_pens[-1] + self.negative_examples.get(t_trace, 0)
+                self.dend_examples[t_trace] = red_pens[-1] + self.dend_examples.get(t_trace, 0)
             for i in range(1, len(trace) - 1):
-                if t_trace[:i] not in self.positive_examples and t_trace[:i] not in self.negative_examples:
+                if t_trace[:i] not in self.positive_examples and t_trace[:i] not in self.dend_examples:
                     self.incomplete_examples[t_trace[:i]] = red_pens[i - 1] + self.incomplete_examples.get(t_trace, 0)
         else:
             self.incomplete_examples[t_trace] = red_pens[-1] + self.incomplete_examples.get(t_trace, 0)
