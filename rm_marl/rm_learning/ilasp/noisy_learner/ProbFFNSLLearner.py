@@ -2,13 +2,14 @@ import itertools
 import os
 from typing import List
 
+from rm_marl.reward_machine import RewardMachine
 from rm_marl.rm_learning import RMLearner
 from rm_marl.rm_learning.ilasp.noisy_learner.example_generator import NoisyILASPExampleGenerator
-from rm_marl.rm_learning.ilasp.noisy_learner.ilasp_example_representation import ISAILASPExample
+from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample
 from rm_marl.rm_learning.ilasp.task_generator import generate_ilasp_task
 from rm_marl.rm_learning.ilasp.task_parser import parse_ilasp_solutions
 from rm_marl.rm_learning.ilasp.task_solver import solve_ilasp_task
-from rm_marl.rm_learning.trace_tracker import NoisyTraceTracker
+from rm_marl.rm_learning.trace_tracker import NoisyTraceTracker, TraceTracker
 from rm_marl.utils.logging import getLogger
 
 LOGGER = getLogger(__name__)
@@ -27,13 +28,13 @@ class ProbFFNSLLearner(RMLearner):
 
         self.rm_num_states = 1
 
-    def update_rm(self, observables, rm, trace):
+    def learn(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated, is_positive_trace):
         # We assume this function be called when a trace is fully generated
         # TODO: check if this is reasonable
-        assert trace.is_complete
-
-        self._update_examples(trace)
-        # examples are always updated
+        if terminated or truncated:
+            self._update_examples(trace)
+        elif curr_rm.is_state_terminal(curr_state):
+            pass
 
         # TODO: implement condition for checking
         if True:
@@ -45,7 +46,7 @@ class ProbFFNSLLearner(RMLearner):
     ):
         raise NotImplementedError("Should not use this method. It is deprecated.")
 
-    def _update_examples(self, trace: NoisyTraceTracker):
+    def _update_examples(self, trace: TraceTracker):
         if not trace:
             return False
 

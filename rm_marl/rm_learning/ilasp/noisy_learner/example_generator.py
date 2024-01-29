@@ -1,11 +1,10 @@
-import math
 import random
-from typing import List, Iterator, Union, Tuple, Dict, Set
+from typing import List, Dict, Set
 
 import numpy as np
 
-from rm_marl.rm_learning.ilasp.noisy_learner.ilasp_example_representation import ObservablePredicate, LastPredicate, \
-    ILASPPredicate, ISAILASPExample
+from rm_marl.rm_learning.ilasp.ilasp_example_representation import ObservablePredicate, LastPredicate, \
+    ISAILASPExample
 from rm_marl.rm_learning.trace_tracker import NoisyTraceTracker
 
 

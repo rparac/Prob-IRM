@@ -1,7 +1,7 @@
 import os
 from typing import List
 
-from rm_marl.rm_learning.ilasp.noisy_learner.ilasp_example_representation import ISAILASPExample
+from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample
 from .utils.ilasp_task_generator_example import generate_examples
 from .utils.ilasp_task_generator_hypothesis import get_hypothesis_space
 from .utils.ilasp_task_generator_state import generate_state_statements

@@ -1,8 +1,8 @@
 import itertools
 from typing import List
 
-from ...ilasp_common import OBS_STR, generate_injected_statement
-from ...noisy_learner.ilasp_example_representation import ISAILASPExample
+from ...ilasp_common import generate_injected_statement
+from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample
 
 
 def generate_examples(goal_examples: List[ISAILASPExample], dend_examples: List[ISAILASPExample],

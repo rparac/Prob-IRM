@@ -1,7 +1,7 @@
 import itertools
 import os
 
-from .noisy_learner.ilasp_example_representation import lift_goal_example, lift_inc_example, lift_dend_example
+from rm_marl.rm_learning.ilasp.ilasp_example_representation import lift_goal_example, lift_inc_example, lift_dend_example
 from ..trace_tracker import TraceTracker
 from ...reward_machine import RewardMachine
 from ...utils.logging import getLogger

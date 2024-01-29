@@ -11,19 +11,26 @@ class TraceTracker:
         # TODO: remove obs; it's unused
         self.obs = []
 
+        self.is_positive = []
+        self.is_complete = []
+
         self._hash_state_mapping = OrderedDict()
 
     def reset(self):
         self.trace.clear()
         self.obs.clear()
 
-    def update(self, labels, obs):
+    def update(self, labels, obs, is_positive_trace, is_complete_trace):
+        self.is_positive.append(is_positive_trace)
+        self.is_complete.append(is_complete_trace)
         self.trace.append(self._process_label(labels))
         self.obs.append(self._process_obs(obs))
 
     def _process_label(self, labels):
-        # TODO check or remove that
-        # assert len(labels) < 2, f"Assumption that there is only one label at a time: [{labels}]"
+        if isinstance(labels, dict):
+            # noisy trace
+            return labels
+
         return labels or []
 
     def _process_obs(self, obs):
@@ -40,10 +47,12 @@ class TraceTracker:
     def no_dups_labels_sequence(self):
         return tuple(i[0] for i in groupby(self.labels_sequence or tuple()))
 
+    # TODO: can this be deleted?
     @property
     def flatten_labels_sequence(self):
         return tuple(e for es in self.trace for e in es)
 
+    # TODO: can this be deleted?
     @property
     def no_dups_flatten_labels_sequence(self):
         return tuple(i[0] for i in groupby(self.flatten_labels_sequence or tuple()))
