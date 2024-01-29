@@ -25,14 +25,14 @@ class RMLearner(metaclass=abc.ABCMeta):
             os.mkdir(folder)
         self._log_folder = folder
 
+    # TODO: change the method name to update_rm
     @abc.abstractmethod
     def learn(self):
         raise NotImplementedError("learn")
 
-    # TODO: remove the old learn method
-    @abc.abstractmethod
-    def update_rm(self):
-        raise NotImplementedError("update_rm")
+    # @abc.abstractmethod
+    # def update_rm(self):
+    #     raise NotImplementedError("update_rm")
 
     def process_examples(self, examples):
         return examples

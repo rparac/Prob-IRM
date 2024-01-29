@@ -1,4 +1,5 @@
 import abc
+import enum
 from typing import Optional, List, Set, Type
 
 
@@ -6,16 +7,6 @@ class ILASPTerm(abc.ABC):
     @abc.abstractmethod
     def as_term_str(self) -> str:
         raise NotImplementedError("Should not use ILASPTerm directly")
-
-
-class RejectTerm(ILASPTerm):
-    def as_term_str(self) -> str:
-        return "reject"
-
-
-class AcceptTerm(ILASPTerm):
-    def as_term_str(self) -> str:
-        return "accept"
 
 
 class ILASPPredicate(abc.ABC):
@@ -47,23 +38,31 @@ class ObservablePredicate(ILASPPredicate):
         # Intentionally defined for label only
         return self.label == other.label
 
+    def __hash__(self):
+        return hash(self.as_predicate_str())
+
 
 class ISAILASPExample:
+    class ExType(enum.Enum):
+        GOAL = enum.auto()
+        DEND = enum.auto()
+        INCOMPLETE = enum.auto()
+
     ex_id: str
     penalty: Optional[int]
+    example_type: ExType
     inclusion: Set[ILASPTerm]
     exclusion: Set[ILASPTerm]
     observable_context: Set[ObservablePredicate]
     last_predicate: LastPredicate
     is_positive: bool
 
-    def __init__(self, ex_id: str, ex_penalty: Optional[int], inclusion: Set[ILASPTerm],
-                 exclusion: Set[ILASPTerm], observable_context: Set[ObservablePredicate],
+    def __init__(self, ex_id: str, ex_penalty: Optional[int], example_type: ExType,
+                 observable_context: Set[ObservablePredicate],
                  last_predicate: LastPredicate, is_positive: bool = True):
         self.ex_id = ex_id
         self.penalty = ex_penalty
-        self.inclusion = inclusion
-        self.exclusion = exclusion
+        self.example_type = example_type
         self.observable_context = observable_context
         self.last_predicate = last_predicate
         self.is_positive = is_positive
@@ -77,15 +76,31 @@ class ISAILASPExample:
                 self.observable_context == other.observable_context and
                 self.last_predicate == other.last_predicate)
 
+    def _generate_inc_exc_str(self):
+        if self.example_type == ISAILASPExample.ExType.GOAL:
+            inc_str = "accept"
+        elif self.example_type == ISAILASPExample.ExType.DEND:
+            inc_str = "reject"
+        else:
+            inc_str = ""
+
+        if self.example_type == ISAILASPExample.ExType.GOAL:
+            exc_str = "reject"
+        elif self.example_type == ISAILASPExample.ExType.DEND:
+            exc_str = "accept"
+        else:
+            exc_str = "accept, reject"
+
+        return f"{{{inc_str}}}, {{{exc_str}}},"
+
     def __repr__(self):
-        context_str = '\n'.join([elem.as_predicate_str() for elem in self.observable_context])
-        context_str += f'\n{self.last_predicate}'
+        context_str = '  '.join([elem.as_predicate_str() for elem in self.observable_context])
+        context_str += f'\n  {self.last_predicate.as_predicate_str()}'
         prefix = "pos" if self.is_positive else "neg"
-        return f"#{prefix}({self.ex_id}@{self.penalty},\n" \
-               f"{{ {','.join([e.as_term_str() for e in self.inclusion])} }},\n" \
-               f"{{ {','.join([e.as_term_str() for e in self.exclusion])} }}, \n" \
+        return f"#{prefix}({self.ex_id}{'' if self.penalty is None else f'@{self.penalty}'}, " \
+               f"{self._generate_inc_exc_str()}" \
                f"{{\n" \
-               f" {context_str}" \
+               f"  {context_str}\n" \
                "}).\n"
 
     def compact_observations(self):
@@ -125,7 +140,30 @@ class ISAILASPExample:
         for i in range(1, len(self.observable_context)):
             ex_id = f"{self.ex_id}_inc_{i}"
             sols.append(
-                ISAILASPExample(ex_id, self.penalty, set(), {AcceptTerm(), RejectTerm()}, self.observable_context[:i],
+                ISAILASPExample(ex_id, self.penalty, ISAILASPExample.ExType.INCOMPLETE, self.observable_context[:i],
                                 LastPredicate(i))
             )
         return sols
+
+
+# Lifts the example representation from Daniel's work to ISAILASPExample
+def _lift(example: List[List[str]], ex_id: str, ex_type: ISAILASPExample.ExType) -> ISAILASPExample:
+    obs_context = []
+    for i in range(0, len(example)):
+        for symbol in example[i]:
+            obs_context.append(ObservablePredicate(symbol, i))
+    last = LastPredicate(len(example) - 1)
+    penalty = None
+    return ISAILASPExample(ex_id, penalty, ex_type, set(obs_context), last)
+
+
+def lift_goal_example(example: List[List[str]], ex_id: str) -> ISAILASPExample:
+    return _lift(example, ex_id, ex_type=ISAILASPExample.ExType.GOAL)
+
+
+def lift_dend_example(example: List[List[str]], ex_id: str) -> ISAILASPExample:
+    return _lift(example, ex_id, ex_type=ISAILASPExample.ExType.DEND)
+
+
+def lift_inc_example(example: List[List[str]], ex_id: str) -> ISAILASPExample:
+    return _lift(example, ex_id, ex_type=ISAILASPExample.ExType.INCOMPLETE)

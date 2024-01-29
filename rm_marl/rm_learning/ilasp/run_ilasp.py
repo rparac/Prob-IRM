@@ -1,5 +1,8 @@
 import argparse
 import json
+
+from rm_marl.rm_learning.ilasp.noisy_learner.ilasp_example_representation import lift_goal_example, lift_inc_example, \
+    lift_dend_example
 from .task_generator.ilasp_task_generator import generate_ilasp_task
 from .task_solver.ilasp_solver import solve_ilasp_task
 from .task_parser.ilasp_solution_parser import parse_ilasp_solutions
@@ -11,7 +14,8 @@ def get_argparser():
     parser.add_argument("task_filename", help="filename of the ILASP task")
     parser.add_argument("solution_filename", help="filename of the ILASP task solution")
     parser.add_argument("plot_filename", help="filename of the automaton plot")
-    parser.add_argument("--symmetry_breaking_method", "-s", default=None, help="method for symmetry breaking (bfs, increasing_path)")
+    parser.add_argument("--symmetry_breaking_method", "-s", default=None,
+                        help="method for symmetry breaking (bfs, increasing_path)")
     return parser
 
 
@@ -20,8 +24,15 @@ if __name__ == "__main__":
     with open(args.task_config) as f:
         config = json.load(f)
 
-    generate_ilasp_task(config["num_states"], "u_acc", "u_rej", config["observables"], config["goal_examples"],
-                        config["deadend_examples"], config["inc_examples"], ".", args.task_filename,
+    binary_folder_name = "../bin"
+    output_folder = "."
+
+    goal_examples = [lift_goal_example(ex, f"ex_goal_{i}") for i, ex in enumerate(config["goal_examples"])]
+    dend_examples = [lift_dend_example(ex, f"ex_dend_{i}") for i, ex in enumerate(config["dend_examples"])]
+    inc_examples = [lift_inc_example(ex, f"ex_inc_{i}") for i, ex in enumerate(config["inc_examples"])]
+
+    generate_ilasp_task(config["num_states"], "u_acc", "u_rej", config["observables"], goal_examples,
+                        dend_examples, inc_examples, ".", args.task_filename,
                         args.symmetry_breaking_method, config["max_disjunction_size"], config["learn_acyclic"],
                         config["use_compressed_traces"], config["avoid_learning_only_negative"],
                         config["prioritize_optimal_solutions"], binary_folder_name="../bin")

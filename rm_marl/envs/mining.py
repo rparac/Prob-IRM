@@ -7,7 +7,6 @@ back to the depot(goal). The episode terminates when the agent reaches the depot
 gets a positive reward only when it is back in the terminal state with gold
 """
 
-
 from enum import IntEnum
 
 import gym
@@ -100,7 +99,9 @@ class MiningEnv(BaseGridEnv):
         return obs
 
     def _get_info(self):
-        return {}
+        return {
+            "is_positive_trace": False,
+        }
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed, options=options)
@@ -140,6 +141,7 @@ class MiningEnv(BaseGridEnv):
 
         observation = self._get_obs()
         info = self._get_info()
+        info["is_positive_trace"] = reward > 0
 
         if self.render_mode == "human":
             self._render_frame()

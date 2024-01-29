@@ -27,8 +27,8 @@ class RewardMachineLearningAgent(RewardMachineAgent):
     ):
         rm_learner_kws = rm_learner_kws or {}
         self.rm_learner = rm_learner_cls(agent_id, **rm_learner_kws)
-        # self.trace = TraceTracker()
-        self.trace = NoisyTraceTracker()
+        self.trace = TraceTracker()
+        # self.trace = NoisyTraceTracker()
         # self.incomplete_examples = []
         self.incomplete_examples = {}
         # self.positive_examples = []
@@ -80,73 +80,18 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         )
 
         if learning:
-            self.trace.update(labels)
-
-            if terminated or truncated:
-                candidate_rm = self.rm_learner.update_rm(self.observables, self.rm, self.trace)
-
-        return loss, interrupt, rm_updated
-
-    # TODO: delete
-    def old_update_agent(
-            self,
-            state,
-            action,
-            reward,
-            terminated,
-            truncated,
-            is_positive_trace,
-            next_state,
-            labels,
-            learning=True,
-    ):
-        loss, interrupt, rm_updated = super().update_agent(
-            state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning
-        )
-
-        if learning:
             self.trace.update(labels, next_state)
-            if isinstance(self.rm_learner, (ILASPLearner, DAFSALearner, S2SLearner)):
-                seq = self.trace.no_dups_labels_sequence
-            # elif isinstance(self.rm_learner, (DAFSALearner,)):
-            #     seq = self.trace.no_dups_flatten_labels_sequence
-            else:
-                seq = self.trace.flatten_labels_sequence
+
             if terminated or truncated:
-                examples_updated = self._update_examples(
-                    seq, terminated, is_positive_trace
-                )
-                if examples_updated and self._should_relearn_rm(terminated, is_positive_trace):
-                    candidate_rm = self.rm_learner.learn(
-                        self.observables,
-                        self.rm,
-                        self.positive_examples,
-                        self.dend_examples,
-                        self.incomplete_examples,
-                    )
-                    if candidate_rm:
-                        self.rm = candidate_rm
-                        self.algo.reset()
-                        rm_updated = True
-            # TODO: discuss with Leo why we need this part
-            # elif self.rm.is_state_terminal(self.u):
-            #     LOGGER.debug(
-            #         f"[{self.agent_id}] the RM {self.rm_learner.rm_learning_counter} is wrong "
-            #         f"or the state belief is wrong.")
-            #     examples_updated = self._update_examples(seq, complete=False, positive=False)
-            #     if examples_updated:
-            #         candidate_rm = self.rm_learner.learn(
-            #             self.observables,
-            #             self.rm,
-            #             self.positive_examples,
-            #             self.dend_examples,
-            #             self.incomplete_examples
-            #         )
-            #         if candidate_rm:
-            #             self.rm = candidate_rm
-            #             self.algo.reset()
-            #             rm_updated = True
-            #         interrupt = True
+                candidate_rm = self.rm_learner.learn(self.rm, self.u, self.trace, terminated, truncated,
+                                                     is_positive_trace)
+                if candidate_rm:
+                    self.rm = candidate_rm
+                    self.algo.reset()
+                    rm_updated = True
+                    # We can always interrupt if a new rm is learned
+                    # TODO: check if we need the interrupt variable; looks like it is fully captured by rm_updated
+                    interrupt = True
 
         return loss, interrupt, rm_updated
 
@@ -194,27 +139,6 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                     self.incomplete_examples[t_trace[:i]] = red_pens[i - 1] + self.incomplete_examples.get(t_trace, 0)
         else:
             self.incomplete_examples[t_trace] = red_pens[-1] + self.incomplete_examples.get(t_trace, 0)
-
-    def _update_examples(self, trace: tuple, complete: bool, positive: bool):
-        if not trace:
-            return False
-
-        if complete:
-            if positive:
-                self.positive_examples[trace] = None
-            else:
-                self.dend_examples[trace] = None
-            for i in range(1, len(trace)):
-                self.incomplete_examples.append(trace[:i])
-        else:
-            self.incomplete_examples.append(trace)
-
-        self.incomplete_examples = [
-            e for e in self.incomplete_examples
-            if e not in self.positive_examples
-        ]
-
-        return True
 
     # RM should be relearned if there is a mismatch between
     #  environment and the current RM

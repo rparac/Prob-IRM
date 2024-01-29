@@ -5,7 +5,7 @@ from typing import List, Iterator, Union, Tuple, Dict, Set
 import numpy as np
 
 from rm_marl.rm_learning.ilasp.noisy_learner.ilasp_example_representation import ObservablePredicate, LastPredicate, \
-    ILASPPredicate, ISAILASPExample, AcceptTerm, RejectTerm
+    ILASPPredicate, ISAILASPExample
 from rm_marl.rm_learning.trace_tracker import NoisyTraceTracker
 
 
@@ -33,11 +33,11 @@ class NoisyILASPExampleGenerator:
     def create_examples_from(self, trace: NoisyTraceTracker) -> List[ISAILASPExample]:
         if trace.is_complete:
             if trace.is_positive:
-                inclusion, exclusion = {AcceptTerm()}, {RejectTerm()}
+                ex_type = ISAILASPExample.ExType.GOAL
             else:
-                inclusion, exclusion = {RejectTerm()}, {AcceptTerm()}
+                ex_type = ISAILASPExample.ExType.DEND
         else:
-            inclusion, exclusion = set(), {AcceptTerm(), RejectTerm()}
+            ex_type = ISAILASPExample.ExType.INCOMPLETE
 
         sol = []
         for i in range(self.I):
@@ -45,7 +45,7 @@ class NoisyILASPExampleGenerator:
             context = self.create_example_context(trace)
             penalty = np.round(-self.K * np.log(self.epsilon / (1 - self.epsilon)) / self.I).astype(int)
             last_predicate = LastPredicate(len(trace.trace) - 1)
-            sol.append(ISAILASPExample(ex_id, penalty, inclusion, exclusion, context, last_predicate))
+            sol.append(ISAILASPExample(ex_id, penalty, ex_type, context, last_predicate))
             self.ex_counter += 1
         return sol
 
