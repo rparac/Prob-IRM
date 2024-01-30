@@ -53,8 +53,8 @@ rm = RewardMachine.load_from_file("data/mining/rm_agent_1.txt")
 rm_transitioner = DeterministicRMTransitioner(rm)
 # rm_transitioner = ProbRMTransitioner(rm)
 
-# env = MiningNoisyLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)  # type: ignore
-env = MiningLabelingFunctionWrapper(env) # type: ignore
+env = MiningNoisyLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)  # type: ignore
+# env = MiningLabelingFunctionWrapper(env) # type: ignore
 
 # AutomataWrapper here only provides the filter_label function (used in counter_factual update).
 #  It also logs RM states
@@ -75,7 +75,7 @@ ag = RewardMachineLearningAgent(
         "action_space": env.action_space,
         "seed": 123,
     },
-    rm_learner_cls=ILASPLearner,
+    rm_learner_cls=ProbFFNSLLearner,
 )
 
 agent_dict = {"A1": ag}

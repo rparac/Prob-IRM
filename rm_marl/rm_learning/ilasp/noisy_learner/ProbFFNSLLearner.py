@@ -5,7 +5,7 @@ from typing import List
 from rm_marl.reward_machine import RewardMachine
 from rm_marl.rm_learning import RMLearner
 from rm_marl.rm_learning.ilasp.noisy_learner.example_generator import NoisyILASPExampleGenerator
-from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample
+from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample, ISAExampleContainer
 from rm_marl.rm_learning.ilasp.task_generator import generate_ilasp_task
 from rm_marl.rm_learning.ilasp.task_parser import parse_ilasp_solutions
 from rm_marl.rm_learning.ilasp.task_solver import solve_ilasp_task
@@ -19,14 +19,13 @@ class ProbFFNSLLearner(RMLearner):
     def __init__(self, agent_id):
         super().__init__(agent_id)
 
-        self.rm_num_states = 1
-
-        self.goal_examples = []
-        self.dend_examples = []
-        self.inc_examples = []
+        self.goal_examples = ISAExampleContainer()
+        self.dend_examples = ISAExampleContainer()
+        self.inc_examples = ISAExampleContainer()
         self.ex_generator = NoisyILASPExampleGenerator()
 
-        self.rm_num_states = 1
+        # Minimum is 3 states (accepting, rejecting, u0)
+        self.rm_num_states = 3
 
     def learn(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated,
               is_positive_trace):
@@ -48,24 +47,14 @@ class ProbFFNSLLearner(RMLearner):
         examples = self.ex_generator.create_examples_from(trace)
         for ex in examples:
             ex.compact_observations()
-            if ex.ExType == ISAILASPExample.ExType.GOAL:
-                self._add_example(self.goal_examples, ex)
-            elif ex.ExType == ISAILASPExample.ExType.DEND:
-                self._add_example(self.dend_examples, ex)
+            if ex.example_type == ISAILASPExample.ExType.GOAL:
+                self.goal_examples.add(ex)
+            elif ex.example_type == ISAILASPExample.ExType.DEND:
+                self.dend_examples.add(ex)
             else:
-                self._add_example(self.inc_examples, ex)
+                self.inc_examples.add(ex)
             for inc_ex in ex.generate_incomplete_examples():
-                self._add_example(self.inc_examples, inc_ex)
-
-    def _add_example(self, curr_examples: List[ISAILASPExample], new_example: ISAILASPExample) -> List[ISAILASPExample]:
-        ex_updated = False
-        for ex in curr_examples:
-            if ex == new_example:
-                ex_updated = True
-                ex.penalty += new_example.penalty
-        if not ex_updated:
-            curr_examples.append(new_example)
-        return curr_examples
+                self.inc_examples.add(inc_ex)
 
     def _update_reward_machine(self):
         self.rm_learning_counter += 1
@@ -99,9 +88,9 @@ class ProbFFNSLLearner(RMLearner):
             "u_acc",
             "u_rej",
             self._observables,
-            self.goal_examples,
-            self.dend_examples,
-            self.inc_examples,
+            self.goal_examples.as_list(),
+            self.dend_examples.as_list(),
+            self.inc_examples.as_list(),
             self.log_folder,
             ilasp_task_filename,
             symmetry_breaking_method="bfs-alternative",
@@ -113,10 +102,12 @@ class ProbFFNSLLearner(RMLearner):
             binary_folder_name=None,
         )
 
+    # TODO: move logic inside a container if this is too slow
     @property
     def _observables(self):
         ret = set()
-        for ex in itertools.chain(self.goal_examples, self.dend_examples, self.inc_examples):
+        for ex in itertools.chain(self.goal_examples.as_list(), self.dend_examples.as_list(),
+                                  self.inc_examples.as_list()):
             for obs in ex.observable_context:
                 ret.add(obs.label)
         return ret

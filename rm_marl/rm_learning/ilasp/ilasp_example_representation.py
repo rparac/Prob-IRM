@@ -1,6 +1,6 @@
 import abc
 import enum
-from typing import Optional, List, Set, Type
+from typing import Optional, List, Set, Type, Dict
 
 
 class ILASPTerm(abc.ABC):
@@ -25,6 +25,7 @@ class LastPredicate(ILASPPredicate):
     def __eq__(self, other):
         return isinstance(other, LastPredicate) and self.time_step == other.time_step
 
+
 class ObservablePredicate(ILASPPredicate):
     def __init__(self, label: str, time_step: int):
         self.label = label
@@ -36,12 +37,11 @@ class ObservablePredicate(ILASPPredicate):
     def __eq__(self, other):
         if not isinstance(other, ObservablePredicate):
             return False
-
         # Intentionally defined for label only
         return self.label == other.label
 
     def __hash__(self):
-        return hash(self.as_predicate_str())
+        return hash(self.label)
 
 
 class ISAILASPExample:
@@ -53,12 +53,12 @@ class ISAILASPExample:
     ex_id: str
     penalty: Optional[int]
     example_type: ExType
-    observable_context: Set[ObservablePredicate]
+    observable_context: List[ObservablePredicate]
     last_predicate: LastPredicate
     is_positive: bool
 
     def __init__(self, ex_id: str, ex_penalty: Optional[int], example_type: ExType,
-                 observable_context: Set[ObservablePredicate],
+                 observable_context: List[ObservablePredicate],
                  last_predicate: LastPredicate, is_positive: bool = True):
         self.ex_id = ex_id
         self.penalty = ex_penalty
@@ -74,6 +74,9 @@ class ISAILASPExample:
         return (self.example_type == other.example_type and
                 self.observable_context == other.observable_context and
                 self.last_predicate == other.last_predicate)
+
+    def __hash__(self):
+        return sum(hash(x) for x in self.observable_context)
 
     def _generate_inc_exc_str(self):
         if self.example_type == ISAILASPExample.ExType.GOAL:
@@ -105,12 +108,11 @@ class ISAILASPExample:
     def compact_observations(self):
         # Group observations by time-step
         time_obs_dict = {}
-        other_predicates = []
         for elem in self.observable_context:
             elems = time_obs_dict.get(elem.time_step, set())
             elems.add(elem)
             time_obs_dict[elem.time_step] = elems
-        self.observable_context = set(other_predicates)
+        self.observable_context = []
 
         # Merge identical observations
         sol = []
@@ -127,7 +129,7 @@ class ISAILASPExample:
         for t, observations in enumerate(sol):
             for observation in observations:
                 observation.time_step = t
-                self.observable_context.add(observation)
+                self.observable_context.append(observation)
 
         # Add Last Predicate
         last_timestep = len(sol) - 1
@@ -144,6 +146,31 @@ class ISAILASPExample:
             )
         return sols
 
+    @staticmethod
+    def add_example(curr_examples, new_example):
+        ex_updated = False
+        for ex in curr_examples:
+            if ex == new_example:
+                ex_updated = True
+                ex.penalty += new_example.penalty
+        if not ex_updated:
+            curr_examples.append(new_example)
+        return curr_examples
+
+
+class ISAExampleContainer:
+    def __init__(self):
+        self._storage: Dict[ISAILASPExample, int] = {}
+
+    def add(self, ex):
+        if ex in self._storage:
+            curr_pen = self._storage[ex]
+            ex.penalty += curr_pen
+        self._storage[ex] = ex.penalty
+
+    def as_list(self):
+        return list(self._storage.keys())
+
 
 # Lifts the example representation from Daniel's work to ISAILASPExample
 def _lift(example: List[List[str]], ex_id: str, ex_type: ISAILASPExample.ExType) -> ISAILASPExample:
@@ -153,7 +180,7 @@ def _lift(example: List[List[str]], ex_id: str, ex_type: ISAILASPExample.ExType)
             obs_context.append(ObservablePredicate(symbol, i))
     last = LastPredicate(len(example) - 1)
     penalty = None
-    return ISAILASPExample(ex_id, penalty, ex_type, set(obs_context), last)
+    return ISAILASPExample(ex_id, penalty, ex_type, obs_context, last)
 
 
 def lift_goal_example(example: List[List[str]], ex_id: str) -> ISAILASPExample:

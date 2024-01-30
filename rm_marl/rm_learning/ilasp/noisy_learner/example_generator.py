@@ -4,7 +4,7 @@ from typing import List, Dict, Set
 import numpy as np
 
 from rm_marl.rm_learning.ilasp.ilasp_example_representation import ObservablePredicate, LastPredicate, \
-    ISAILASPExample
+    ISAILASPExample, ISAExampleContainer
 from rm_marl.rm_learning.trace_tracker import NoisyTraceTracker, TraceTracker
 
 
@@ -38,17 +38,17 @@ class NoisyILASPExampleGenerator:
         else:
             ex_type = ISAILASPExample.ExType.INCOMPLETE
 
-        sol = []
+        sol = ISAExampleContainer()
         for i in range(self.I):
             ex_id = f"ex_{self.ex_counter}"
             context = self.create_example_context(trace)
             penalty = np.round(-self.K * np.log(self.epsilon / (1 - self.epsilon)) / self.I).astype(int)
             last_predicate = LastPredicate(len(trace.trace) - 1)
-            sol.append(ISAILASPExample(ex_id, penalty, ex_type, context, last_predicate))
+            sol.add(ISAILASPExample(ex_id, penalty, ex_type, context, last_predicate))
             self.ex_counter += 1
-        return sol
+        return sol.as_list()
 
-    def create_example_context(self, trace: TraceTracker) -> Set[ObservablePredicate]:
+    def create_example_context(self, trace: TraceTracker) -> List[ObservablePredicate]:
         assert len(trace.trace) > 0
         # Create context
         sol = []
@@ -56,7 +56,7 @@ class NoisyILASPExampleGenerator:
             true_labels = self._sample_dict(labels)
             predicates = [ObservablePredicate(label, time_step) for label in true_labels]
             sol.extend(predicates)
-        return set(sol)
+        return sol
 
     # labels - dictionary of labels paired with their probability
     # returns: keys which are considered as true
