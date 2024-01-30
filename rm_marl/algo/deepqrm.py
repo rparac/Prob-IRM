@@ -52,6 +52,7 @@ class DeepQRM(Algo):
         target_update_freq: int = 100,
         gamma: float = 0.9,
         epsilon: float = 0.1,
+        temperature: float = 50.0,
         optimizer_cls: Type[Optimizer] = AdamW,
         optimizer_kws: dict = None
     ):
@@ -77,7 +78,6 @@ class DeepQRM(Algo):
         self._target_update_freq = target_update_freq
         self._policy_train_freq = policy_train_freq
         self._gamma = gamma
-        self._epsilon = epsilon
 
         # Optimizers
         self._optimizer_cls = optimizer_cls
@@ -86,6 +86,8 @@ class DeepQRM(Algo):
         # Internal parameters used to make decisions
         self._policies_train_timer = self._policy_train_freq
         self._target_update_timer = self._target_update_freq
+        self._temperature = temperature
+        self._epsilon = epsilon
 
         # PRNGs
         self._np_random, _ = gym.utils.seeding.np_random()
@@ -289,12 +291,33 @@ class DeepQRM(Algo):
         if self._np_random.random() < self._epsilon:
             return self._np_random.choice(range(self._num_actions))
 
+        # A non-random action is to be taken, prepare the flat env state and feed it to the Q-network
+        flat_state = torch.as_tensor(
+            gym.spaces.utils.flatten(self._obs_space, state),
+            dtype=torch.float
+        )
+        action_values = self._q_networks[u].policy_network(flat_state)
+
+        # Softmax action selection
+        if not greedy:
+            exp_values = torch.exp(action_values * self._temperature)
+            action_probabilities = exp_values / sum(exp_values)
+
+            # Check for NANs, ie: q-values are too large and softmax returns infinity
+            # If so, make every corresponding action equally likely
+            if any(torch.isnan(action_probabilities)):
+                print("BOLTZMANN CONSTANT TOO LARGE IN ACTION-SELECTION SOFTMAX")
+                temp = torch.as_tensor(torch.isnan(action_probabilities), dtype=torch.float)
+                action_probabilities = temp / torch.sum(temp)
+
+            cumulated_probabilities = torch.cat((torch.tensor([0]), torch.cumsum(action_probabilities)))
+            rand = self._np_random.random()
+            for action in range(self._num_actions):
+                if cumulated_probabilities[action] <= rand <= cumulated_probabilities[action + 1]:
+                    return action
+
+        # Greedy action selection
         else:
-            flat_state = torch.as_tensor(
-                gym.spaces.utils.flatten(self._obs_space, state),
-                dtype=torch.float
-            )
-            action_values = self._q_networks[u].policy_network(flat_state)
             best_action_value = action_values.max()
             best_actions_mask = action_values == best_action_value
             best_actions = [t.item() for t in torch.nonzero(best_actions_mask)]
