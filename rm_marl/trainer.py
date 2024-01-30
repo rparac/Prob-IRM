@@ -25,9 +25,8 @@ class Trainer:
         self.test_episodes = 0
 
         # Logs for plots more that SummaryWriter can't represent, so we use matplotlib + SummaryWritter add image
-
         # Keeps track of all rm states in each environment. Used for logging of state transition diagram.
-        self.all_recorded_rm_states: Dict[str, set] = dict()
+        self.all_recorded_rm_states: Dict[str, set] = defaultdict(_generate_empty_set)
         # Stores for each episode in an environment a dictionary of (RM state, timestep) pairs
         # from env_id -> [{u -> last_timestep}]
         self.last_timestep_train_info: Dict[str, List[Dict[str, int]]] = {}
@@ -56,7 +55,8 @@ class Trainer:
 
         if run_config["extra_debug_information"]:
             create_rm_state_logs(log_dir, run_config["total_episodes"], self.test_episodes,
-                                 run_config["testing_freq"], self.last_timestep_train_info, self.last_timestep_test_info,
+                                 run_config["testing_freq"], self.last_timestep_train_info,
+                                 self.last_timestep_test_info,
                                  self.all_recorded_rm_states, self.rm_relearned_episodes)
 
         _ = [e.close() for e in self.envs.values()]
@@ -70,8 +70,6 @@ class Trainer:
         steps = defaultdict(list)
         losses = defaultdict(list)
         rewards = defaultdict(list)
-
-        self.all_recorded_rm_states = self.all_recorded_rm_states or {env_id: set() for env_id in envs.keys()}
 
         _ = [a.set_log_folder(os.path.join(logger.log_dir, aid)) for aid, a in self.agents.items()]
 
@@ -319,3 +317,8 @@ class Trainer:
         if "trainer.pkl" not in path:
             path = os.path.join(path, "trainer.pkl")
         return joblib.load(path)
+
+
+# Lambda cannot be used because of a pickling issue
+def _generate_empty_set():
+    return set()
