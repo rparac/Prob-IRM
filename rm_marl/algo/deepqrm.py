@@ -310,7 +310,7 @@ class DeepQRM(Algo):
                 temp = torch.as_tensor(torch.isnan(action_probabilities), dtype=torch.float)
                 action_probabilities = temp / torch.sum(temp)
 
-            cumulated_probabilities = torch.cat((torch.tensor([0]), torch.cumsum(action_probabilities)))
+            cumulated_probabilities = torch.cat((torch.tensor([0]), torch.cumsum(action_probabilities, dim=0)))
             rand = self._np_random.random()
             for action in range(self._num_actions):
                 if cumulated_probabilities[action] <= rand <= cumulated_probabilities[action + 1]:
