@@ -27,7 +27,7 @@ class Trainer:
         # Logs for plots more that SummaryWriter can't represent, so we use matplotlib + SummaryWritter add image
 
         # Keeps track of all rm states in each environment. Used for logging of state transition diagram.
-        self.all_recorded_rm_states: Dict[str, set] = dict()
+        self.all_recorded_rm_states: Dict[str, set] = defaultdict(lambda: set())
         # Stores for each episode in an environment a dictionary of (RM state, timestep) pairs
         # from env_id -> [{u -> last_timestep}]
         self.last_timestep_train_info: Dict[str, List[Dict[str, int]]] = {}
@@ -70,8 +70,6 @@ class Trainer:
         steps = defaultdict(list)
         losses = defaultdict(list)
         rewards = defaultdict(list)
-
-        self.all_recorded_rm_states = self.all_recorded_rm_states or {env_id: set() for env_id in envs.keys()}
 
         _ = [a.set_log_folder(os.path.join(logger.log_dir, aid)) for aid, a in self.agents.items()]
 
