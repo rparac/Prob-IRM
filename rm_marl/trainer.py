@@ -27,7 +27,7 @@ class Trainer:
         # Logs for plots more that SummaryWriter can't represent, so we use matplotlib + SummaryWritter add image
 
         # Keeps track of all rm states in each environment. Used for logging of state transition diagram.
-        self.all_recorded_rm_states: Dict[str, set] = defaultdict(_generate_empty_set)
+        self.all_recorded_rm_states: Dict[str, set] = defaultdict(set)
         # Stores for each episode in an environment a dictionary of (RM state, timestep) pairs
         # from env_id -> [{u -> last_timestep}]
         self.last_timestep_train_info: Dict[str, List[Dict[str, int]]] = {}
@@ -308,8 +308,3 @@ class Trainer:
         if "trainer.pkl" not in path:
             path = os.path.join(path, "trainer.pkl")
         return joblib.load(path)
-
-
-# Lambda cannot be used because of a pickling issue
-def _generate_empty_set():
-    return set()
