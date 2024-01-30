@@ -81,7 +81,7 @@ class DeepQRM(Algo):
 
         # Optimizers
         self._optimizer_cls = optimizer_cls
-        self._optimizer_kws = optimizer_kws or {"lr": 1e-4, "asmgrad": True}  # Defaults assume AdamW
+        self._optimizer_kws = optimizer_kws or {"lr": 1e-4, "amsgrad": True}  # Defaults assume AdamW
 
         # Internal parameters used to make decisions
         self._policies_train_timer = self._policy_train_freq
