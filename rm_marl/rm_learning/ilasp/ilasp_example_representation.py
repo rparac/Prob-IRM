@@ -22,6 +22,8 @@ class LastPredicate(ILASPPredicate):
     def as_predicate_str(self):
         return f'last({self.time_step}).'
 
+    def __eq__(self, other):
+        return isinstance(other, LastPredicate) and self.time_step == other.time_step
 
 class ObservablePredicate(ILASPPredicate):
     def __init__(self, label: str, time_step: int):
@@ -51,8 +53,6 @@ class ISAILASPExample:
     ex_id: str
     penalty: Optional[int]
     example_type: ExType
-    inclusion: Set[ILASPTerm]
-    exclusion: Set[ILASPTerm]
     observable_context: Set[ObservablePredicate]
     last_predicate: LastPredicate
     is_positive: bool
@@ -71,8 +71,7 @@ class ISAILASPExample:
         if not isinstance(other, ISAILASPExample):
             return False
 
-        return (self.inclusion == other.inclusion and
-                self.exclusion == other.exclusion and
+        return (self.example_type == other.example_type and
                 self.observable_context == other.observable_context and
                 self.last_predicate == other.last_predicate)
 

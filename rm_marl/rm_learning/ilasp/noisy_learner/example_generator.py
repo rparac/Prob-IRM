@@ -5,7 +5,7 @@ import numpy as np
 
 from rm_marl.rm_learning.ilasp.ilasp_example_representation import ObservablePredicate, LastPredicate, \
     ISAILASPExample
-from rm_marl.rm_learning.trace_tracker import NoisyTraceTracker
+from rm_marl.rm_learning.trace_tracker import NoisyTraceTracker, TraceTracker
 
 
 # Computes the classification examples for the logic-based learning method
@@ -29,9 +29,9 @@ class NoisyILASPExampleGenerator:
 
         random.seed(0)
 
-    def create_examples_from(self, trace: NoisyTraceTracker) -> List[ISAILASPExample]:
-        if trace.is_complete:
-            if trace.is_positive:
+    def create_examples_from(self, trace: TraceTracker) -> List[ISAILASPExample]:
+        if trace.is_complete[-1]:
+            if trace.is_positive[-1]:
                 ex_type = ISAILASPExample.ExType.GOAL
             else:
                 ex_type = ISAILASPExample.ExType.DEND
@@ -48,7 +48,7 @@ class NoisyILASPExampleGenerator:
             self.ex_counter += 1
         return sol
 
-    def create_example_context(self, trace: NoisyTraceTracker) -> Set[ObservablePredicate]:
+    def create_example_context(self, trace: TraceTracker) -> Set[ObservablePredicate]:
         assert len(trace.trace) > 0
         # Create context
         sol = []
@@ -62,7 +62,7 @@ class NoisyILASPExampleGenerator:
     # returns: keys which are considered as true
     def _sample_dict(self, labels: Dict[str, float]) -> List[str]:
         true_elems = []
-        for label, prob in labels:
+        for label, prob in labels.items():
             if random.random() <= prob:
                 true_elems.append(label)
         return true_elems

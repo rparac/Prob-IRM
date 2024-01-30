@@ -28,23 +28,18 @@ class ProbFFNSLLearner(RMLearner):
 
         self.rm_num_states = 1
 
-    def learn(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated, is_positive_trace):
+    def learn(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated,
+              is_positive_trace):
         # We assume this function be called when a trace is fully generated
         # TODO: check if this is reasonable
         if terminated or truncated:
             self._update_examples(trace)
         elif curr_rm.is_state_terminal(curr_state):
-            pass
+            self._update_examples(trace)
 
         # TODO: implement condition for checking
         if True:
             self._update_reward_machine()
-
-    # TODO: keep track of RM relearning (need to implement relearning condition)
-    def learn(
-            self, observables, rm, positive_examples, dend_examples, incomplete_examples,
-    ):
-        raise NotImplementedError("Should not use this method. It is deprecated.")
 
     def _update_examples(self, trace: TraceTracker):
         if not trace:

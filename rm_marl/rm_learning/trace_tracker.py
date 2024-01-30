@@ -19,6 +19,8 @@ class TraceTracker:
     def reset(self):
         self.trace.clear()
         self.obs.clear()
+        self.is_positive.clear()
+        self.is_complete.clear()
 
     def update(self, labels, obs, is_positive_trace, is_complete_trace):
         self.is_positive.append(is_positive_trace)
