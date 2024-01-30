@@ -392,7 +392,7 @@ class DeepQRM(Algo):
 class DeepQNetwork(nn.Module):
 
     def __init__(self, dim_obs, num_layers, layer_size, num_actions):
-        super(DeepQNetwork).__init__()
+        super(DeepQNetwork, self).__init__()
 
         # Initialize input layer
         self._input_layer = nn.Sequential(
