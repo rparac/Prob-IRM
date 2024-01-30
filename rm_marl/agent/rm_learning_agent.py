@@ -80,7 +80,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         )
 
         if learning:
-            self.trace.update(labels, next_state, is_positive_trace)
+            self.trace.update(labels, next_state, is_positive_trace, terminated)
 
             if terminated or truncated:
                 candidate_rm = self.rm_learner.learn(self.rm, self.u, self.trace, terminated, truncated,
