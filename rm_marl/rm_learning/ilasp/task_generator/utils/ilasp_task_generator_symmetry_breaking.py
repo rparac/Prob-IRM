@@ -173,7 +173,7 @@ def _generate_bfs_symmetry_breaking_rules_alternative(max_disj_size):
     stmts.append("injected_ed_sb(X, Y, E) :- injected_ed(X, Y, E), injected_state_id(Y, _).")
     stmts.append("injected_pa(X, Y) :- injected_ed_sb(X, Y, _), injected_state_lt(X, Y), "
                  "#false : injected_ed_sb(Z, Y, _), injected_state_lt(Z, X).")
-    stmts.append(":- injected_state_id(Y, YID), YID > 0, not injected_pa(_, Y).")
+    stmts.append("% :- injected_state_id(Y, YID), YID > 0, not injected_pa(_, Y).")
     stmts.append(":- injected_pa(X, Y), injected_ed_sb(XP, YP, _), injected_state_lt(XP, X), injected_state_leq(Y, YP).")
 
     # if X is the parent of Y, there is a smallest edge from X to Y (there is no destination YP such that Y<YP, but

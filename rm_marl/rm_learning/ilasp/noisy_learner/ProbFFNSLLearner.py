@@ -25,7 +25,8 @@ class ProbFFNSLLearner(RMLearner):
         self.ex_generator = NoisyILASPExampleGenerator()
 
         # Minimum is 3 states (accepting, rejecting, u0)
-        self.rm_num_states = 3
+        # self.rm_num_states = 3
+        self.rm_num_states = 4
 
     def learn(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated,
               is_positive_trace):
@@ -38,7 +39,7 @@ class ProbFFNSLLearner(RMLearner):
 
         # TODO: implement condition for checking
         if True:
-            self._update_reward_machine()
+            return self._update_reward_machine(curr_rm)
 
     def _update_examples(self, trace: TraceTracker):
         if not trace:
@@ -56,7 +57,7 @@ class ProbFFNSLLearner(RMLearner):
             for inc_ex in ex.generate_incomplete_examples():
                 self.inc_examples.add(inc_ex)
 
-    def _update_reward_machine(self):
+    def _update_reward_machine(self, curr_rm):
         self.rm_learning_counter += 1
 
         ilasp_task_filename = os.path.join(
@@ -70,6 +71,31 @@ class ProbFFNSLLearner(RMLearner):
         solver_completed = self._solve_ilasp_task(ilasp_task_filename, ilasp_solution_filename)
         if solver_completed:
             candidate_rm = parse_ilasp_solutions(ilasp_solution_filename)
+
+            # TODO: remove duplication here with ILASPLearner
+            if candidate_rm.states:
+                candidate_rm.set_u0("u0")
+                if len(self.goal_examples) > 0:
+                    candidate_rm.set_uacc("u_acc")
+                if len(self.dend_examples) > 0:
+                    candidate_rm.set_urej("u_rej")
+
+                if candidate_rm == curr_rm:
+                    return None
+                rm_plot_filename = os.path.join(
+                    self.log_folder, f"plot_{self.rm_learning_counter}"
+                )
+                candidate_rm.plot(rm_plot_filename)
+                return candidate_rm
+            else:
+                LOGGER.debug(f"[{self.agent_id}] ILASP task unsolvable")
+                self.rm_num_states += 1
+                return self._update_reward_machine(curr_rm)
+
+        else:
+            raise RuntimeError(
+                "Error: Couldn't find an automaton within the specified timeout!"
+            )
 
     def _solve_ilasp_task(self, ilasp_task_filename, ilasp_solution_filename):
         return solve_ilasp_task(

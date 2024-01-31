@@ -45,7 +45,7 @@ def generate_transition_statements(learn_acyclic, use_compressed_traces, avoid_l
     # all states must be reachable from the initial state
     stmt += "reachable(u0).\n"
     stmt += "reachable(Y) :- reachable(X), ed(X, Y, _).\n"
-    stmt += ":- not reachable(X), state(X).\n\n"
+    stmt += "% :- not reachable(X), state(X).\n\n"
 
     if learn_acyclic:
         stmt += "path(X, Y) :- %s(X, Y, _).\n" % CONNECTED_STR

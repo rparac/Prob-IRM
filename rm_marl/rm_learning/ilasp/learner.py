@@ -47,12 +47,12 @@ class ILASPLearner(RMLearner):
         if not examples_updated:
             return None
 
-        return self._learn(
+        return self._update_reward_machine(
             self.observables,
             curr_rm,
-            self.positive_examples,
-            self.dend_examples,
-            self.incomplete_examples,
+            self.process_examples(self.positive_examples),
+            self.process_examples(self.dend_examples),
+            self.process_examples(self.incomplete_examples),
         )
 
     def _update_examples(self, trace: tuple, complete: bool, positive: bool):
@@ -75,17 +75,6 @@ class ILASPLearner(RMLearner):
         ]
 
         return True
-
-    def _learn(
-            self, observables, rm, positive_examples, dend_examples, incomplete_examples
-    ):
-        return self._update_reward_machine(
-            observables,
-            rm,
-            self.process_examples(positive_examples),
-            self.process_examples(dend_examples),
-            self.process_examples(incomplete_examples),
-        )
 
     def process_examples(self, examples):
         return sorted(set(examples), key=len)

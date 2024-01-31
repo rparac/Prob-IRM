@@ -142,7 +142,7 @@ class ISAILASPExample:
             ex_id = f"{self.ex_id}_inc_{i}"
             sols.append(
                 ISAILASPExample(ex_id, self.penalty, ISAILASPExample.ExType.INCOMPLETE, self.observable_context[:i],
-                                LastPredicate(i))
+                                LastPredicate(i - 1))
             )
         return sols
 
@@ -170,6 +170,9 @@ class ISAExampleContainer:
 
     def as_list(self):
         return list(self._storage.keys())
+
+    def __len__(self):
+        return len(self._storage)
 
 
 # Lifts the example representation from Daniel's work to ISAILASPExample
