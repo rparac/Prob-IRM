@@ -1,33 +1,18 @@
-import os
-from typing import TYPE_CHECKING, Optional
+from typing import Optional, Type
 
 from ..algo import QRM
+from ._base import Agent
+from ..algo import Algo
 
-if TYPE_CHECKING:
-    from ..algo import Algo
 
-
-class NoRMAgent:
+class NoRMAgent(Agent):
     def __init__(
-        self, agent_id: str, algo_cls: "Algo" = QRM, algo_kws: dict = None
+        self, agent_id: str, algo_cls: Type[Algo] = QRM, algo_kws: dict = None
     ):
-        self.agent_id = agent_id
-        algo_kws = algo_kws or {}
-        self.algo = algo_cls(**algo_kws)
-        self._log_folder = None
+
+        super().__init__(agent_id, algo_cls, algo_kws)
 
         self.reset()
-
-    @property
-    def log_folder(self):
-        if self._log_folder is None:
-            raise RuntimeError("log_folder should be set")
-        return self._log_folder
-
-    def set_log_folder(self, folder):
-        if not os.path.exists(folder):
-            os.mkdir(folder)
-        self._log_folder = folder
 
     def reset(self, seed: Optional[int] = None):
         self.u = 0

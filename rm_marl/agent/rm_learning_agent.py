@@ -1,17 +1,14 @@
 from itertools import groupby
-from typing import TYPE_CHECKING, Optional
+from typing import Optional, Type
 from collections import OrderedDict
 
 from ..algo import QRM
-from ..reward_machine import RewardMachine
-from ..rm_learning import ILASPLearner, DAFSALearner, AlergiaLearner, S2SLearner
+from ..algo import Algo
+from ..rm_learning import ILASPLearner, DAFSALearner, S2SLearner
 from ..utils.logging import getLogger
 from .rm_agent import RewardMachineAgent
-
-if TYPE_CHECKING:
-    from ..algo import Algo
-    from ..reward_machine import RewardMachine
-    from ..rm_learning import RMLearner
+from ..reward_machine import RewardMachine
+from ..rm_learning import RMLearner
 
 LOGGER = getLogger(__name__)
 
@@ -67,9 +64,9 @@ class RewardMachineLearningAgent(RewardMachineAgent):
     def __init__(
         self,
         agent_id: str,
-        algo_cls: "Algo" = QRM,
+        algo_cls: Type[Algo] = QRM,
         algo_kws: dict = None,
-        rm_learner_cls: "RMLearner" = ILASPLearner,
+        rm_learner_cls: Type[RMLearner] = ILASPLearner,
         rm_learner_kws: dict = None,
     ):
         rm_learner_kws = rm_learner_kws or {}
