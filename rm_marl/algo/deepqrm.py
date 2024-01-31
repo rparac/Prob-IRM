@@ -280,7 +280,7 @@ class DeepQRM(Algo):
         ----------
         state The current environmental state
         u The current agent's RM state
-        greedy Ignored parameter; needed for compatibility with Trainer code # TODO: Add action-selection softmax
+        greedy Ignored parameter; needed for compatibility with Trainer code
 
         Returns
         -------
