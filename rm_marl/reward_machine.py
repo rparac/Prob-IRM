@@ -1,6 +1,8 @@
 from collections import defaultdict
 import copy
 
+import numpy as np
+
 
 class _CustomDefaultDict(dict):
     def __getitem__(self, __key):
@@ -162,15 +164,33 @@ class RewardMachine:
         if isinstance(u, (int, str)):
             return u == self.uacc
 
-        #  50% chance we are in one.
-        accept_threshold = 0.5
-        return u[self.to_idx(self.uacc)] > accept_threshold
+        acc_idx = self.to_idx(self.uacc)
+        curr_state_idx = np.argmax(u)
+        return acc_idx == curr_state_idx
+
+    def accepting_state_prob(self, u):
+        if isinstance(u, (int, str)):
+            return 1 if u == self.uacc else 0
+
+        acc_idx = self.to_idx(self.uacc)
+        # Todo: replace this with a different indicator (remove -1)
+        return u[acc_idx] if acc_idx != -1 else 0
 
     def is_rejecting_state(self, u):
         if isinstance(u, (int, str)):
             return u == self.urej
-        reject_threshold = 0.5
-        return u[self.to_idx(self.urej)] > reject_threshold
+
+        rej_idx = self.to_idx(self.urej)
+        curr_state_idx = np.argmax(u)
+        return rej_idx == curr_state_idx
+
+    def rejecting_state_prob(self, u):
+        if isinstance(u, (int, str)):
+            return 1 if u == self.urej else 0
+
+        rej_idx = self.to_idx(self.urej)
+        # Todo: replace this with a different indicator (remove -1)
+        return u[rej_idx] if rej_idx != -1 else 0
 
     @staticmethod
     def _is_event_satisfied(condition, observations):

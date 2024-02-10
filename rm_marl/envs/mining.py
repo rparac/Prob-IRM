@@ -6,7 +6,7 @@ This is a simple single agent environment. The goal of the task is to dig gold a
 back to the depot(goal). The episode terminates when the agent reaches the depot. The agent
 gets a positive reward only when it is back in the terminal state with gold
 """
-
+import random
 from enum import IntEnum
 
 import gym
@@ -191,22 +191,32 @@ class MiningLabelingFunctionWrapper(LabelingFunctionWrapper):
 
 class MiningNoisyLabelingFunctionWrapper(LabelingFunctionWrapper):
     # Constructor to ensure type safety
-    def __init__(self, env: MiningEnv, sensor_true_confidence: float, sensor_false_confidence: float):
+    def __init__(self, env: MiningEnv, sensor_true_confidence: float, sensor_false_confidence: float, seed: int):
         super().__init__(env, noisy=True, sensor_true_confidence=sensor_true_confidence,
                          sensor_false_confidence=sensor_false_confidence)
         self.env = env
 
-    # TODO: simulate sensor errors
+        np.random.seed(seed)
+
     def get_labels(self, obs: dict = None, prev_obs: dict = None):
         """Returns a modified observation."""
         labels = {'by': 0, 'g': 0}
 
         unwrapped_obs = gym.spaces.unflatten(self.env.unflatten_obs_space, obs["A1"])
         labels['by'] = 0
-        if unwrapped_obs["dug_gold"]:
-            labels['by'] = 1
-        # if unwrapped_obs["tried_digging"]:
-        #     labels['by'] = self.get_label_confidence(label_true=unwrapped_obs["dug_gold"])
+
+        if unwrapped_obs["tried_digging"]:
+            if unwrapped_obs["dug_gold"]:
+                # Gold is detected in this case
+                gold_predicted = bool(np.random.binomial(1, self.sensor_true_confidence))
+                labels['by'] = self.get_label_confidence(gold_predicted)
+            else:
+                # Gold is not detected in this case
+                gold_predicted = bool(1 - np.random.binomial(1, self.sensor_false_confidence))
+                labels['by'] = self.get_label_confidence(gold_predicted)
+
+        # if unwrapped_obs["dug_gold"]:
+        #     labels['by'] = 1
 
         if unwrapped_obs["goal_reached"]:
             labels['g'] = 1

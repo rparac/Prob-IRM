@@ -1,6 +1,7 @@
 import abc
+import copy
 import enum
-from typing import Optional, List, Set, Type, Dict
+from typing import Optional, List, Set, Type, Dict, Union
 
 
 class ILASPTerm(abc.ABC):
@@ -51,13 +52,14 @@ class ISAILASPExample:
         INCOMPLETE = enum.auto()
 
     ex_id: str
-    penalty: Optional[int]
+    # penalty is rounded in this class to avoid dealing with extremely large numbers
+    penalty: Optional[float]
     example_type: ExType
     observable_context: List[ObservablePredicate]
     last_predicate: LastPredicate
     is_positive: bool
 
-    def __init__(self, ex_id: str, ex_penalty: Optional[int], example_type: ExType,
+    def __init__(self, ex_id: str, ex_penalty: Optional[float], example_type: ExType,
                  observable_context: List[ObservablePredicate],
                  last_predicate: LastPredicate, is_positive: bool = True):
         self.ex_id = ex_id
@@ -66,6 +68,9 @@ class ISAILASPExample:
         self.observable_context = observable_context
         self.last_predicate = last_predicate
         self.is_positive = is_positive
+
+        # Large number to reduce the rounding error to int
+        self.penalty_rounding_scale = 1 # 10
 
     def __eq__(self, other):
         if not isinstance(other, ISAILASPExample):
@@ -99,7 +104,8 @@ class ISAILASPExample:
         context_str = '  '.join([elem.as_predicate_str() for elem in self.observable_context])
         context_str += f'\n  {self.last_predicate.as_predicate_str()}'
         prefix = "pos" if self.is_positive else "neg"
-        return f"#{prefix}({self.ex_id}{'' if self.penalty is None else f'@{self.penalty}'}, " \
+        penalty_rounded = round(self.penalty * self.penalty_rounding_scale) if self.penalty else None
+        return f"#{prefix}({self.ex_id}{'' if penalty_rounded is None else f'@{penalty_rounded}'}, " \
                f"{self._generate_inc_exc_str()}" \
                f"{{\n" \
                f"  {context_str}\n" \
@@ -160,16 +166,27 @@ class ISAILASPExample:
 
 class ISAExampleContainer:
     def __init__(self):
-        self._storage: Dict[ISAILASPExample, int] = {}
+        self._storage: Dict[ISAILASPExample, float] = {}
 
     def add(self, ex):
         if ex in self._storage:
             curr_pen = self._storage[ex]
+            del self._storage[ex]
             ex.penalty += curr_pen
         self._storage[ex] = ex.penalty
 
     def as_list(self):
         return list(self._storage.keys())
+
+    # Return examples such that their penalties sum to total_sum
+    def as_list_reweighted(self, total_sum: Union[int, float]) -> List[ISAILASPExample]:
+        ex_pen_sum = sum(self._storage.values())
+        ret = []
+        for ex, ex_val in self._storage.items():
+            new_ex = copy.deepcopy(ex)
+            new_ex.penalty = (ex_val / ex_pen_sum) * total_sum
+            ret.append(new_ex)
+        return ret
 
     def __len__(self):
         return len(self._storage)

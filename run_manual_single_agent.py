@@ -2,7 +2,7 @@
 This file showcases how code is intended to be used in the single agent case.
 Hydra configuration helps with duplicate configuration, but is not immediately clear to a user.
 """
-
+import cProfile
 import os
 import random
 
@@ -25,17 +25,19 @@ from rm_marl.trainer import Trainer
 BASE_PATH = os.path.join(os.path.dirname(__file__), "data/mining")
 ENV_PATH = os.path.join(BASE_PATH, f"env.txt")
 
+seed = 123
+
 trainer_run_config = {
     "training": True,
-    "total_episodes": 100,
+    "total_episodes": 500, # 100,
     "log_freq": 1,
     "log_dir": os.path.join(os.path.dirname(__file__), "logs"),
-    "testing_freq": 10,
+    "testing_freq": 50, # 10,
     "greedy": True,
     "synchronize": False,
     "counterfactual_update": False,
-    "recording_freq": 5,
-    "seed": 123,
+    "recording_freq": 50, # 5
+    "seed": seed,
     "name": "mining-learning-rm",
     "extra_debug_information": True,
 }
@@ -50,10 +52,11 @@ env = gym.make(
 
 # rm = None
 rm = RewardMachine.load_from_file("data/mining/rm_agent_1.txt")
-rm_transitioner = DeterministicRMTransitioner(rm)
-# rm_transitioner = ProbRMTransitioner(rm)
+# rm_transitioner = DeterministicRMTransitioner(rm)
+rm_transitioner = ProbRMTransitioner(rm)
 
-env = MiningNoisyLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)  # type: ignore
+env = MiningNoisyLabelingFunctionWrapper(env, sensor_true_confidence=0.2, sensor_false_confidence=0.2,  # type: ignore
+                                         seed=seed)
 # env = MiningLabelingFunctionWrapper(env) # type: ignore
 
 # AutomataWrapper here only provides the filter_label function (used in counter_factual update).
@@ -67,7 +70,7 @@ env = AutomataWrapper(
 env = RecordEpisodeStatistics(env)  # type: ignore
 
 ag = RewardMachineLearningAgent(
-# ag = RewardMachineAgent(
+    # ag = RewardMachineAgent(
     rm_transitioner=rm_transitioner,
     agent_id="A1",
     algo_cls=QRM,

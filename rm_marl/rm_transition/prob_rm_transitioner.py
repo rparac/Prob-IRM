@@ -8,6 +8,8 @@ from rm_marl.rm_transition.rm_transitioner import RMTransitioner
 
 
 class ProbRMTransitioner(RMTransitioner):
+    # rm should be provided unless it is learned.
+    # In that case, the rm parameter will be set by the learning agent
     def __init__(self, rm: Optional[RewardMachine]):
         super().__init__(rm)
 
@@ -53,7 +55,7 @@ class ProbRMTransitioner(RMTransitioner):
         return math.prod(transition_label_probs)
 
     # Simplified version
-    #
+    # TODO: remove
     def get_next_state_simple(self, curr_state, label_probs):
         assert np.isclose(sum(curr_state), 1, rtol=1e-5, atol=1e-5)
         belief_out = curr_state.copy()

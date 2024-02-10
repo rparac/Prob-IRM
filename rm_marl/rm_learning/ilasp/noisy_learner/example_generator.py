@@ -1,11 +1,11 @@
 import random
-from typing import List, Dict, Set
+from typing import List, Dict
 
 import numpy as np
 
 from rm_marl.rm_learning.ilasp.ilasp_example_representation import ObservablePredicate, LastPredicate, \
     ISAILASPExample, ISAExampleContainer
-from rm_marl.rm_learning.trace_tracker import NoisyTraceTracker, TraceTracker
+from rm_marl.rm_learning.trace_tracker import TraceTracker
 
 
 # Computes the classification examples for the logic-based learning method
@@ -14,8 +14,6 @@ class NoisyILASPExampleGenerator:
     def __init__(self):
         # Number of samples
         self.I = 100
-        # Large number to reduce the error of rounding to int
-        self.K = 1000
         # The probability that an example is incorrect
         self.epsilon = 0.1  # 0.0000001
 
@@ -30,8 +28,8 @@ class NoisyILASPExampleGenerator:
         random.seed(0)
 
     def create_examples_from(self, trace: TraceTracker) -> List[ISAILASPExample]:
-        if trace.is_complete[-1]:
-            if trace.is_positive[-1]:
+        if trace.is_complete:
+            if trace.is_positive:
                 ex_type = ISAILASPExample.ExType.GOAL
             else:
                 ex_type = ISAILASPExample.ExType.DEND
@@ -42,14 +40,14 @@ class NoisyILASPExampleGenerator:
         for i in range(self.I):
             ex_id = f"ex_{self.ex_counter}"
             context = self.create_example_context(trace)
-            penalty = np.round(-self.K * np.log(self.epsilon / (1 - self.epsilon)) / self.I).astype(int)
+            penalty = -np.log(self.epsilon / (1 - self.epsilon)) / self.I
             last_predicate = LastPredicate(len(trace.trace) - 1)
             sol.add(ISAILASPExample(ex_id, penalty, ex_type, context, last_predicate))
             self.ex_counter += 1
         return sol.as_list()
 
+    # TODO: this method is called often so it might need to be sped up
     def create_example_context(self, trace: TraceTracker) -> List[ObservablePredicate]:
-        assert len(trace.trace) > 0
         # Create context
         sol = []
         for time_step, labels in enumerate(trace.trace):
@@ -58,6 +56,7 @@ class NoisyILASPExampleGenerator:
             sol.extend(predicates)
         return sol
 
+    # TODO: this method is called often so it might need to be sped up
     # labels - dictionary of labels paired with their probability
     # returns: keys which are considered as true
     def _sample_dict(self, labels: Dict[str, float]) -> List[str]:

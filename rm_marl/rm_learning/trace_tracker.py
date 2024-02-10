@@ -8,25 +8,25 @@ from typing import Dict, List, Tuple
 class TraceTracker:
     def __init__(self) -> None:
         self.trace = []
-        # TODO: remove obs; it's unused
-        self.obs = []
+        # self.obs = []
 
-        self.is_positive = []
-        self.is_complete = []
+        self.is_positive = False
+        self.is_complete = False
 
-        self._hash_state_mapping = OrderedDict()
+        # self._hash_state_mapping = OrderedDict()
 
     def reset(self):
         self.trace.clear()
-        self.obs.clear()
-        self.is_positive.clear()
-        self.is_complete.clear()
+        # self.obs.clear()
+        self.is_positive = False
+        self.is_complete = False
 
+    # TODO: remove obs; it's unused
     def update(self, labels, obs, is_positive_trace, is_complete_trace):
-        self.is_positive.append(is_positive_trace)
-        self.is_complete.append(is_complete_trace)
+        self.is_positive = self.is_positive or is_positive_trace
+        self.is_complete = self.is_complete or is_complete_trace
         self.trace.append(self._process_label(labels))
-        self.obs.append(self._process_obs(obs))
+        # self.obs.append(self._process_obs(obs))
 
     def _process_label(self, labels):
         if isinstance(labels, dict):
@@ -35,17 +35,16 @@ class TraceTracker:
 
         return labels or []
 
-    def _process_obs(self, obs):
-        state_hash = hash(str(obs))
-        if state_hash not in self._hash_state_mapping:
-            self._hash_state_mapping[state_hash] = obs
-        return list(self._hash_state_mapping.keys()).index(state_hash) + 1
+    # def _process_obs(self, obs):
+    #     state_hash = hash(str(obs))
+    #     if state_hash not in self._hash_state_mapping:
+    #         self._hash_state_mapping[state_hash] = obs
+    #     return list(self._hash_state_mapping.keys()).index(state_hash) + 1
 
     @property
     def labels_sequence(self):
-        return tuple(tuple(es) for es in self.trace if es)
+        return tuple(tuple(es) for es in self.trace if es) @ property
 
-    @property
     def no_dups_labels_sequence(self):
         return tuple(i[0] for i in groupby(self.labels_sequence or tuple()))
 
@@ -59,29 +58,29 @@ class TraceTracker:
     def no_dups_flatten_labels_sequence(self):
         return tuple(i[0] for i in groupby(self.flatten_labels_sequence or tuple()))
 
-
-class NoisyTraceTracker:
-    def __init__(self):
-        self.trace = []
-        self.probabilities = []
-
-        self.is_positive = False
-        self.is_complete = False
-
-        self.penalty_scale_factor = 10
-
-    def reset(self):
-        self.trace.clear()
-        self.probabilities.clear()
-
-    def update(self, labels: Dict[str, float]):
-        self.trace.append(labels)
-
-    def labels_sequence(self):
-        ret_labels = []
-        ret_penalties = []
-        for es, val in zip(self.trace, self.probabilities):
-            if es:
-                ret_labels.append(tuple(es))
-                ret_penalties.append(val)
-        return ret_labels, ret_penalties
+# TODO: delete
+# class NoisyTraceTracker:
+#     def __init__(self):
+#         self.trace = []
+#         self.probabilities = []
+#
+#         self.is_positive = False
+#         self.is_complete = False
+#
+#         self.penalty_scale_factor = 10
+#
+#     def reset(self):
+#         self.trace.clear()
+#         self.probabilities.clear()
+#
+#     def update(self, labels: Dict[str, float]):
+#         self.trace.append(labels)
+#
+#     def labels_sequence(self):
+#         ret_labels = []
+#         ret_penalties = []
+#         for es, val in zip(self.trace, self.probabilities):
+#             if es:
+#                 ret_labels.append(tuple(es))
+#                 ret_penalties.append(val)
+#         return ret_labels, ret_penalties

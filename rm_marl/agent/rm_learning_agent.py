@@ -1,12 +1,12 @@
 from typing import TYPE_CHECKING, Optional, Callable
 
+from rm_marl.rm_learning.trace_tracker import TraceTracker
+from .rm_agent import RewardMachineAgent
 from ..algo import QRM
 from ..reward_machine import RewardMachine
-from ..rm_learning import ILASPLearner, DAFSALearner, S2SLearner
+from ..rm_learning import ILASPLearner
 from ..rm_transition.rm_transitioner import RMTransitioner
 from ..utils.logging import getLogger
-from .rm_agent import RewardMachineAgent
-from rm_marl.rm_learning.trace_tracker import TraceTracker, NoisyTraceTracker
 
 if TYPE_CHECKING:
     from ..algo import Algo
@@ -139,15 +139,3 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                     self.incomplete_examples[t_trace[:i]] = red_pens[i - 1] + self.incomplete_examples.get(t_trace, 0)
         else:
             self.incomplete_examples[t_trace] = red_pens[-1] + self.incomplete_examples.get(t_trace, 0)
-
-    # RM should be relearned if there is a mismatch between
-    #  environment and the current RM
-    def _should_relearn_rm(self, terminated: bool, is_positive: bool):
-        if not terminated:
-            # TODO: check if this is fine
-            # We can't determine if there is a mismatch
-            return False
-
-        if is_positive:
-            return not self.rm.is_accepting_state(self.u)
-        return not self.rm.is_rejecting_state(self.u)
