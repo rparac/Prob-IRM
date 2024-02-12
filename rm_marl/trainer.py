@@ -158,10 +158,10 @@ class Trainer:
                             reward,
                             terminated,
                             truncated,
-                            info["is_positive_trace"],
                             self._project_obs(next_obs, a, aid),
                             synchronized_labels[aid],
                             learning=run_config["training"],
+                            is_positive_trace=info["is_positive_trace"]
                         )
 
                         if rm_updated:

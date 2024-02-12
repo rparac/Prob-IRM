@@ -24,7 +24,7 @@ class NoRMAgent(Agent):
         return self.algo.learn(state, u, action, reward, done, next_state, next_u)
 
     def update_agent(
-        self, state, action, reward, terminated, truncated, next_state, labels, learning=True
+        self, state, action, reward, terminated, truncated, next_state, labels, learning=True, **kwargs
     ):
         loss = None
         next_u = 0
