@@ -11,11 +11,12 @@ LOGGER = getLogger(__name__)
 
 
 class ILASPLearner(RMLearner):
-    def __init__(self, agent_id, init_rm_num_states=None):
+    def __init__(self, agent_id, init_rm_num_states=None, wait_for_pos_only=True):
         super().__init__(agent_id)
 
         self.init_rm_num_states = init_rm_num_states
         self.rm_num_states = init_rm_num_states
+        self.wait_for_pos_only = wait_for_pos_only
 
         self._previous_positive_examples = None
         self._previous_dend_examples = None
@@ -60,8 +61,14 @@ class ILASPLearner(RMLearner):
     ):
         LOGGER.debug(f"[{self.agent_id}]`_update_reward_machine`")
 
-        if not positive_examples and not dend_examples:
-            LOGGER.debug(f"[{self.agent_id}] No positive and no dend examples")
+        if self.wait_for_pos_only:
+            if not positive_examples:
+                LOGGER.debug(f"[{self.agent_id}] No positive examples")
+                return
+        else:
+            if not positive_examples and not dend_examples:
+                LOGGER.debug(f"[{self.agent_id}] No positive and no deadend examples")
+                return
 
         rm_num_states = (rm_num_states or self.rm_num_states or min(
             len(t) for t in itertools.chain(positive_examples, dend_examples)) + 2)
