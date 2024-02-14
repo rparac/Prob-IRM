@@ -110,14 +110,17 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         reward,
         terminated,
         truncated,
-        is_positive_trace,
         next_state,
         labels,
         learning=True,
+        **kwargs
     ):
         loss, interrupt, rm_updated = super().update_agent(
-            state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning
+            state, action, reward, terminated, truncated, next_state, labels, learning, **kwargs
         )
+
+        assert "is_positive_trace" in kwargs, f"Missing required argument \"is_positive_trace\""
+        is_positive_trace = kwargs["is_positive_trace"]
 
         if learning:
             self.trace.update(labels, next_state)
