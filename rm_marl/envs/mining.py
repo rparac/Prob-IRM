@@ -10,7 +10,7 @@ gets a positive reward only when it is back in the terminal state with gold
 
 from enum import IntEnum
 
-import gymnasium
+import gym
 import numpy as np
 import pygame
 
@@ -32,7 +32,7 @@ class MiningEnv(BaseGridEnv):
     ):
         super().__init__(render_mode, size, positions, file)
 
-        self.action_space = gymnasium.spaces.Discrete(len(self.Actions))
+        self.action_space = gym.spaces.Discrete(len(self.Actions))
         self._action_to_direction = {
             self.Actions.none: np.array([0, 0]),
             self.Actions.up: np.array([0, -1]),
@@ -50,14 +50,14 @@ class MiningEnv(BaseGridEnv):
         self.num_steps = 0
 
         pos_max = (self.size, self.size)
-        self.unflatten_obs_space = gymnasium.spaces.Dict({
-            "tried_digging": gymnasium.spaces.Discrete(2),
-            "dug_gold": gymnasium.spaces.Discrete(2),
-            "goal_reached": gymnasium.spaces.Discrete(2),
-            "pos": gymnasium.spaces.MultiDiscrete(list(pos_max), dtype=np.int32),
+        self.unflatten_obs_space = gym.spaces.Dict({
+            "tried_digging": gym.spaces.Discrete(2),
+            "dug_gold": gym.spaces.Discrete(2),
+            "goal_reached": gym.spaces.Discrete(2),
+            "pos": gym.spaces.MultiDiscrete(list(pos_max), dtype=np.int32),
         })
-        self.observation_space = gymnasium.spaces.Dict(
-            {"A1": gymnasium.spaces.utils.flatten_space(self.unflatten_obs_space)})
+        self.observation_space = gym.spaces.Dict(
+            {"A1": gym.spaces.utils.flatten_space(self.unflatten_obs_space)})
 
     def _draw_component(self, label, pos, canvas):
         if label[0] == "W":
@@ -96,7 +96,7 @@ class MiningEnv(BaseGridEnv):
                   "goal_reached": self.goal_reached,
                   "pos": np.array(a1_pos)}
         # obs_a1 = {"dug_gold": self.just_dug_gold, "goal_reached": self.goal_reached, "pos": np.array(a1_pos)}
-        obs = {"A1": gymnasium.spaces.utils.flatten(self.unflatten_obs_space, obs_a1)}
+        obs = {"A1": gym.spaces.utils.flatten(self.unflatten_obs_space, obs_a1)}
         return obs
 
     def _get_info(self):
@@ -177,7 +177,7 @@ class MiningLabelingFunctionWrapper(LabelingFunctionWrapper):
         """Returns a modified observation."""
         labels = []
 
-        unwrapped_obs = gymnasium.spaces.unflatten(self.env.unflatten_obs_space, obs["A1"])
+        unwrapped_obs = gym.spaces.unflatten(self.env.unflatten_obs_space, obs["A1"])
         if unwrapped_obs["dug_gold"]:
             labels.append('by')
 
