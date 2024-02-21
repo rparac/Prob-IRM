@@ -20,7 +20,7 @@ class QRM(Algo):
         gamma: float = 0.9,
         seed: int = 123,
     ):
-        assert isinstance(action_space, gym.spaces.Discrete)
+        # assert isinstance(action_space, gym.spaces.Discrete)
         self.action_space = action_space
         self.epsilon = epsilon
         self.temperature = temperature
