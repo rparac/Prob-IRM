@@ -55,7 +55,7 @@ class Agent(abc.ABC):
 
     @abc.abstractmethod
     def update_agent(
-            self, state, action, reward, terminated, truncated, next_state, labels, learning=True
+            self, state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning=True
     ):
         raise NotImplementedError('update_agent')
 
