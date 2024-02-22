@@ -43,8 +43,9 @@ class TraceTracker:
 
     @property
     def labels_sequence(self):
-        return tuple(tuple(es) for es in self.trace if es) @ property
+        return tuple(tuple(es) for es in self.trace if es)
 
+    @property
     def no_dups_labels_sequence(self):
         return tuple(i[0] for i in groupby(self.labels_sequence or tuple()))
 

@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import Optional
 
 import gym.spaces
+import gymnasium
 import numpy as np
 from gym.utils import seeding
 
@@ -20,7 +21,7 @@ class QRM(Algo):
         gamma: float = 0.9,
         seed: int = 123,
     ):
-        assert isinstance(action_space, gym.spaces.Discrete)
+        assert isinstance(action_space, gym.spaces.Discrete) or isinstance(action_space, gymnasium.spaces.Discrete)
         self.action_space = action_space
         self.epsilon = epsilon
         self.temperature = temperature
@@ -80,11 +81,17 @@ class QRM(Algo):
 
         return loss
 
-    def action(self, state, u, greedy: bool = False):
-
-        if self._np_random.random() < self.epsilon:
+    def action(self, state, u, greedy: bool = False, testing: bool = False):
+        random_act_selection = self._np_random.random() < self.epsilon
+        if random_act_selection and not testing:
             action = self._np_random.choice(range(self.action_space.n))
-        elif not greedy:
+        elif testing or (greedy and not random_act_selection):
+            best_actions = np.where(
+                self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)]
+                == np.max(self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)])
+            )[0]
+            action = self._np_random.choice(best_actions)
+        else:
             pr_sum = np.sum(
                 np.exp(self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)] * self.temperature)
             )
@@ -103,15 +110,21 @@ class QRM(Algo):
             cdf = np.insert(np.cumsum(pr), 0, 0)
 
             randn = self._np_random.random()
+            action = 0
             for a in range(self.action_space.n):
                 if randn >= cdf[a] and randn <= cdf[a + 1]:
                     action = a
                     break
-        else:
-            best_actions = np.where(
-                self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)]
-                == np.max(self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)])
-            )[0]
-            action = self._np_random.choice(best_actions)
 
         return action
+
+    def set_save_path(self, path, **kwargs):
+        """
+        Do nothing
+
+        Since QRM instances can simply be serialized and restore with python's default
+        pickle behaviour, this method is effectively useless. It is, however, implemented to
+        both document this detail and to comply with the Algo interface.
+
+        """
+        pass

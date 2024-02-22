@@ -27,7 +27,7 @@ class RMLearner(metaclass=abc.ABCMeta):
 
     # TODO: change the method name to update_rm
     @abc.abstractmethod
-    def learn(self):
+    def learn(self, observables, rm, positive_examples, negative_examples, incomplete_examples):
         raise NotImplementedError("learn")
 
     # @abc.abstractmethod

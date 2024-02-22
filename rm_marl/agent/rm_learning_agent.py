@@ -1,16 +1,15 @@
-from typing import TYPE_CHECKING, Optional, Callable
+from typing import Callable
+from typing import Optional, Type
 
 from rm_marl.rm_learning.trace_tracker import TraceTracker
 from .rm_agent import RewardMachineAgent
+from ..algo import Algo
 from ..algo import QRM
 from ..reward_machine import RewardMachine
 from ..rm_learning import ILASPLearner
+from ..rm_learning import RMLearner
 from ..rm_transition.rm_transitioner import RMTransitioner
 from ..utils.logging import getLogger
-
-if TYPE_CHECKING:
-    from ..algo import Algo
-    from ..rm_learning import RMLearner
 
 LOGGER = getLogger(__name__)
 
@@ -20,9 +19,9 @@ class RewardMachineLearningAgent(RewardMachineAgent):
             self,
             agent_id: str,
             rm_transitioner: RMTransitioner,
-            algo_cls: "Algo" = QRM,
+            algo_cls: Type[Algo] = QRM,
             algo_kws: dict = None,
-            rm_learner_cls: "RMLearner" = ILASPLearner,
+            rm_learner_cls: Type[RMLearner] = ILASPLearner,
             rm_learner_kws: dict = None,
     ):
         rm_learner_kws = rm_learner_kws or {}
@@ -44,6 +43,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         super().set_log_folder(folder)
         self.rm_learner.set_log_folder(self.log_folder)
 
+    # TODO: Maybe we should move this elsewhere; Useful for wrapping a no-RM agent as well
     @staticmethod
     def _default_rm():
         rm = RewardMachine()

@@ -142,3 +142,8 @@ logs/
 
 # Pycharm
 .idea/
+
+
+# src - location where pip installs editable sources
+src/
+
