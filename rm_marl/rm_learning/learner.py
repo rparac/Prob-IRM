@@ -26,11 +26,8 @@ class RMLearner(metaclass=abc.ABCMeta):
         self._log_folder = folder
 
     @abc.abstractmethod
-    def learn(self):
+    def learn(self, observables, rm, positive_examples, negative_examples, incomplete_examples):
         raise NotImplementedError("learn")
 
     def process_examples(self, examples):
         return examples
-
-
-
