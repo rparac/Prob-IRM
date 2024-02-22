@@ -16,7 +16,7 @@ from rm_marl.reward_machine import RewardMachine
 
 
 class DanielGymAdapter(gym.Wrapper):
-    def __init__(self, env: BaseEnv, render_mode=None):
+    def __init__(self, env: BaseEnv, render_mode=None, max_episode_length=None):
         # Explicitly returns observables as a part of the observation.
         # We regenerate them in this adapter using the info output.
         env.hide_state_variables = True
@@ -26,6 +26,8 @@ class DanielGymAdapter(gym.Wrapper):
         self._render_mode = render_mode
         self.env = env
         self.observables = self.env.get_restricted_observables()
+        self.max_episode_length = max_episode_length
+        self.current_step = 0
         self.agent_id = "A1"
 
         observables_obs_space = {
@@ -41,6 +43,7 @@ class DanielGymAdapter(gym.Wrapper):
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
+        self.current_step = 0
         if self._render_mode == "human":
             self.env.render(self._render_mode)
 
@@ -48,8 +51,12 @@ class DanielGymAdapter(gym.Wrapper):
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action[self.agent_id])
+        self.current_step += 1
         if self._render_mode == "human":
             self.env.render(self._render_mode)
+
+        if self.max_episode_length and self.current_step >= self.max_episode_length:
+            truncated = True
 
         return self._to_new_obs(obs, info), reward, terminated, truncated, {}
 
