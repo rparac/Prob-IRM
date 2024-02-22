@@ -9,9 +9,9 @@ import gym
 import numpy as np
 from gym.wrappers import RecordEpisodeStatistics
 
-from rm_marl.agent import RewardMachineAgent
+from rm_marl.agent import RewardMachineAgent, RewardMachineLearningAgent
 from rm_marl.algo import QRM
-from rm_marl.envs.gym_subgoal_automata.gym_subgoal_automata_wrapper import DanielGymAdapter, \
+from rm_marl.envs.gym_subgoal_automata_wrapper import DanielGymAdapter, \
     OfficeWorldDeliverCoffeeLabelingFunctionWrapper
 from rm_marl.envs.wrappers import AutomataWrapper
 from rm_marl.trainer import Trainer
@@ -20,24 +20,24 @@ seed = 123
 
 trainer_run_config = {
     "training": True,
-    "total_episodes": 100,  # 100,
+    "total_episodes": 10000,
     "log_freq": 1,
     "log_dir": os.path.join(os.path.dirname(__file__), "logs"),
-    "testing_freq": 10,
+    "testing_freq": 1000,
     "greedy": True,
     "synchronize": False,
-    "counterfactual_update": False,
-    "recording_freq": 50,
+    "counterfactual_update": True,
+    "recording_freq": 1000,
     "seed": seed,
     "name": "office-world",
-    "extra_debug_information": True,
+    "extra_debug_information": False,
 }
 np.random.seed(trainer_run_config["seed"])
 random.seed(trainer_run_config["seed"])
 
 env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
-               params={"generation": "random", "environment_seed": 0, "hide_state_variables": True})
-env = DanielGymAdapter(env, render_mode="rgb_array")  # type: ignore
+               params={"generation": "random", "environment_seed": 1, "hide_state_variables": True})
+env = DanielGymAdapter(env, render_mode="rgb_array", max_episode_length=250)  # type: ignore
 
 # rm = None
 rm = env.get_perfect_rm()
@@ -54,14 +54,17 @@ env = AutomataWrapper(
 )
 env = RecordEpisodeStatistics(env)  # type: ignore
 
-ag = RewardMachineAgent(
+ag = RewardMachineLearningAgent(
     # ag = RewardMachineAgent(
-    rm=rm,
+    # rm=rm,
     agent_id="A1",
     algo_cls=QRM,
     algo_kws={
         "action_space": env.action_space,
         "seed": 123,
+        "epsilon": 0.1,
+        "gamma": 0.99,
+        "alpha": 0.1,
     },
 )
 
