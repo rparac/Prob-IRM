@@ -47,6 +47,7 @@ class DanielGymAdapter(gym.Wrapper):
         if self._render_mode == "human":
             self.env.render(self._render_mode)
 
+        info["is_positive_trace"] = False
         return self._to_new_obs(obs, info), {}
 
     def step(self, action):
@@ -58,7 +59,8 @@ class DanielGymAdapter(gym.Wrapper):
         if self.max_episode_length and self.current_step >= self.max_episode_length:
             truncated = True
 
-        return self._to_new_obs(obs, info), reward, terminated, truncated, {}
+        info["is_positive_trace"] = reward > 0
+        return self._to_new_obs(obs, info), reward, terminated, truncated, info
 
     def _to_new_obs(self, old_obs, old_info):
         seen_observables = old_info.get("observations", set())
