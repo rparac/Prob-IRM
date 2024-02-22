@@ -1,6 +1,6 @@
 """
 Wrapper around https://github.com/ertsiger/gym-subgoal-automata/tree/master
-which provides enviornments such as coffee world and water world.
+which provides environments such as coffee world and water world.
 
 Sample usage:
 # See the link above for other options
