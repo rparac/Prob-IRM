@@ -1,10 +1,10 @@
 import gym
 
-from rm_marl.envs.gym_subgoal_automata_wrapper import DanielGymAdapter, OfficeWorldDeliverCoffeeLabelingFunctionWrapper
+from rm_marl.envs.gym_subgoal_automata_wrapper import GymSubgoalAutomataAdapter, OfficeWorldDeliverCoffeeLabelingFunctionWrapper
 
 env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
                params={"generation": "random", "environment_seed": 0, "hide_state_variables": True})
-env = DanielGymAdapter(env, render_mode="human")  # type: ignore
+env = GymSubgoalAutomataAdapter(env, render_mode="human")  # type: ignore
 env = OfficeWorldDeliverCoffeeLabelingFunctionWrapper(env)
 
 key_to_act = {

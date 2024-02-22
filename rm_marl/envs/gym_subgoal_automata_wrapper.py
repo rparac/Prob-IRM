@@ -15,7 +15,7 @@ from rm_marl.envs.wrappers import LabelingFunctionWrapper
 from rm_marl.reward_machine import RewardMachine
 
 
-class DanielGymAdapter(gym.Wrapper):
+class GymSubgoalAutomataAdapter(gym.Wrapper):
     def __init__(self, env: BaseEnv, render_mode=None, max_episode_length=None):
         # Explicitly returns observables as a part of the observation.
         # We regenerate them in this adapter using the info output.
@@ -104,7 +104,7 @@ class OfficeWorldDeliverCoffeeLabelingFunctionWrapper(LabelingFunctionWrapper):
     to find object ids
     """
 
-    def __init__(self, env: DanielGymAdapter):
+    def __init__(self, env: GymSubgoalAutomataAdapter):
         super().__init__(env)
         self.agent_id = "A1"
         self.env = env

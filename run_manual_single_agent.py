@@ -11,7 +11,7 @@ from gym.wrappers import RecordEpisodeStatistics
 
 from rm_marl.agent import RewardMachineAgent, RewardMachineLearningAgent
 from rm_marl.algo import QRM
-from rm_marl.envs.gym_subgoal_automata_wrapper import DanielGymAdapter, \
+from rm_marl.envs.gym_subgoal_automata_wrapper import GymSubgoalAutomataAdapter, \
     OfficeWorldDeliverCoffeeLabelingFunctionWrapper
 from rm_marl.envs.wrappers import AutomataWrapper
 from rm_marl.trainer import Trainer
@@ -37,7 +37,7 @@ random.seed(trainer_run_config["seed"])
 
 env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
                params={"generation": "random", "environment_seed": 1, "hide_state_variables": True})
-env = DanielGymAdapter(env, render_mode="rgb_array", max_episode_length=250)  # type: ignore
+env = GymSubgoalAutomataAdapter(env, render_mode="rgb_array", max_episode_length=250)  # type: ignore
 
 # rm = None
 rm = env.get_perfect_rm()
