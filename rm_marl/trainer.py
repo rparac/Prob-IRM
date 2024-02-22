@@ -125,6 +125,7 @@ class Trainer:
                             greedy=run_config.get("greedy", True)
                             if not run_config["training"]
                             else False,
+                            testing=not run_config["training"],
                         )
                         for aid, a in env_agents[env_id].items()
                     }
