@@ -56,12 +56,12 @@ class ISAILASPExample:
     penalty: Optional[float]
     example_type: ExType
     observable_context: List[ObservablePredicate]
-    last_predicate: LastPredicate
+    last_predicate: Optional[LastPredicate]
     is_positive: bool
 
     def __init__(self, ex_id: str, ex_penalty: Optional[float], example_type: ExType,
                  observable_context: List[ObservablePredicate],
-                 last_predicate: LastPredicate, is_positive: bool = True):
+                 last_predicate: Optional[LastPredicate], is_positive: bool = True):
         self.ex_id = ex_id
         self.penalty = ex_penalty
         self.example_type = example_type
@@ -70,7 +70,7 @@ class ISAILASPExample:
         self.is_positive = is_positive
 
         # Large number to reduce the rounding error to int
-        self.penalty_rounding_scale = 1 # 10
+        self.penalty_rounding_scale = 1  # 10
 
     def __eq__(self, other):
         if not isinstance(other, ISAILASPExample):
@@ -100,9 +100,14 @@ class ISAILASPExample:
 
         return f"{{{inc_str}}}, {{{exc_str}}},"
 
+    # Example is active if it has a non-zero penalty
+    def is_active(self):
+        return self.penalty is None or round(self.penalty * self.penalty_rounding_scale) > 0
+
     def __repr__(self):
         context_str = '  '.join([elem.as_predicate_str() for elem in self.observable_context])
-        context_str += f'\n  {self.last_predicate.as_predicate_str()}'
+        if self.last_predicate:
+            context_str += f'\n  {self.last_predicate.as_predicate_str()}'
         prefix = "pos" if self.is_positive else "neg"
         penalty_rounded = round(self.penalty * self.penalty_rounding_scale) if self.penalty else None
         return f"#{prefix}({self.ex_id}{'' if penalty_rounded is None else f'@{penalty_rounded}'}, " \
@@ -112,35 +117,42 @@ class ISAILASPExample:
                "}).\n"
 
     def compact_observations(self):
-        # Group observations by time-step
-        time_obs_dict = {}
-        for elem in self.observable_context:
-            elems = time_obs_dict.get(elem.time_step, set())
-            elems.add(elem)
-            time_obs_dict[elem.time_step] = elems
-        self.observable_context = []
+        previous_last_predicate = None
+        while self.last_predicate != previous_last_predicate:
+            previous_last_predicate = self.last_predicate
+            # Group observations by time-step
+            time_obs_dict = {}
+            for elem in self.observable_context:
+                elems = time_obs_dict.get(elem.time_step, set())
+                elems.add(elem)
+                time_obs_dict[elem.time_step] = elems
+            self.observable_context = []
 
-        # Merge identical observations
-        sol = []
-        time_steps = sorted(time_obs_dict.keys())
-        curr_observations = time_obs_dict[time_steps[0]]
-        for t in time_steps[1:]:
-            if time_obs_dict[t] != curr_observations:
-                sol.append(curr_observations)
-                curr_observations = time_obs_dict[t]
-        sol.append(curr_observations)
+            if len(time_obs_dict.keys()) == 0:
+                # no observations detected
+                self.last_predicate = None
+                return
 
-        # Add correct time steps
-        ret = []
-        for t, observations in enumerate(sol):
-            for observation in observations:
-                observation.time_step = t
-                self.observable_context.append(observation)
+            # Merge identical observations
+            sol = []
+            time_steps = sorted(time_obs_dict.keys())
+            curr_observations = time_obs_dict[time_steps[0]]
+            for t in time_steps[1:]:
+                if time_obs_dict[t] != curr_observations:
+                    sol.append(curr_observations)
+                    curr_observations = time_obs_dict[t]
+            sol.append(curr_observations)
 
-        # Add Last Predicate
-        last_timestep = len(sol) - 1
-        self.last_predicate = LastPredicate(last_timestep)
-        return ret, last_timestep
+            # Add correct time steps
+            for t, observations in enumerate(sol):
+                for observation in observations:
+                    observation.time_step = t
+                    self.observable_context.append(observation)
+
+            # Add Last Predicate
+            last_timestep = len(sol) - 1
+            self.last_predicate = LastPredicate(last_timestep)
+        previous_last_predicate = None
 
     def generate_incomplete_examples(self) -> List['ISAILASPExample']:
         sols = []

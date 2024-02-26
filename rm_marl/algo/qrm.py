@@ -1,3 +1,4 @@
+import math
 from collections import defaultdict
 from typing import Optional
 
@@ -8,30 +9,40 @@ from gym.utils import seeding
 
 from ._base import Algo
 
-class QRM(Algo):
 
+class QRM(Algo):
     _np_random: Optional[np.random.Generator] = None
 
     def __init__(
-        self,
-        action_space: "gym.spaces.Space" = None,
-        epsilon: float = 0.0,
-        temperature: float = 50.0,
-        alpha: float = 0.8,
-        gamma: float = 0.9,
-        seed: int = 123,
+            self,
+            action_space: "gym.spaces.Space" = None,
+            temperature: float = 50.0,
+            alpha: float = 0.8,
+            gamma: float = 0.9,
+            seed: int = 123,
+            epsilon_start: float = 1.0,
+            epsilon_end: float = 0.0,
+            epsilon_decay: int = 100,
     ):
         assert isinstance(action_space, gym.spaces.Discrete) or isinstance(action_space, gymnasium.spaces.Discrete)
         self.action_space = action_space
-        self.epsilon = epsilon
         self.temperature = temperature
         self.alpha = alpha
         self.gamma = gamma
         self._seed = seed
+        self.epsilon_start = epsilon_start
+        self.epsilon_end = epsilon_end
+        # Controls the rate of exponential decay of epsilon, higher means slower decay
+        self.epsilon_decay = epsilon_decay
 
         self.q = defaultdict(self._q_sa_constructor)
 
         self.reset(seed=seed)
+
+    @property
+    def epsilon(self):
+        return self.epsilon_end + (self.epsilon_start - self.epsilon_end) * math.exp(
+            -1 * self.n_steps / self.epsilon_decay)
 
     def _q_a_constructor(self):
         return np.zeros((self.action_space.n))
@@ -45,6 +56,7 @@ class QRM(Algo):
             self._np_random, seed = seeding.np_random(seed)
 
         self.q.clear()
+        self.n_steps = 0
 
     @staticmethod
     def _to_hashable_state_(state):
@@ -65,7 +77,6 @@ class QRM(Algo):
         u_str = ",".join([str(np.round(elem, decimals=3)) for elem in u])
         return u_str
 
-
     def learn(self, state, u, action, reward, done, next_state, next_u):
         next_q = np.amax(self.q[self._to_hashable_rm_state(next_u)][self._to_hashable_state_(next_state)])
         target_q = reward + (1 - int(done)) * self.gamma * next_q
@@ -76,9 +87,10 @@ class QRM(Algo):
 
         # Bellman update
         self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)][action] = (
-                                                                     1 - self.alpha
-                                                             ) * current_q + self.alpha * target_q
+                                                                                                 1 - self.alpha
+                                                                                         ) * current_q + self.alpha * target_q
 
+        self.n_steps += 1
         return loss
 
     def action(self, state, u, greedy: bool = False, testing: bool = False):

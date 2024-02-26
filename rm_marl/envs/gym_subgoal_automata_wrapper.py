@@ -9,6 +9,7 @@ env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
 env = DanielGymAdapter(env)
 """
 import gym
+import numpy as np
 
 from gym_subgoal_automata.envs.base.base_env import BaseEnv
 from rm_marl.envs.wrappers import LabelingFunctionWrapper
@@ -55,6 +56,12 @@ class GymSubgoalAutomataAdapter(gym.Wrapper):
         self.current_step += 1
         if self._render_mode == "human":
             self.env.render(self._render_mode)
+
+
+        # TODO: force negative reward when a plant is reached; this may need to be done through reward shaping or the other env
+        if 'n' in info['observations']:
+            reward = -1
+
 
         if self.max_episode_length and self.current_step >= self.max_episode_length:
             truncated = True
@@ -129,3 +136,74 @@ class OfficeWorldDeliverCoffeeLabelingFunctionWrapper(LabelingFunctionWrapper):
             'g',  # office
             'n',  # plant
         ]
+
+
+class OfficeWorldCoffeeLabelingFunctionWrapper(LabelingFunctionWrapper):
+    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+                 sensor_false_confidence: float,
+                 seed: int = 0):
+        super().__init__(env, noisy=True, sensor_true_confidence=sensor_true_confidence,
+                         sensor_false_confidence=sensor_false_confidence)
+        self.env = env
+        self.rng = np.random.default_rng(seed)
+        self.num_steps = 0
+
+    def get_labels(self, obs: dict, prev_obs: dict):
+        self.num_steps += 1
+        # TODO: this may be slow; as we do it a number of times
+        unwrapped_obs = gym.spaces.unflatten(self.env.unflatten_obs_space, obs[self.agent_id])
+        if unwrapped_obs["f"]:
+            coffee_predicted = bool(self.rng.binomial(1, self.sensor_true_confidence))
+        else:
+            coffee_predicted = bool(1 - self.rng.binomial(1, self.sensor_false_confidence))
+        labels = {'f': self.get_label_confidence(coffee_predicted, value_true_prior=2 / (12 * 9))}
+        return labels
+
+    def get_all_labels(self):
+        return ['f']  # coffee
+
+
+class OfficeWorldOfficeLabelingFunctionWrapper(LabelingFunctionWrapper):
+    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+                 sensor_false_confidence: float,
+                 seed: int = 0):
+        super().__init__(env, noisy=True, sensor_true_confidence=sensor_true_confidence,
+                         sensor_false_confidence=sensor_false_confidence)
+        self.env = env
+        self.rng = np.random.default_rng(seed)
+
+    def get_labels(self, obs: dict, prev_obs: dict):
+        # TODO: this may be slow; as we do it a number of times
+        unwrapped_obs = gym.spaces.unflatten(self.env.unflatten_obs_space, obs[self.agent_id])
+        if unwrapped_obs["g"]:
+            goal_predicted = bool(self.rng.binomial(1, self.sensor_true_confidence))
+        else:
+            goal_predicted = bool(1 - self.rng.binomial(1, self.sensor_false_confidence))
+        labels = {'g': self.get_label_confidence(goal_predicted)}
+        return labels
+
+    def get_all_labels(self):
+        return ['g']  # office
+
+
+class OfficeWorldPlantLabelingFunctionWrapper(LabelingFunctionWrapper):
+    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+                 sensor_false_confidence: float,
+                 seed: int = 0):
+        super().__init__(env, noisy=True, sensor_true_confidence=sensor_true_confidence,
+                         sensor_false_confidence=sensor_false_confidence)
+        self.env = env
+        self.rng = np.random.default_rng(seed)
+
+    def get_labels(self, obs: dict, prev_obs: dict):
+        # TODO: this may be slow; as we do it a number of times
+        unwrapped_obs = gym.spaces.unflatten(self.env.unflatten_obs_space, obs[self.agent_id])
+        if unwrapped_obs["n"]:
+            goal_predicted = bool(self.rng.binomial(1, self.sensor_true_confidence))
+        else:
+            goal_predicted = bool(1 - self.rng.binomial(1, self.sensor_false_confidence))
+        labels = {'n': self.get_label_confidence(goal_predicted)}
+        return labels
+
+    def get_all_labels(self):
+        return ['n']  # plant

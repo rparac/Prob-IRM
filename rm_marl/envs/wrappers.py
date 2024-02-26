@@ -3,7 +3,7 @@ import copy
 import random
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 import gym
 from gym.wrappers import RecordEpisodeStatistics, TimeLimit
@@ -40,9 +40,6 @@ class LabelingFunctionWrapper(gym.Wrapper):
             self.sensor_true_confidence = sensor_true_confidence
             self.sensor_false_confidence = sensor_false_confidence
 
-            self.sensor_true_prior = 0.5
-            self.sensor_false_prior = 1 - self.sensor_true_prior
-
     """
     We use the following binary sensor model:
         - It takes in two parameters:
@@ -60,18 +57,19 @@ class LabelingFunctionWrapper(gym.Wrapper):
            - Opposite case p(true_value | false_value_predicted)  is similar
     """
 
-    def get_label_confidence(self, label_true_pred: bool):
+    def get_label_confidence(self, label_true_pred: bool, value_true_prior: float = 0.5):
+        value_false_prior = 1 - value_true_prior
         # case: p(true_value | true_value_predicted)
         if label_true_pred:
-            p_true_and_true_pred = self.sensor_true_confidence * self.sensor_true_prior
-            p_true_pred = (self.sensor_true_confidence * self.sensor_true_prior +
-                           (1 - self.sensor_false_confidence) * self.sensor_false_prior)
+            p_true_and_true_pred = self.sensor_true_confidence * value_true_prior
+            p_true_pred = (self.sensor_true_confidence * value_true_prior +
+                           (1 - self.sensor_false_confidence) * value_false_prior)
             return p_true_and_true_pred / p_true_pred
         # case p(true_value | false_value_predicted)
         else:
-            p_true_and_false_pred = (1 - self.sensor_true_confidence) * self.sensor_true_prior
-            p_false_pred = ((1 - self.sensor_true_confidence) * self.sensor_true_prior
-                            + self.sensor_false_confidence * self.sensor_false_prior)
+            p_true_and_false_pred = (1 - self.sensor_true_confidence) * value_true_prior
+            p_false_pred = ((1 - self.sensor_true_confidence) * value_true_prior
+                            + self.sensor_false_confidence * value_false_prior)
             return p_true_and_false_pred / p_false_pred
 
     @abc.abstractmethod
@@ -109,6 +107,26 @@ class LabelingFunctionWrapper(gym.Wrapper):
         return labels
 
 
+class NoisyLabelingFunctionComposer(LabelingFunctionWrapper):
+    def __init__(self, label_funs: List[LabelingFunctionWrapper]):
+        assert len(label_funs) > 0
+
+        super().__init__(label_funs[0].env, noisy=True)
+        self.label_funs = label_funs
+
+    def get_labels(self, obs: dict, prev_obs: dict):
+        labels = {}
+        for label_fun in self.label_funs:
+            labels.update(label_fun.get_labels(obs, prev_obs))
+        return labels
+
+    def get_all_labels(self):
+        ret = []
+        for label_fun in self.label_funs:
+            ret.extend(label_fun.get_all_labels())
+        return ret
+
+
 @dataclass
 class RandomLabelingConfig:
     proba: float
@@ -117,7 +135,6 @@ class RandomLabelingConfig:
 
 
 class RandomLabelingFunctionWrapper(gym.Wrapper):
-
 
     def __init__(self, env: gym.Env, random_events: dict):
         """
@@ -187,11 +204,11 @@ class AutomataWrapper(gym.Wrapper):
         ENV = 1
 
     def __init__(
-        self,
-        env: gym.Env,
-        rm_transitioner: RMTransitioner,
-        label_mode: LabelMode = LabelMode.ALL,
-        termination_mode: TerminationMode = TerminationMode.RM
+            self,
+            env: gym.Env,
+            rm_transitioner: RMTransitioner,
+            label_mode: LabelMode = LabelMode.ALL,
+            termination_mode: TerminationMode = TerminationMode.RM
     ):
         """
         label_mode:
@@ -251,7 +268,7 @@ class AutomataWrapper(gym.Wrapper):
     def _get_terminated(self, terminated):
         if self.termination_mode == self.TerminationMode.ENV:
             return terminated
-        else: # should be TerminationMode.RM
+        else:  # should be TerminationMode.RM
             return self.rm.is_state_terminal(self.u)
 
     def _apply_simulated_updates(self, original_labels, simulated_updates):
@@ -278,6 +295,7 @@ class AutomataWrapper(gym.Wrapper):
         info["rm_state"] = self.u
         return obs, info
 
+
 class RewardMachineWrapper(AutomataWrapper):
 
     def __init__(
@@ -298,6 +316,7 @@ class RewardMachineWrapper(AutomataWrapper):
 
     def _get_reward(self, reward, u_next):
         return self.reward_function(self.rm, self.u, u_next, reward)
+
 
 class SingleAgentEnvWrapper(gym.Wrapper):
     def __init__(self, env: gym.Env, agent_id: str):
@@ -326,4 +345,3 @@ class SingleAgentEnvWrapper(gym.Wrapper):
         }
 
         return observation, reward, terminated, truncated, info
-

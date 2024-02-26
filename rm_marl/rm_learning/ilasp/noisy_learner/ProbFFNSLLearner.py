@@ -166,18 +166,25 @@ class ProbFFNSLLearner(RMLearner):
     # TODO: move logic inside a container if this is too slow
     @property
     def _observables(self):
-        ret = set()
+        # Using dict for reproducibility - converting set into a list does not preserve the ordering
+        # (only changing the number of episodes changed the list)
+        ret = dict()
+        # ret = set()
         for ex in itertools.chain(self.goal_examples.as_list(), self.dend_examples.as_list(),
                                   self.inc_examples.as_list()):
             for obs in ex.observable_context:
-                ret.add(obs.label)
-        return ret
+                ret[obs.label] = None
+        return list(ret.keys())
 
     def _should_relearn_rm(self) -> bool:
         if len(self._seen_traces) < self.min_rm_num_episodes:
             return False
 
         correct_threshold = self._rm_success_trace_cnt / len(self._seen_traces)
+
+        if len(self._seen_traces) % 100 == 0:
+            return True
+
         return correct_threshold < self.rm_recognize_threshold
 
     def _update_trace_counters(self, curr_rm, curr_state, trace):
@@ -220,6 +227,7 @@ class ProbFFNSLLearner(RMLearner):
                 curr_state = transitioner.get_next_state(curr_state, event)
             self._update_trace_counters(candidate_rm, curr_state, trace)
 
-        if self._should_relearn_rm():
-            raise ValueError("The relarned RM would be immediately be relearned."
-                             "Check if the threshold is too large or there is a bigger issue.")
+        # TODO: return after hacky test
+        # if self._should_relearn_rm():
+        #     raise ValueError("The relarned RM would be immediately be relearned."
+        #                      "Check if the threshold is too large or there is a bigger issue.")

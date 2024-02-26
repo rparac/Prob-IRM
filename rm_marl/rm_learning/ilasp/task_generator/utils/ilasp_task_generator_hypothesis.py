@@ -44,7 +44,7 @@ def _generate_state_constants(num_states, accepting_state, rejecting_state):
 
 
 def _generate_observables_constants(observables):
-    observables_constants = ["#constant(observable, \"%s\").\n" % o for o in observables]
+    observables_constants = ["#constant(observable, \"%s\").\n" % o for o in list(observables)]
     return "".join(observables_constants) + '\n'
 
 
