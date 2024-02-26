@@ -35,7 +35,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
         # self.negative_examples = []
         self.dend_examples = {}
 
-        rm_transitioner.rm = self._default_rm()
+        rm_transitioner.rm = self.default_rm()
 
         super().__init__(agent_id, rm_transitioner, algo_cls, algo_kws)
 
@@ -45,7 +45,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
 
     # TODO: Maybe we should move this elsewhere; Useful for wrapping a no-RM agent as well
     @staticmethod
-    def _default_rm():
+    def default_rm():
         rm = RewardMachine()
         rm.add_states(["u0"])
         rm.set_u0("u0")

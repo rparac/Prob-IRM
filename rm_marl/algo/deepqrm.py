@@ -13,6 +13,7 @@ Icarte himself in this repository: https://bitbucket.org/RToroIcarte/lrm/src
 We kindly thank the original authors for their amazing contribution to the neuro-symbolic reinforcement learning
 literature and for making their code freely available for the research community.
 """
+import math
 
 import numpy as np
 import torch.nn as nn
@@ -26,12 +27,10 @@ import random
 import os
 import os.path
 
-
 from ._base import Algo
 
 
 class DeepQRM(Algo):
-
     # TODO: Seeding
 
     RMStatePolicy = namedtuple("RMStatePolicy", [
@@ -41,20 +40,23 @@ class DeepQRM(Algo):
     ])
 
     def __init__(
-        self,
-        obs_space: "gym.spaces.Space",
-        action_space: "gym.spaces.Discrete",
-        num_policy_layers: int = 5,
-        policy_layer_size: int = 64,
-        replay_size: int = 10000,
-        batch_size: int = 32,
-        policy_train_freq: int = 1,
-        target_update_freq: int = 100,
-        gamma: float = 0.9,
-        epsilon: float = 0.1,
-        temperature: float = 50.0,
-        optimizer_cls: Type[Optimizer] = AdamW,
-        optimizer_kws: dict = None
+            self,
+            obs_space: "gym.spaces.Space",
+            action_space: "gym.spaces.Discrete",
+            num_policy_layers: int = 5,
+            policy_layer_size: int = 64,
+            replay_size: int = 10000,
+            batch_size: int = 32,
+            policy_train_freq: int = 1,
+            target_update_freq: int = 100,
+            gamma: float = 0.9,
+            epsilon_start: float = 1.0,
+            epsilon_end: float = 0.0,
+            epsilon_decay: int = 100,
+            temperature: float = 50.0,
+            optimizer_cls: Type[Optimizer] = AdamW,
+            optimizer_kws: dict = None,
+            seed: int = 0,
     ):
 
         super().__init__()
@@ -87,10 +89,14 @@ class DeepQRM(Algo):
         self._policies_train_timer = self._policy_train_freq
         self._target_update_timer = self._target_update_freq
         self._temperature = temperature
-        self._epsilon = epsilon
+        self._epsilon_start = epsilon_start
+        self._epsilon_end = epsilon_end
+        self._epsilon_decay = epsilon_decay
 
         # PRNGs
-        self._np_random, _ = gym.utils.seeding.np_random()
+        self._curr_seed = seed
+        torch.manual_seed(seed)
+        self._np_random, self._curr_seed = gym.utils.seeding.np_random(self._curr_seed)
 
         # Statistics
         # NB: These are NOT reset when self.reset() is called
@@ -100,6 +106,13 @@ class DeepQRM(Algo):
 
         # Save path to store/load instances
         self._save_path = None
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    @property
+    def _epsilon(self):
+        return self._epsilon_end + (self._epsilon_start - self._epsilon_end) * math.exp(
+            -1 * self.n_steps / self._epsilon_decay)
 
     def _init_q_network(self):
         """
@@ -116,7 +129,7 @@ class DeepQRM(Algo):
             self._num_policy_layers,
             self._layers_size,
             self._num_actions
-        )
+        ).to(self.device)
 
     def _init_q_network_pair(self):
         """
@@ -175,8 +188,8 @@ class DeepQRM(Algo):
             gym.spaces.utils.flatten(self._obs_space, next_state),
             dtype=torch.float
         )
-        reward = torch.as_tensor([reward])
-        action = torch.as_tensor([action])
+        reward = torch.as_tensor([reward], device=self.device)
+        action = torch.as_tensor([action], device=self.device)
 
         # Add experience to the replay buffer
         self._replay_memory.push(flat_state, u, action, reward, done, flat_next_state, next_u)
@@ -200,6 +213,8 @@ class DeepQRM(Algo):
         if self._target_update_timer == 0:
             self._update_target_networks()
             self._target_update_timer = self._target_update_freq
+
+        self.n_steps += 1
 
         # The overall loss is the mean loss obtained among all sub-policies
         valid_losses = [loss for loss in losses if loss is not None]
@@ -233,10 +248,10 @@ class DeepQRM(Algo):
 
         batch = self._replay_memory.sample(rm_state, self._batch_size)
         states, actions, rewards, dones, next_states, next_rm_states = tuple(zip(*batch))
-        states = torch.stack(states)
-        rewards = torch.stack(rewards)
-        actions = torch.stack(actions)
-        next_states = torch.stack(next_states)
+        states = torch.stack(states).to(self.device)
+        rewards = torch.stack(rewards).to(self.device)
+        actions = torch.stack(actions).to(self.device)
+        next_states = torch.stack(next_states).to(self.device)
 
         # Use the policy network to compute the Q-value estimates for each (s, a) pair
         q_estimates = q_net(states).gather(1, actions)
@@ -247,15 +262,25 @@ class DeepQRM(Algo):
         non_terminal_next_rm_states = [u for u, d in zip(next_rm_states, dones) if not d]
 
         # Gather the values predicted by the target network associated with the next RM states of each experience
-        target_values = torch.stack([
-            self._q_networks[u].target_network(s).max().unsqueeze(0)
-            for s, u
-            in zip(non_terminal_next_states, non_terminal_next_rm_states)
-        ])
+        target_values = []
+        for s, u in zip(non_terminal_next_states, non_terminal_next_rm_states):
+            # TODO: make double DQN a parameter; in DQN the action would be chosen by target_network
+            best_act = self._q_networks[u].policy_network(s).argmax()
+            t = self._q_networks[u].target_network(s)[best_act].unsqueeze(0)
+            t_old = self._q_networks[u].target_network(s).max().unsqueeze(0)
+            target_values.append(t)
+        target_values = torch.stack(target_values)
+
+        #
+        # target_values = torch.stack([
+        #     self._q_networks[u].target_network(s).max().unsqueeze(0)
+        #     for s, u
+        #     in zip(non_terminal_next_states, non_terminal_next_rm_states)
+        # ])
 
         # Compute the value estimates V(s') = max_{a'} Q(s', a') for next states according to the target network
         # By definition, V(s) = 0 for a terminal state s
-        next_states_values = torch.zeros((self._batch_size, 1))
+        next_states_values = torch.zeros((self._batch_size, 1), device=self.device)
         next_states_values[non_terminal_mask] = target_values
 
         # Compute the Q-values we expected to produce with our policy network
@@ -269,7 +294,7 @@ class DeepQRM(Algo):
 
         return loss.item()
 
-    def action(self, state, u, greedy: bool = True):
+    def action(self, state, u, greedy: bool = True, testing: bool = False):
         """
         Compute an action to be taken based on the state of the policy
 
@@ -281,6 +306,7 @@ class DeepQRM(Algo):
         state The current environmental state
         u The current agent's RM state
         greedy Ignored parameter; needed for compatibility with Trainer code
+        testing Ignored parameter; are we running the code in test mode
 
         Returns
         -------
@@ -294,12 +320,13 @@ class DeepQRM(Algo):
         # A non-random action is to be taken, prepare the flat env state and feed it to the Q-network
         flat_state = torch.as_tensor(
             gym.spaces.utils.flatten(self._obs_space, state),
-            dtype=torch.float
+            dtype=torch.float,
+            device=self.device
         )
         action_values = self._q_networks[u].policy_network(flat_state)
 
         # Softmax action selection
-        if not greedy:
+        if False and not greedy:
             exp_values = torch.exp(action_values * self._temperature)
             action_probabilities = exp_values / sum(exp_values)
 
@@ -310,7 +337,8 @@ class DeepQRM(Algo):
                 temp = torch.as_tensor(torch.isnan(action_probabilities), dtype=torch.float)
                 action_probabilities = temp / torch.sum(temp)
 
-            cumulated_probabilities = torch.cat((torch.tensor([0]), torch.cumsum(action_probabilities, dim=0)))
+            cumulated_probabilities = torch.cat(
+                (torch.tensor([0], device=self.device), torch.cumsum(action_probabilities, dim=0)))
             rand = self._np_random.random()
             for action in range(self._num_actions):
                 if cumulated_probabilities[action] <= rand <= cumulated_probabilities[action + 1]:
@@ -338,7 +366,7 @@ class DeepQRM(Algo):
         self._policies_train_timer = self._policy_train_freq
         self._target_update_timer = self._target_update_freq
 
-        self._np_random, _ = gym.utils.seeding.np_random()
+        self._np_random, self._curr_seed = gym.utils.seeding.np_random(self._curr_seed)
 
     def set_save_path(self, path, **kwargs):
 
@@ -575,4 +603,5 @@ class ReplayMemoryRM:
 class NotEnoughExperiencesError(Exception):
 
     def __init__(self, *, requested, available):
-        super().__init__(f'A batch of size {requested} was requested, but only {available} experiences are available in the replay memory')
+        super().__init__(
+            f'A batch of size {requested} was requested, but only {available} experiences are available in the replay memory')

@@ -17,8 +17,8 @@ class NoRMAgent(Agent):
     def reset(self, seed: Optional[int] = None):
         self.u = 0
 
-    def action(self, state, greedy: bool = False):
-        return self.algo.action(state, self.u, greedy=greedy)
+    def action(self, state, greedy: bool = False, testing: bool = False):
+        return self.algo.action(state, self.u, greedy=greedy, testing=testing)
 
     def learn(self, state, u, action, reward, done, next_state, next_u):
         return self.algo.learn(state, u, action, reward, done, next_state, next_u)

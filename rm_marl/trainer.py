@@ -22,7 +22,7 @@ class Trainer:
         self.agents = agents
 
         self.total_steps = 0
-        self.test_episodes = 0
+        self.test_episode = 0
 
         # Logs for plots more that SummaryWriter can't represent, so we use matplotlib + SummaryWritter add image
         # Keeps track of all rm states in each environment. Used for logging of state transition diagram.
@@ -54,7 +54,7 @@ class Trainer:
             pass
 
         if run_config["extra_debug_information"]:
-            create_rm_state_logs(log_dir, run_config["total_episodes"], self.test_episodes,
+            create_rm_state_logs(log_dir, run_config["total_episodes"], self.test_episode,
                                  run_config["testing_freq"], self.last_timestep_train_info,
                                  self.last_timestep_test_info,
                                  self.all_recorded_rm_states, self.rm_relearned_episodes)
@@ -75,7 +75,7 @@ class Trainer:
 
         for episode in tqdm(range(1, 1 + run_config["total_episodes"])):
             if not run_config["training"]:
-                self.test_episodes += 1
+                self.test_episode += 1
 
             episode_losses = defaultdict(list)
             episode_frames = defaultdict(list)
@@ -145,13 +145,14 @@ class Trainer:
                         synchronized_labels = agent_labels
 
                     # track state metric for logging
-                    most_likely_state = info["rm_state"]
-                    if isinstance(most_likely_state, np.ndarray):
-                        # TODO: not working with multi agent case
-                        most_likely_state_idx = np.argmax(most_likely_state)
-                        curr_a = list(env_agents[env_id].values())[0]
-                        most_likely_state = curr_a.rm.states[most_likely_state_idx]
-                    last_timestep_in_u[env_id][most_likely_state] = steps_count
+                    if "rm_state" in info:
+                        most_likely_state = info["rm_state"]
+                        if isinstance(most_likely_state, np.ndarray):
+                            # TODO: not working with multi agent case
+                            most_likely_state_idx = np.argmax(most_likely_state)
+                            curr_a = list(env_agents[env_id].values())[0]
+                            most_likely_state = curr_a.rm.states[most_likely_state_idx]
+                        last_timestep_in_u[env_id][most_likely_state] = steps_count
 
                     # update the agent's RM and Q-functions
                     agent_loss = []
@@ -164,7 +165,7 @@ class Trainer:
                             reward,
                             terminated,
                             truncated,
-                            info["is_positive_trace"],
+                            info.get("is_positive_trace", True),
                             self._project_obs(next_obs, a, aid),
                             synchronized_labels[aid],
                             learning=run_config["training"],
@@ -222,10 +223,12 @@ class Trainer:
                             f"{prefix}/loss/{env_id}", np.mean(losses[env_id]), self.total_steps
                         )
                     logger.add_scalar(
-                        f"{prefix}/num_steps/{env_id}", np.mean(steps[env_id]), self.total_steps
+                        f"{prefix}/num_steps/{env_id}", steps[env_id][-1],
+                        episode if run_config["training"] else self.test_episode
                     )
                     logger.add_scalar(
-                        f"{prefix}/reward/{env_id}", np.mean(rewards[env_id]), self.total_steps
+                        f"{prefix}/reward/{env_id}", rewards[env_id][-1],
+                        episode if run_config["training"] else self.test_episode
                     )
                     self.all_recorded_rm_states[env_id] = self.all_recorded_rm_states[env_id].union(
                         last_timestep_in_u[env_id].keys())
