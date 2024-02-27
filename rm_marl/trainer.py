@@ -114,7 +114,7 @@ class Trainer:
 
                 for env_id, env in envs.items():
 
-                    if episode % run_config["recording_freq"] == 0:
+                    if episode % run_config["recording_freq"] == 0 and not run_config["no_display"]:
                         episode_frames[env_id].append(env.render())
 
                     if dones[env_id]:
