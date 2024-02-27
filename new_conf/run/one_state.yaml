@@ -1,0 +1,12 @@
+training: True
+total_episodes: 1000
+log_freq: 1
+log_dir: logs
+testing_freq: 100
+greedy: True
+synchronize: False
+counterfactual_update: False
+recording_freq: 100
+seed: 123
+name: "inverted-pendulum" # should make ???
+extra_debug_information: False
