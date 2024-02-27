@@ -147,3 +147,5 @@ logs/
 # src - location where pip installs editable sources
 src/
 
+# multirun - output of a hydra parameter tuning
+multirun/
