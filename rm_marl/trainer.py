@@ -254,6 +254,7 @@ class Trainer:
                 self._run(self.testing_envs, {
                     "training": False,
                     "log_freq": 1,
+                    "no_display": run_config["no_display"],
                     "recording_freq": 1,
                     "total_episodes": 1,
                     "greedy": run_config.get("greedy", True),
