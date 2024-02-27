@@ -87,7 +87,7 @@ class RewardMachineLearningAgent(RewardMachineAgent):
                                                      is_positive_trace)
                 if candidate_rm:
                     self.rm = candidate_rm
-                    self.algo.reset()
+                    self.algo.reset(self.rm)
                     rm_updated = True
                     # We can always interrupt if a new rm is learned
                     # TODO: check if we need the interrupt variable; looks like it is fully captured by rm_updated

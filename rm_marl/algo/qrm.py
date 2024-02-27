@@ -8,6 +8,7 @@ import numpy as np
 from gym.utils import seeding
 
 from ._base import Algo
+from ..reward_machine import RewardMachine
 
 
 class QRM(Algo):
@@ -37,7 +38,8 @@ class QRM(Algo):
 
         self.q = defaultdict(self._q_sa_constructor)
 
-        self.reset(seed=seed)
+        # Q-table doesn't need RM information
+        self.reset(rm=None, seed=seed)
 
     @property
     def epsilon(self):
@@ -50,7 +52,7 @@ class QRM(Algo):
     def _q_sa_constructor(self):
         return defaultdict(self._q_a_constructor)
 
-    def reset(self, seed: Optional[int] = None):
+    def reset(self, rm: Optional[RewardMachine], seed: Optional[int] = None, **kwargs):
         seed = self._seed if seed is None else seed
         if seed is not None:
             self._np_random, seed = seeding.np_random(seed)

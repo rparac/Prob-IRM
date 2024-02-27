@@ -58,6 +58,7 @@ def run(cfg: DictConfig) -> None:
             "epsilon_start": agent_config["epsilon_start"],
             "epsilon_end": agent_config["epsilon_end"],
             "epsilon_decay": agent_config["epsilon_decay"],
+            "use_crm": True,
         },
     )
 

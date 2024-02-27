@@ -91,11 +91,11 @@ class Trainer:
             dones = {env_id: False for env_id in envs.keys()}
             env_agents = {}
 
-            _ = [a.reset(seed=seed) for a in self.agents.values()]
+            _ = [a.reset() for a in self.agents.values()]
 
             obs, infos, env_agents, shared_events = {}, {}, {}, {}
             for env_id, env in envs.items():
-                o, i = env.reset(seed=seed)
+                o, i = env.reset()
                 obs[env_id] = o
                 infos[env_id] = i
 

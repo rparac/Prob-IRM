@@ -21,7 +21,11 @@ class Algo(abc.ABC):
         raise NotImplementedError("action")
 
     @abc.abstractmethod
-    def reset(self, *args, **kwargs):
+    def reset(self, rm, *args, **kwargs):
+        """
+        We require a rm as NN implementations need
+        to know its dimension to properly initialize
+        """
         raise NotImplementedError("reset")
 
     @abc.abstractmethod

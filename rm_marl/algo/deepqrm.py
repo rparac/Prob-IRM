@@ -28,6 +28,9 @@ import os
 import os.path
 
 from ._base import Algo
+from .deepq.memory import ReplayMemoryRM, ReplayMemoryRM
+from .deepq.networks import DeepQNetwork, CRMNetwork
+from ..reward_machine import RewardMachine
 
 
 class DeepQRM(Algo):
@@ -57,6 +60,8 @@ class DeepQRM(Algo):
             optimizer_cls: Type[Optimizer] = AdamW,
             optimizer_kws: dict = None,
             seed: int = 0,
+            use_crm: bool = False,
+            num_rm_states: int = 1,
     ):
 
         super().__init__()
@@ -67,23 +72,32 @@ class DeepQRM(Algo):
         self._num_policy_layers = num_policy_layers
         self._layers_size = policy_layer_size
         self._num_actions = action_space.n
+        self._num_rm_states = num_rm_states
 
+        # PRNGs
+        self._curr_seed = seed
+        torch.manual_seed(seed)
+        self._np_random, self._curr_seed = gym.utils.seeding.np_random(self._curr_seed)
+
+        # Optimizers
+        self._optimizer_cls = optimizer_cls
+        self._optimizer_kws = optimizer_kws or {"lr": 1e-4, "amsgrad": True}  # Defaults assume AdamW
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        self._use_crm = use_crm
         # Mappings from RM states to RMStatePolicy instances
-        self._q_networks = defaultdict(self._init_q_network_pair)
+        self._init_q_networks()
 
         # Replay Memory
         self._replay_size = replay_size
-        self._replay_memory = ReplayMemoryRM(self._replay_size)
+        self._init_replay_memory()
 
         # Learning parameters
         self._batch_size = batch_size
         self._target_update_freq = target_update_freq
         self._policy_train_freq = policy_train_freq
         self._gamma = gamma
-
-        # Optimizers
-        self._optimizer_cls = optimizer_cls
-        self._optimizer_kws = optimizer_kws or {"lr": 1e-4, "amsgrad": True}  # Defaults assume AdamW
 
         # Internal parameters used to make decisions
         self._policies_train_timer = self._policy_train_freq
@@ -92,11 +106,6 @@ class DeepQRM(Algo):
         self._epsilon_start = epsilon_start
         self._epsilon_end = epsilon_end
         self._epsilon_decay = epsilon_decay
-
-        # PRNGs
-        self._curr_seed = seed
-        torch.manual_seed(seed)
-        self._np_random, self._curr_seed = gym.utils.seeding.np_random(self._curr_seed)
 
         # Statistics
         # NB: These are NOT reset when self.reset() is called
@@ -107,12 +116,13 @@ class DeepQRM(Algo):
         # Save path to store/load instances
         self._save_path = None
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     @property
     def _epsilon(self):
         return self._epsilon_end + (self._epsilon_start - self._epsilon_end) * math.exp(
             -1 * self.n_steps / self._epsilon_decay)
+
+    def _init_memory(self):
+        return ReplayMemoryRM(self._replay_size, self._curr_seed)
 
     def _init_q_network(self):
         """
@@ -123,6 +133,14 @@ class DeepQRM(Algo):
         -------
         A newly created DeepQNetwork instance
         """
+        if self._use_crm:
+            return CRMNetwork(
+                self._dim_obs,
+                self._num_rm_states,
+                self._num_policy_layers,
+                self._layers_size,
+                self._num_actions,
+            ).to(self.device)
 
         return DeepQNetwork(
             self._dim_obs,
@@ -192,7 +210,11 @@ class DeepQRM(Algo):
         action = torch.as_tensor([action], device=self.device)
 
         # Add experience to the replay buffer
-        self._replay_memory.push(flat_state, u, action, reward, done, flat_next_state, next_u)
+        if self._use_crm:
+            self._replay_memory[None].push(flat_state, u, action, reward, done, flat_next_state,
+                                           next_u)
+        else:
+            self._replay_memory[u].push(flat_state, u, action, reward, done, flat_next_state, next_u)
 
         # Check if the sub-policies need to be trained
         self._policies_train_timer -= 1
@@ -201,8 +223,9 @@ class DeepQRM(Algo):
 
         # On each actual learning step, update the policy associated with every RM state
         losses = []
-        for rm_state in self._q_networks.copy().keys():
-            loss = self._subpolicy_training_step(rm_state)
+        for u, (policy_net, optimizer, target_net) in self._q_networks.items():
+            memory = self._replay_memory[u]
+            loss = self._subpolicy_training_step(policy_net, optimizer, target_net, memory)
             losses.append(loss)
 
         # Training has been done: reset the corresponding timer
@@ -220,54 +243,56 @@ class DeepQRM(Algo):
         valid_losses = [loss for loss in losses if loss is not None]
         return sum(valid_losses) / len(valid_losses) if len(valid_losses) > 0 else np.NAN
 
-    def _subpolicy_training_step(self, rm_state):
-        """
-        Perform a training iteration for the sub-policy associated with the given RM state
-
-        Note that the sub-policy will only be trained if the replay memory contains a number of experiences
-        associated with the given RM state higher than the batch size requested when the DeepQRM instance
-        was initialized.
-
-        Parameters
-        ----------
-        rm_state The reward machine state associated with the sub-policy that needs to be trained.
-
-        Returns
-        -------
-        The value for the loss function obtained in the training step
+    # def _subpolicy_training_step(self, rm_state):
+    def _subpolicy_training_step(self, q_net, optimizer, t_net, memory):
 
         """
+    Perform a training iteration for the sub-policy associated with the given RM state
 
-        self._subpolicy_updates[rm_state] += 1
+    Note that the sub-policy will only be trained if the replay memory contains a number of experiences
+    associated with the given RM state higher than the batch size requested when the DeepQRM instance
+    was initialized.
+
+    Parameters
+    ----------
+    rm_state The reward machine state associated with the sub-policy that needs to be trained.
+
+    Returns
+    -------
+    The value for the loss function obtained in the training step
+
+    """
+
+        # TODO: add this at call site
+        # self._subpolicy_updates[rm_state] += 1
 
         # Only learn if we have enough experiences to form a batch
-        if self._replay_memory.n_entries_for_state(rm_state) < self._batch_size:
+        if len(memory) < self._batch_size:
             return None
 
-        q_net, optimizer, _ = self._q_networks[rm_state]
-
-        batch = self._replay_memory.sample(rm_state, self._batch_size)
-        states, actions, rewards, dones, next_states, next_rm_states = tuple(zip(*batch))
+        batch = memory.sample(self._batch_size)
+        curr_rm_states, states, actions, rewards, dones, next_states, next_rm_states = tuple(zip(*batch))
         states = torch.stack(states).to(self.device)
         rewards = torch.stack(rewards).to(self.device)
         actions = torch.stack(actions).to(self.device)
         next_states = torch.stack(next_states).to(self.device)
+        curr_rm_states = torch.stack([self._vectorize(u) for u in curr_rm_states]).to(self.device)
 
         # Use the policy network to compute the Q-value estimates for each (s, a) pair
-        q_estimates = q_net(states).gather(1, actions)
+        q_estimates = q_net(states, curr_rm_states).gather(1, actions)
 
         # Determine which s' and u' are not terminal states
         non_terminal_mask = [not d for d in dones]
         non_terminal_next_states = next_states[non_terminal_mask]
-        non_terminal_next_rm_states = [u for u, d in zip(next_rm_states, dones) if not d]
+        non_terminal_next_rm_states = [self._vectorize(u) for u, d in zip(next_rm_states, dones) if not d]
 
         # Gather the values predicted by the target network associated with the next RM states of each experience
         target_values = []
         for s, u in zip(non_terminal_next_states, non_terminal_next_rm_states):
             # TODO: make double DQN a parameter; in DQN the action would be chosen by target_network
-            best_act = self._q_networks[u].policy_network(s).argmax()
-            t = self._q_networks[u].target_network(s)[best_act].unsqueeze(0)
-            t_old = self._q_networks[u].target_network(s).max().unsqueeze(0)
+            best_act = q_net(s, u).argmax()
+            t = t_net(s, u)[best_act].unsqueeze(0)
+            t_old = t_net(s, u).max().unsqueeze(0)
             target_values.append(t)
         target_values = torch.stack(target_values)
 
@@ -323,7 +348,12 @@ class DeepQRM(Algo):
             dtype=torch.float,
             device=self.device
         )
-        action_values = self._q_networks[u].policy_network(flat_state)
+        if self._use_crm:
+            # TODO: need to deal with string case
+            rm_state = self._vectorize(u)
+            action_values = self._q_networks[None].policy_network(flat_state, rm_state)
+        else:
+            action_values = self._q_networks[u].policy_network(flat_state, u)
 
         # Softmax action selection
         if False and not greedy:
@@ -351,7 +381,14 @@ class DeepQRM(Algo):
             best_actions = [t.item() for t in torch.nonzero(best_actions_mask)]
             return self._np_random.choice(best_actions)
 
-    def reset(self):
+    def _vectorize(self, u):
+        if isinstance(u, int):
+            rm_state = torch.eye(self._num_rm_states, device=self.device)[u]
+        else:
+            rm_state = torch.tensor(u, device=self.device)
+        return rm_state
+
+    def reset(self, rm: RewardMachine, **kwargs):
         """
         Resets the DeepQRM policy to its initial state
 
@@ -360,7 +397,8 @@ class DeepQRM(Algo):
 
         """
 
-        self._q_networks.clear()
+        self._num_rm_states = len(rm.states)
+        self._init_q_networks()
         self._replay_memory.clear()
 
         self._policies_train_timer = self._policy_train_freq
@@ -411,13 +449,13 @@ class DeepQRM(Algo):
         self.__dict__.update(state)
 
         # Create a new, empty Replay Buffer
-        self._replay_memory = ReplayMemoryRM(self._replay_size)
+        self._init_replay_memory()
 
         # Restore the _subpolicy_updates statistics
         self._subpolicy_updates = defaultdict(lambda: 0, self._subpolicy_updates)
 
         # Restore the Q-networks based on the files found in the save path
-        self._q_networks = defaultdict(self._init_q_network_pair)
+        self._init_q_networks()
         for subpolicy_state_file in [f for f in os.listdir(self._save_path) if f.endswith('.pth')]:
 
             # Load the state dictionary
@@ -428,7 +466,10 @@ class DeepQRM(Algo):
 
             # Handle both integer and string-based RM state IDs
             try:
-                rm_state = int(rm_state_str)
+                if rm_state_str == "None":
+                    rm_state = None
+                else:
+                    rm_state = int(rm_state_str)
             except ValueError:
                 rm_state = rm_state_str
 
@@ -439,169 +480,14 @@ class DeepQRM(Algo):
         self._update_target_networks()
         self._target_updates -= 1  # Compensate for the +1 made in _update_target_networks()
 
+    def _init_q_networks(self):
+        if self._use_crm:
+            self._q_networks = {None: self._init_q_network_pair()}
+        else:
+            self._q_networks = defaultdict(self._init_q_network_pair)
 
-class DeepQNetwork(nn.Module):
-
-    def __init__(self, dim_obs, num_layers, layer_size, num_actions):
-        super(DeepQNetwork, self).__init__()
-
-        # Initialize input layer
-        self._input_layer = nn.Sequential(
-            nn.Linear(dim_obs, layer_size),
-            nn.ReLU()
-        )
-
-        # Initialize hidden layers
-        self._hidden_layers = nn.Sequential()
-        for i in range(num_layers):
-            self._hidden_layers.append(nn.Linear(layer_size, layer_size))
-            self._hidden_layers.append(nn.ReLU())
-
-        # Initialize output layer: since we produce Q-values, not action probabilities,
-        # we resort to a linear output layer
-        self._output_layer = nn.Linear(layer_size, num_actions)
-
-        # For ease of use, concatenate all the layers in a single Sequential module
-        self._model = nn.Sequential(
-            self._input_layer,
-            self._hidden_layers,
-            self._output_layer
-        )
-
-    def forward(self, x):
-        return self._model(x)
-
-
-class ReplayMemoryRM:
-    """
-    Experience Replay Memory buffer implementation for Reward Machines
-
-    This class implements the circular buffer used to implement the Experience Replay mechanism described by
-    Minh et al. in their seminal paper "Playing Atari with Deep Reinforcement Learning" from 2015. However, it also
-    includes a few modifications that allow it to be conveniently used with in reward machine-based scenarios.
-    Specifically, this implementation grants its users the ability to sample only from the experiences that relate to
-    a specific RM state.
-    """
-
-    Experience = namedtuple('Experience', [
-        'state',
-        'action',
-        'reward',
-        'done',
-        'new_state',
-        'new_u'
-    ])
-
-    def __init__(self, size):
-        """
-        Initialize the replay memory, given its maximum capacity
-
-        Once the memory is full, the oldest experiences are discarded to make space for the newer ones.
-
-        Parameters
-        ----------
-        size The maximum capacity of the replay memory, in number of experience samples
-
-        """
-
-        self._size = size
-        self._buffers = defaultdict(self._init_buffer)
-
-    def _init_buffer(self):
-        """
-        Initialize a replay buffer, which can be used to store the experiences relating to any RM state.
-        The size of the buffer is the same specified when this ReplayMemoryRM instance was created.
-
-        Returns
-        -------
-        A new replay buffer
-
-        """
-
-        return deque(maxlen=self._size)
-
-    def __len__(self):
-        """
-        Return the current total number of experience entries stored in the replay memory
-
-        Returns
-        -------
-        The total number of entries in the memory
-        """
-
-        return sum(len(buffer) for buffer in self._buffers.values())
-
-    def n_entries_for_state(self, u):
-        """
-        Return the number of entries in the memory associated with the given RM state
-
-        Parameters
-        ----------
-        u The RM state of interest
-
-        Returns
-        -------
-        The number of entries associated with the given RM state
-        """
-
-        return len(self._buffers[u])
-
-    def push(self, state, u, action, reward, done, new_state, new_u):
-        """
-        Push a new experience sample into the replay memory
-
-        Parameters
-        ----------
-        state       The environmental state where the experience began
-        u           The reward machine state where the experience began
-        action      The action taken by the agent
-        reward      The reward obtained by the agent in this experience
-        done        True if the episode ended after this experience
-        new_state   The new state reached by the agent after executing its action
-        new_u       The new state reached by the agent's RM after this experience
-        """
-
-        assert new_state is not None, 'Tried to push an experience leading to a "None" new env state'
-        assert new_u is not None, 'Tried to push an experience leading to a "None" new RM state'
-
-        experience_sample = ReplayMemoryRM.Experience(state, action, reward, done, new_state, new_u)
-        self._buffers[u].append(experience_sample)
-
-    def sample(self, u, batch_size):
-        """
-        Sample a random batch of experiences relating to a specific RM state from the replay memory
-
-        Note that if a batch is requested with a bigger size than the current number of entries in the replay memory,
-        an exception is raised. This makes sure that, if the method returns, the user is always provided an actual
-        random batch of the desired size.
-
-        Parameters
-        ----------
-        u          The RM state of interest
-        batch_size The size of the requested batch, in number of samples
-
-        Returns
-        -------
-        A list of Experience instances relating to the given RM state
-
-        """
-
-        if len(self._buffers[u]) < batch_size:
-            raise NotEnoughExperiencesError(requested=batch_size, available=len(self._buffers[u]))
-
-        return random.sample(self._buffers[u], batch_size)
-
-    def clear(self):
-        """
-        Empty out the replay memory, eliminating every experience it contains for any RM state
-
-        """
-
-        self._buffers.clear()
-
-
-class NotEnoughExperiencesError(Exception):
-
-    def __init__(self, *, requested, available):
-        super().__init__(
-            f'A batch of size {requested} was requested, but only {available} experiences are available in the replay memory')
+    def _init_replay_memory(self):
+        if self._use_crm:
+            self._replay_memory = {None: ReplayMemoryRM(self._replay_size, self._curr_seed)}
+        else:
+            self._replay_memory = defaultdict(self._init_memory)
