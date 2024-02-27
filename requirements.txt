@@ -16,3 +16,6 @@ python-sat==0.1.7.dev26
 pytictoc==1.5.2
 # If there are issues installing: https://stackoverflow.com/questions/19579528/pygame-installation-sdl-config-command-not-found
 -e 'git+https://github.com/rparac/gym-subgoal-automata.git#egg=gym_subgoal_automata'
+
+# Hydra hyperparmeter tuning
+hydra-optuna-sweeper==1.2.0

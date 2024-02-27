@@ -2,15 +2,16 @@
 defaults:
   - override /hydra/sweeper: optuna
   - override /hydra/sweeper/sampler: tpe
+  # - override /hydra/launcher: joblib # waits for execution of all to complete before starting new processes
 
 hydra:
   sweeper:
     sampler:
       seed: 123
-    direction: minimize
+    direction: maximize
     study_name: tuning
     storage: null
-    n_trials: 20
+    n_trials: 1
     n_jobs: 1
     params:
       env.agent.num_policy_layers: range(1, 5, step=1)

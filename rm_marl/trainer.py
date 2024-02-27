@@ -49,9 +49,9 @@ class Trainer:
             json.dump(dict(run_config), f, indent=4)
 
         try:
-            self._run(self.envs, run_config, logger)
+            result = self._run(self.envs, run_config, logger)
         except KeyboardInterrupt:
-            pass
+            result = None
 
         if run_config["extra_debug_information"]:
             create_rm_state_logs(log_dir, run_config["total_episodes"], self.test_episode,
@@ -63,6 +63,8 @@ class Trainer:
         logger.close()
         if run_config["training"]:
             self.save(log_dir)
+
+        return result
 
     def _run(self, envs: dict, run_config: dict, logger: SummaryWriter):
         base_seed = run_config["seed"]
@@ -258,6 +260,10 @@ class Trainer:
                     "seed": run_config["seed"],
                     "synchronize": run_config["synchronize"],
                 }, logger)
+
+        # TODO: make cleaner
+        # Sums the rewards of the last 100 episodes
+        return sum(rewards[list(self.testing_envs.keys())[0]][run_config["total_episodes"] - 100:])
 
     @staticmethod
     def _project_labels(labels, a, aid):

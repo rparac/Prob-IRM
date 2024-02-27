@@ -61,16 +61,10 @@ def run(cfg: DictConfig) -> None:
         },
     )
 
-    # t = time.time()
-    #
-    #
-    # agent_dict = {"A1": ag}
-    # env_dict = {"E": env}
-    # trainer = Trainer(env_dict, env_dict, agent_dict)
-    # trainer.run(run_config)
-    #
-    # print(f"Execution took {time.time() - t} seconds")
-    return agent_config["gamma"]
+    agent_dict = {"A1": ag}
+    env_dict = {"E": env}
+    trainer = Trainer(env_dict, env_dict, agent_dict)
+    return trainer.run(run_config)
 
 
 if __name__ == "__main__":

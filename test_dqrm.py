@@ -53,52 +53,53 @@ class InvertedPendulumLabelingFunctionWrapper(LabelingFunctionWrapper):
         return []
 
 
-seed = 123
+if __name__ == '__main__':
+    seed = 123
 
-trainer_run_config = {
-    "training": True,
-    "total_episodes": 50000,  # 100,
-    "log_freq": 1,
-    "log_dir": os.path.join(os.path.dirname(__file__), "logs"),
-    "testing_freq": 50,  # 10,
-    "greedy": True,
-    "synchronize": False,
-    "counterfactual_update": False,
-    "recording_freq": 50,  # 5
-    "seed": seed,
-    "name": "inverted-pendulum",
-    "extra_debug_information": False,
-}
-np.random.seed(trainer_run_config["seed"])
-random.seed(trainer_run_config["seed"])
+    trainer_run_config = {
+        "training": True,
+        "total_episodes": 50000,  # 100,
+        "log_freq": 1,
+        "log_dir": os.path.join(os.path.dirname(__file__), "logs"),
+        "testing_freq": 50,  # 10,
+        "greedy": True,
+        "synchronize": False,
+        "counterfactual_update": False,
+        "recording_freq": 50,  # 5
+        "seed": seed,
+        "name": "inverted-pendulum",
+        "extra_debug_information": False,
+    }
+    np.random.seed(trainer_run_config["seed"])
+    random.seed(trainer_run_config["seed"])
 
-env = gym.make('InvertedPendulum-v4', render_mode='rgb_array', max_episode_steps=200)
-env = DiscreteActions(env, agent_id="A1")
-env = DictObservation(env, agent_id="A1")
-env = InvertedPendulumLabelingFunctionWrapper(env)
-# env = AutomataWrapper(env, DeterministicRMTransitioner(rm=None))
-env = RecordEpisodeStatistics(env)  # type: ignore
+    env = gym.make('InvertedPendulum-v4', render_mode='rgb_array', max_episode_steps=200)
+    env = DiscreteActions(env, agent_id="A1")
+    env = DictObservation(env, agent_id="A1")
+    env = InvertedPendulumLabelingFunctionWrapper(env)
+    # env = AutomataWrapper(env, DeterministicRMTransitioner(rm=None))
+    env = RecordEpisodeStatistics(env)  # type: ignore
 
-ag = NoRMAgent(
-    agent_id="A1",
-    algo_cls=DeepQRM,
-    algo_kws={
-        "obs_space": env.observation_space,
-        "action_space": env.action_space,
-        # "num_policy_layers": 3,
-        # "policy_layer_size": 16,
-        # "gamma": 0.99,
-        "epsilon_start": 1,
-        "epsilon_end": 0,
-        "epsilon_decay": 10,
-    },
-)
+    ag = NoRMAgent(
+        agent_id="A1",
+        algo_cls=DeepQRM,
+        algo_kws={
+            "obs_space": env.observation_space,
+            "action_space": env.action_space,
+            # "num_policy_layers": 3,
+            # "policy_layer_size": 16,
+            # "gamma": 0.99,
+            "epsilon_start": 1,
+            "epsilon_end": 0,
+            "epsilon_decay": 10,
+        },
+    )
 
-t = time.time()
+    t = time.time()
 
-agent_dict = {"A1": ag}
-env_dict = {"E": env}
-trainer = Trainer(env_dict, env_dict, agent_dict)
-trainer.run(trainer_run_config)
+    agent_dict = {"A1": ag}
+    env_dict = {"E": env}
+    trainer = Trainer(env_dict, env_dict, agent_dict)
+    trainer.run(trainer_run_config)
 
-print(f"Execution took {time.time() - t} seconds")
+    print(f"Execution took {time.time() - t} seconds")
