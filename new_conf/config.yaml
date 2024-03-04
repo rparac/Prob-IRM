@@ -1,3 +1,3 @@
 defaults:
   - env: inverted_pendulum
-  - run: one_state
+  - run: dqrm_coffee_world

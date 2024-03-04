@@ -1,3 +1,0 @@
-defaults:
-  - override hydra/sweeper: optuna
-  - override hydra/sweeper/sampler: tpe

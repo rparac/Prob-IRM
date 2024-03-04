@@ -9,5 +9,5 @@ counterfactual_update: False
 recording_freq: 100
 no_display: False
 seed: 123
-name: "inverted-pendulum" # should make ???
+name: ??? # "inverted-pendulum" # should make ???
 extra_debug_information: False
