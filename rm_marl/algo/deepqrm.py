@@ -13,6 +13,7 @@ Icarte himself in this repository: https://bitbucket.org/RToroIcarte/lrm/src
 We kindly thank the original authors for their amazing contribution to the neuro-symbolic reinforcement learning
 literature and for making their code freely available for the research community.
 """
+import cProfile
 import math
 
 import numpy as np
@@ -383,9 +384,10 @@ class DeepQRM(Algo):
 
     def _vectorize(self, u):
         if isinstance(u, int):
-            rm_state = torch.eye(self._num_rm_states, device=self.device)[u]
+            rm_state = torch.zeros(self._num_rm_states, device=self.device, dtype=torch.float32)
+            rm_state[u] = 1
         else:
-            rm_state = torch.tensor(u, device=self.device)
+            rm_state = torch.tensor(u, device=self.device, dtype=torch.float32)
         return rm_state
 
     def reset(self, rm: RewardMachine, **kwargs):
@@ -399,7 +401,8 @@ class DeepQRM(Algo):
 
         self._num_rm_states = len(rm.states)
         self._init_q_networks()
-        self._replay_memory.clear()
+        # Clear replay memory
+        self._init_replay_memory()
 
         self._policies_train_timer = self._policy_train_freq
         self._target_update_timer = self._target_update_freq

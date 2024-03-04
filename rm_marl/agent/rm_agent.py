@@ -14,6 +14,7 @@ class RewardMachineAgent(Agent):
         super().__init__(agent_id, algo_cls, algo_kws)
         self.rm_transitioner = rm_transitioner
 
+        self.algo.reset(rm=self.rm)
         self.reset()
 
     def reset(self, seed: Optional[int] = None):
