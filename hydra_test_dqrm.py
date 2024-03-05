@@ -2,27 +2,49 @@
 This file showcases how code is intended to be used in the single agent case.
 Hydra configuration helps with duplicate configuration, but is not immediately clear to a user.
 """
-import os
 import random
-import time
-from typing import Tuple
 
 import gym
 import hydra
 import numpy as np
-import torch
-from gym.core import ObsType, ActType
 from gym.spaces import Discrete
 from gym.wrappers import RecordEpisodeStatistics
 from omegaconf import DictConfig
 
-from rm_marl.agent import NoRMAgent, RewardMachineLearningAgent
+from rm_marl.agent import NoRMAgent
 from rm_marl.algo.deepqrm import DeepQRM
-from rm_marl.envs.wrappers import AutomataWrapper, LabelingFunctionWrapper
-from rm_marl.reward_machine import RewardMachine
-from rm_marl.rm_transition.deterministic_rm_transitioner import DeterministicRMTransitioner
 from rm_marl.trainer import Trainer
-from test_dqrm import DiscreteActions, DictObservation, InvertedPendulumLabelingFunctionWrapper
+
+
+class DiscreteActions(gym.ActionWrapper):
+    def __init__(self, env, agent_id: str):
+        super().__init__(env)
+        self.action_space = Discrete(3)
+        self.agent_id = agent_id
+
+    def action(self, action):
+        act = np.array([(action[self.agent_id] - 1) * 2])
+        return act
+
+
+class DictObservation(gym.ObservationWrapper):
+    def __init__(self, env, agent_id: str):
+        super().__init__(env)
+        self.observation_space = gym.spaces.Dict(
+            {"A1": env.observation_space},
+        )
+        self.agent_id = agent_id
+
+    def observation(self, observation):
+        return {self.agent_id: observation}
+
+
+class InvertedPendulumLabelingFunctionWrapper(LabelingFunctionWrapper):
+    def __init__(self, env):
+        super().__init__(env)
+
+    def get_labels(self, obs: dict, prev_obs: dict):
+        return []
 
 
 @hydra.main(version_base=None, config_path="new_conf", config_name="config")
