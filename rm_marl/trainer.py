@@ -91,7 +91,7 @@ class Trainer:
             dones = {env_id: False for env_id in envs.keys()}
             env_agents = {}
 
-            _ = [a.reset() for a in self.agents.values()]
+            _ = [a.reset(agent_id=aid) for aid, a in self.agents.items()]
 
             obs, infos, env_agents, shared_events = {}, {}, {}, {}
             for env_id, env in envs.items():
@@ -128,6 +128,7 @@ class Trainer:
                             if not run_config["training"]
                             else False,
                             testing=not run_config["training"],
+                            agent_id=aid,
                         )
                         for aid, a in env_agents[env_id].items()
                     }
@@ -161,7 +162,7 @@ class Trainer:
                     agent_loss = []
                     interrupt_episode = terminated or truncated
                     for aid, a in env_agents[env_id].items():
-                        current_u = a.u
+                        current_u = a.get_current_state(aid)
                         loss, interrupt, rm_updated = a.update_agent(
                             self._project_obs(obs[env_id], a, aid),
                             actions[aid],
@@ -172,6 +173,7 @@ class Trainer:
                             self._project_obs(next_obs, a, aid),
                             synchronized_labels[aid],
                             learning=run_config["training"],
+                            agent_id=aid,
                         )
 
                         if rm_updated:
@@ -198,6 +200,7 @@ class Trainer:
                                     actions[aid],
                                     done,
                                     self._project_obs(next_obs, a, aid),
+                                    aid,
                                 )
 
                     obs[env_id] = next_obs
@@ -303,7 +306,7 @@ class Trainer:
         return agent_labels
 
     @staticmethod
-    def _counterfactual_update(env, agent, state, current_u, action, done, next_state):
+    def _counterfactual_update(env, agent, state, current_u, action, done, next_state, aid):
         labels = env.get_labels(next_state, state)
 
         if isinstance(labels, dict):
@@ -317,7 +320,7 @@ class Trainer:
                 next_u = agent.rm.get_next_state(u, l)
                 r = agent.rm.get_reward(u, next_u)
 
-                agent.learn(state, u, action, r, done, next_state, next_u)
+                agent.learn(state, u, action, r, done, next_state, next_u, agent_id=aid)
 
     def save(self, path):
         trainer_path = os.path.join(path, "trainer.pkl")

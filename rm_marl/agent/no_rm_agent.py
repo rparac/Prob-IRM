@@ -5,13 +5,15 @@ from ._base import Agent
 from ..algo import Algo
 
 
+# TODO: We can probably just have this class set up a default_rm_agent; removes duplication while making clear we are
+#  not using an RM
 class NoRMAgent(Agent):
     def __init__(
-        self, agent_id: str, algo_cls: Type[Algo] = QRM, algo_kws: dict = None
+            self, agent_id: str, algo: Algo,
     ):
+        super().__init__(agent_id)
 
-        super().__init__(agent_id, algo_cls, algo_kws)
-
+        self.algo = algo
         self.reset()
 
     def reset(self, seed: Optional[int] = None):
@@ -24,7 +26,8 @@ class NoRMAgent(Agent):
         return self.algo.learn(state, u, action, reward, done, next_state, next_u)
 
     def update_agent(
-        self, state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning=True, **kwargs
+            self, state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning=True,
+            **kwargs
     ):
         loss = None
         next_u = 0
@@ -39,3 +42,7 @@ class NoRMAgent(Agent):
 
     def project_labels(self, labels):
         return tuple(labels)
+
+    def set_log_folder(self, folder):
+        super().set_log_folder(folder)
+        self.algo.set_save_path(folder)

@@ -4,30 +4,50 @@ import numpy as np
 
 from ._base import Agent
 from ..algo import QRM, Algo
+from ..reward_machine import RewardMachine
 from ..rm_transition.rm_transitioner import RMTransitioner
 
 
 class RewardMachineAgent(Agent):
     def __init__(
-            self, agent_id: str, rm_transitioner: RMTransitioner, algo_cls: Type[Algo] = QRM, algo_kws: dict = None
+            self, agent_id: str, rm_transitioner: RMTransitioner, algo: Algo
     ):
-        super().__init__(agent_id, algo_cls, algo_kws)
+        super().__init__(agent_id)
         self.rm_transitioner = rm_transitioner
 
+        self.algo = algo
         self.algo.reset(rm=self.rm)
         self.reset()
 
-    def reset(self, seed: Optional[int] = None):
+    @classmethod
+    def default_rm_agent(cls, agent_id, rm_transitioner: RMTransitioner, algo: Algo):
+        rm = RewardMachineAgent.default_rm()
+        rm_transitioner.rm = rm
+        return cls(agent_id, rm_transitioner, algo)
+
+    # TODO: Maybe we should move this elsewhere; Useful for wrapping a no-RM agent as well
+    @staticmethod
+    def default_rm():
+        rm = RewardMachine()
+        rm.add_states(["u0"])
+        rm.set_u0("u0")
+        return rm
+
+    def reset(self, seed: Optional[int] = None, **kwargs):
         self.u = self.rm_transitioner.get_initial_state()
 
     def action(self, state, greedy: bool = False, **algo_args):
         return self.algo.action(state, self.u, greedy=greedy, **algo_args)
 
-    def learn(self, state, u, action, reward, done, next_state, next_u):
+    def get_current_state(self, **kwargs):
+        return self.u
+
+    def learn(self, state, u, action, reward, done, next_state, next_u, **kwargs):
         return self.algo.learn(state, u, action, reward, done, next_state, next_u)
 
     def update_agent(
-            self, state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning=True
+            self, state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning=True,
+            **kwargs
     ):
         loss = None
         next_u = self.rm_transitioner.get_next_state(self.u, labels)
@@ -39,6 +59,10 @@ class RewardMachineAgent(Agent):
 
         self.u = next_u
         return loss, False, False
+
+    def set_log_folder(self, folder):
+        super().set_log_folder(folder)
+        self.algo.set_save_path(folder)
 
     # TODO: check if this is this truly necessary given that filter labels exists
     def project_labels(self, labels):

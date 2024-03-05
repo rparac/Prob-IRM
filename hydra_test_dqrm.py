@@ -70,18 +70,7 @@ def run(cfg: DictConfig) -> None:
     # TODO: make it less explicit; i.e. just pass the dictionary directly
     ag = NoRMAgent(
         agent_id="A1",
-        algo_cls=DeepQRM,
-        algo_kws={
-            "obs_space": env.observation_space,
-            "action_space": env.action_space,
-            "num_policy_layers": agent_config["num_policy_layers"],
-            "policy_layer_size": agent_config["policy_layer_size"],
-            "gamma": agent_config["gamma"],
-            "epsilon_start": agent_config["epsilon_start"],
-            "epsilon_end": agent_config["epsilon_end"],
-            "epsilon_decay": agent_config["epsilon_decay"],
-            "use_crm": True,
-        },
+        algo=DeepQRM,
     )
 
     agent_dict = {"A1": ag}

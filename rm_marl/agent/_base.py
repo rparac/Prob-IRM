@@ -18,15 +18,10 @@ class Agent(abc.ABC):
     def __init__(
             self,
             agent_id: str,
-            algo_cls: Type[Algo] = QRM,
-            algo_kws: dict = None
     ):
 
         self.agent_id = agent_id
         self._log_folder = None
-
-        algo_kws = algo_kws or {}
-        self.algo = algo_cls(**algo_kws)
 
     @property
     def log_folder(self):
@@ -39,23 +34,27 @@ class Agent(abc.ABC):
         if not os.path.exists(folder):
             os.mkdir(folder)
         self._log_folder = folder
-        self.algo.set_save_path(folder)
 
     @abc.abstractmethod
-    def reset(self, seed):
+    def reset(self, seed, agent_id=None):
         raise NotImplementedError('reset')
 
     @abc.abstractmethod
-    def action(self, state, greedy=False):
+    def get_current_state(self, agent_id=None):
+        raise NotImplementedError('get_current_state')
+
+    @abc.abstractmethod
+    def action(self, state, greedy=False, agent_id=None):
         raise NotImplementedError('action')
 
     @abc.abstractmethod
-    def learn(self, state, u, action, reward, done, next_state, next_u):
+    def learn(self, state, u, action, reward, done, next_state, next_u, agent_id=None):
         raise NotImplementedError('learn')
 
     @abc.abstractmethod
     def update_agent(
-            self, state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning=True
+            self, state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning=True,
+            **kwargs
     ):
         raise NotImplementedError('update_agent')
 

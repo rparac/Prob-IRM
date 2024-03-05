@@ -181,9 +181,9 @@ class ProbFFNSLLearner(RMLearner):
             return False
 
         correct_threshold = self._rm_success_trace_cnt / len(self._seen_traces)
-
-        if len(self._seen_traces) % 100 == 0:
-            return True
+        #
+        # if len(self._seen_traces) % 100 == 0:
+        #     return True
 
         return correct_threshold < self.rm_recognize_threshold
 

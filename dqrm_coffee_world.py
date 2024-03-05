@@ -48,17 +48,18 @@ def run(cfg: DictConfig) -> None:
 
     agent_config = env_config["agent"]
 
+    deepqrm = DeepQRM(**{
+        "obs_space": env.observation_space,
+        "action_space": env.action_space,
+        "use_crm": True,
+        **agent_config,
+    })
+
     ag = RewardMachineAgent(
         # rm=rm,
         rm_transitioner=rm_transitioner,
         agent_id="A1",
-        algo_cls=DeepQRM,
-        algo_kws={
-            "obs_space": env.observation_space,
-            "action_space": env.action_space,
-            "use_crm": True,
-            **agent_config,
-        },
+        algo=deepqrm,
     )
     agent_dict = {"A1": ag}
     env_dict = {"E": env}
