@@ -64,7 +64,7 @@ def run(cfg: DictConfig) -> None:
     env_dict = {"E": env}
 
     trainer = Trainer(env_dict, env_dict, agent_dict)
-    trainer.run(run_config)
+    return trainer.run(run_config)
 
 
 if __name__ == '__main__':
