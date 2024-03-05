@@ -114,6 +114,7 @@ class Trainer:
 
                 for env_id, env in envs.items():
 
+                    # env.render with pygame does not work in a headless mode
                     if episode % run_config["recording_freq"] == 0 and not run_config["no_display"]:
                         episode_frames[env_id].append(env.render())
 
