@@ -7,7 +7,7 @@ greedy: True
 synchronize: False
 counterfactual_update: False
 recording_freq: 200
-no_display: True
+no_display: False
 seed: 123
 name: "new-office-world" # should make ???
 extra_debug_information: False

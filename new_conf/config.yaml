@@ -1,3 +1,3 @@
 defaults:
-  - env: inverted_pendulum
+  - env: office_world
   - run: dqrm_coffee_world

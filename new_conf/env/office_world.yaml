@@ -1,0 +1,8 @@
+# [2024-03-06 23:31:15,398][HYDRA] Best parameters: {'env.agent.num_policy_layers': 2, 'env.agent.policy_layer_size': 128, 'env.agent.gamma': 0.9351864733566505, 'env.agent.epsilon_start': 0.989763629350516, 'env.agent.epsilon_end': 0.02069953263195696, 'env.agent.epsilon_decay': 50}
+defaults:
+  # Looking up the initial file in the office-world directory; naming the key as agent
+  - office-world@agent: initial
+
+name: 'TODO: replace'
+render_mode: 'rgb_array'
+max_episode_steps: 250

@@ -320,7 +320,7 @@ class DeepQRM(Algo):
 
         return loss.item()
 
-    def action(self, state, u, greedy: bool = True, testing: bool = False):
+    def action(self, state, u, greedy: bool = True, testing: bool = False, **kwargs):
         """
         Compute an action to be taken based on the state of the policy
 
@@ -449,7 +449,9 @@ class DeepQRM(Algo):
         See https://docs.python.org/3/library/pickle.html#pickle-state for more info
         """
 
+
         self.__dict__.update(state)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Create a new, empty Replay Buffer
         self._init_replay_memory()
@@ -463,9 +465,13 @@ class DeepQRM(Algo):
 
             # Load the state dictionary
             full_path = os.path.join(self._save_path, subpolicy_state_file)
-            subpolicy_state = torch.load(full_path)
+            subpolicy_state = torch.load(full_path, map_location=self.device)
 
-            rm_state_str = subpolicy_state_file.removeprefix('subpolicy_').removesuffix('.pth')
+            rm_state_str = subpolicy_state_file
+            if rm_state_str.startswith('subpolicy_'):
+                rm_state_str = rm_state_str[len('subpolicy_'):]
+            if rm_state_str.endswith('.pth'):
+                rm_state_str = rm_state_str[:-len('.pth')]
 
             # Handle both integer and string-based RM state IDs
             try:

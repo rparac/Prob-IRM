@@ -19,6 +19,7 @@ from rm_marl.trainer import Trainer
 
 @hydra.main(version_base=None, config_path="new_conf", config_name="config")
 def run(cfg: DictConfig) -> None:
+    agent_id = "A1"
     run_config = cfg['run']
 
     np.random.seed(run_config["seed"])
@@ -29,7 +30,7 @@ def run(cfg: DictConfig) -> None:
 
     env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
                    params={"generation": "random", "environment_seed": 7, "hide_state_variables": True})
-    env = GymSubgoalAutomataAdapter(env, render_mode="rgb_array", max_episode_length=250)  # type: ignore
+    env = GymSubgoalAutomataAdapter(env, agent_id, render_mode="rgb_array", max_episode_length=250)  # type: ignore
 
     office_l = OfficeWorldOfficeLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)
     plant_l = OfficeWorldPlantLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)
@@ -58,10 +59,10 @@ def run(cfg: DictConfig) -> None:
     ag = RewardMachineAgent(
         # rm=rm,
         rm_transitioner=rm_transitioner,
-        agent_id="A1",
+        agent_id=agent_id,
         algo=deepqrm,
     )
-    agent_dict = {"A1": ag}
+    agent_dict = {agent_id: ag}
     env_dict = {"E": env}
 
     trainer = Trainer(env_dict, env_dict, agent_dict)
