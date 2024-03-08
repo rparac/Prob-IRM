@@ -95,7 +95,7 @@ class QRM(Algo):
         self.n_steps += 1
         return loss
 
-    def action(self, state, u, greedy: bool = False, testing: bool = False):
+    def action(self, state, u, greedy: bool = False, testing: bool = False, **kwargs):
         random_act_selection = self._np_random.random() < self.epsilon
         if random_act_selection and not testing:
             action = self._np_random.choice(range(self.action_space.n))
