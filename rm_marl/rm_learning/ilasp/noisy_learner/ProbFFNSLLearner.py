@@ -36,6 +36,9 @@ class ProbFFNSLLearner(RMLearner):
         # reward machine is the correct one
         self.min_rm_num_episodes = 10
 
+        # the number of traces when the automata was relearned
+        self.last_relearning_trace_num = 0
+
         # The percentage of traces that need to conform to the reward
         # machine to avoid relearning
         self.rm_recognize_threshold = 0.35
@@ -83,17 +86,22 @@ class ProbFFNSLLearner(RMLearner):
         examples = self.ex_generator.create_examples_from(trace)
         for ex in examples:
             ex.compact_observations()
+            # Imporant to do before the .add function as it may change the example penalty
+            #  Using deepcopy in the .add function results in a significant
+            #  increase in runtime (+50%)
+            incomplete_examples = ex.generate_incomplete_examples()
             if ex.example_type == ISAILASPExample.ExType.GOAL:
                 self.goal_examples.add(ex)
             elif ex.example_type == ISAILASPExample.ExType.DEND:
                 self.dend_examples.add(ex)
             else:
                 self.inc_examples.add(ex)
-            for inc_ex in ex.generate_incomplete_examples():
+            for inc_ex in incomplete_examples:
                 self.inc_examples.add(inc_ex)
 
     def _update_reward_machine(self, curr_rm):
         self.rm_learning_counter += 1
+        self.last_relearning_trace_num = len(self._seen_traces)
 
         ilasp_task_filename = os.path.join(
             self.log_folder, f"task_{self.rm_learning_counter}"
@@ -117,6 +125,7 @@ class ProbFFNSLLearner(RMLearner):
 
                 if candidate_rm == curr_rm:
                     return None
+
                 rm_plot_filename = os.path.join(
                     self.log_folder, f"plot_{self.rm_learning_counter}"
                 )
@@ -177,13 +186,13 @@ class ProbFFNSLLearner(RMLearner):
         return list(ret.keys())
 
     def _should_relearn_rm(self) -> bool:
-        if len(self._seen_traces) < self.min_rm_num_episodes:
+        if len(self._seen_traces) < self.last_relearning_trace_num + self.min_rm_num_episodes:
             return False
 
         correct_threshold = self._rm_success_trace_cnt / len(self._seen_traces)
-        #
-        # if len(self._seen_traces) % 100 == 0:
-        #     return True
+
+        if len(self._seen_traces) % 100 == 0:
+            return True
 
         return correct_threshold < self.rm_recognize_threshold
 
