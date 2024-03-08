@@ -91,16 +91,21 @@ class RewardMachineLearningAgent(Agent):
     ):
 
         rm_agent = self.rm_agents[agent_id]
-        loss, interrupt, rm_updated = rm_agent.update_agent(
+        loss, agents_to_interrupt, rm_updated = rm_agent.update_agent(
             state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning
         )
 
         if learning:
             self.traces[agent_id].update(labels, next_state, is_positive_trace, terminated)
 
-            if terminated or truncated:
+            # TODO: we may need to rethink is_state_terminal
+            if terminated or truncated or self.rm.is_state_terminal(rm_agent.u):
+                if self.rm.is_state_terminal(rm_agent.u):
+                    LOGGER.debug(f"[{self.agent_id}] the RM {self.rm_learner.rm_learning_counter} is wrong.")
+
                 candidate_rm = self.rm_learner.learn(self.rm, rm_agent.u, self.traces[agent_id], terminated, truncated,
                                                      is_positive_trace)
+                agents_to_interrupt = {rm_agent}
                 if candidate_rm:
                     self.rm = candidate_rm
                     for agent in self.rm_agents.values():
@@ -109,9 +114,9 @@ class RewardMachineLearningAgent(Agent):
                     rm_updated = True
                     # We can always interrupt if a new rm is learned
                     # TODO: check if we need the interrupt variable; looks like it is fully captured by rm_updated
-                    interrupt = True
+                    agents_to_interrupt = set(self.rm_agents.keys())
 
-        return loss, interrupt, rm_updated
+        return loss, agents_to_interrupt, rm_updated
 
     def project_labels(self, labels):
         if isinstance(labels, list):

@@ -162,8 +162,8 @@ class Trainer:
                     agent_loss = []
                     interrupt_episode = terminated or truncated
                     for aid, a in env_agents[env_id].items():
-                        current_u = a.get_current_state(aid)
-                        loss, interrupt, rm_updated = a.update_agent(
+                        current_u = a.get_current_state(agent_id=aid)
+                        loss, agents_to_interrupt, rm_updated = a.update_agent(
                             self._project_obs(obs[env_id], a, aid),
                             actions[aid],
                             reward,
@@ -182,12 +182,20 @@ class Trainer:
                             self.rm_relearned_episodes[env_id] = curr_relearned_episodes
 
                         if run_config["training"]:
-                            if interrupt:
+                            if agents_to_interrupt:
                                 interrupt_episode = True
                                 info["episode"] = {
                                     "l": env.episode_lengths[0],
                                     "r": env.episode_returns[0]
                                 }
+                                for _env_id, ag_dict in env_agents.items():
+                                    # There is an agent that should be interrupted
+                                    if agents_to_interrupt.intersection(set(ag_dict.keys())) != set():
+                                        dones[_env_id] = True
+                                        infos[_env_id]["episode"] = {
+                                            "l": envs[_env_id].episode_lengths[0],
+                                            "r": envs[_env_id].episode_returns[0]
+                                        }
                                 break
 
                             agent_loss.append(loss)
@@ -214,6 +222,7 @@ class Trainer:
                         if not np.isnan(mean_loss):
                             episode_losses[env_id].append(mean_loss)
 
+            # print('yes')
             # track metrics and log them in TB
             for env_id in envs.keys():
                 prefix = "training" if run_config["training"] else "eval"
