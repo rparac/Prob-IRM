@@ -158,7 +158,7 @@ class RewardMachine:
         if isinstance(u, (int, str)):
             return u in (self.uacc, self.urej)
 
-        raise NotImplementedError("is_state_terminal is not supported for probabilistic RM")
+        return self.is_accepting_state(u) or self.is_rejecting_state(u)
 
     def is_accepting_state(self, u):
         if isinstance(u, (int, str)):
