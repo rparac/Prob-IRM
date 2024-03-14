@@ -1,12 +1,12 @@
 training: True
-total_episodes: 1000
+total_episodes: 500
 log_freq: 1
 log_dir: logs
-testing_freq: 200
+testing_freq: 250
 greedy: True
 synchronize: False
 counterfactual_update: False
-recording_freq: 200
+recording_freq: 250
 no_display: False
 seed: 123
 name: "new-office-world" # should make ???

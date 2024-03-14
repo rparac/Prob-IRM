@@ -301,12 +301,12 @@ class RewardMachineWrapper(AutomataWrapper):
     def __init__(
             self,
             env: gym.Env,
-            rm: RewardMachine,
+            rm_transitioner: RMTransitioner,
             label_mode: AutomataWrapper.LabelMode = AutomataWrapper.LabelMode.ALL,
             termination_mode: AutomataWrapper.TerminationMode = AutomataWrapper.TerminationMode.RM,
             reward_function: callable = None
     ):
-        super().__init__(env, rm, label_mode, termination_mode)
+        super().__init__(env, rm_transitioner, label_mode, termination_mode)
 
         self.reward_function = reward_function or self._simple_reward_func
 
@@ -315,7 +315,7 @@ class RewardMachineWrapper(AutomataWrapper):
         return rm.get_reward(u, u_next)
 
     def _get_reward(self, reward, u_next):
-        return self.reward_function(self.rm, self.u, u_next, reward)
+        return self.reward_function(self.rm_transitioner.rm, self.u, u_next, reward)
 
 
 class SingleAgentEnvWrapper(gym.Wrapper):

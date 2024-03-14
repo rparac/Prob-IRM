@@ -1,3 +1,6 @@
 defaults:
-  - env: office_world
+  # Look up the base file in env/office-world, naming the key as agent
+  # This also makes the env/office-world the base directory for the env part of configuration (desirable)
+  - env/office-world@env: config
   - run: dqrm_coffee_world
+

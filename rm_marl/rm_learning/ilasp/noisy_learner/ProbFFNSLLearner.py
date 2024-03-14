@@ -10,6 +10,7 @@ from rm_marl.rm_learning import RMLearner
 from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample, ISAExampleContainer
 from rm_marl.rm_learning.ilasp.noisy_learner.example_generator import NoisyILASPExampleGenerator
 from rm_marl.rm_learning.ilasp.task_generator import generate_ilasp_task
+from rm_marl.rm_learning.ilasp.task_improvement_validator import get_ilasp_solution_penalty
 from rm_marl.rm_learning.ilasp.task_parser import parse_ilasp_solutions
 from rm_marl.rm_learning.ilasp.task_solver import solve_ilasp_task
 from rm_marl.rm_learning.trace_tracker import TraceTracker
@@ -34,14 +35,16 @@ class ProbFFNSLLearner(RMLearner):
 
         # Minimum number of new traces before we validate if the
         # reward machine is the correct one
-        self.min_rm_num_episodes = 10
+        # TODO: current choice is to double this number every time the same RM is learned
+        self._initial_min_rm_num_episodes = 10
+        self.min_rm_num_episodes = self._initial_min_rm_num_episodes
 
         # the number of traces when the automata was relearned
         self.last_relearning_trace_num = 0
 
         # The percentage of traces that need to conform to the reward
         # machine to avoid relearning
-        self.rm_recognize_threshold = 0.35
+        self.rm_recognize_threshold = 0.6  # 0.35
 
         # Debug tracking
         self.num_pos_ex = 0
@@ -54,6 +57,8 @@ class ProbFFNSLLearner(RMLearner):
 
         # TODO: We might want to make this more efficient (if there are repeated traces)
         self._seen_traces: List[TraceTracker] = []
+
+        self._curr_ilasp_solution_filename = None
 
     # We assume this function be called when a trace is fully generated
     def learn(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated,
@@ -71,7 +76,8 @@ class ProbFFNSLLearner(RMLearner):
             return None
 
         candidate_rm = self._update_reward_machine(curr_rm)
-        self._initialize_trace_counters(candidate_rm)
+        if candidate_rm:
+            self._initialize_trace_counters(candidate_rm)
         return candidate_rm
 
     def _update_examples(self, trace: TraceTracker):
@@ -123,13 +129,23 @@ class ProbFFNSLLearner(RMLearner):
                 if len(self.dend_examples) > 0 and "u_rej" in candidate_rm.states:
                     candidate_rm.set_urej("u_rej")
 
-                if candidate_rm == curr_rm:
+                new_sol_penalty = get_ilasp_solution_penalty(self.log_folder, ilasp_solution_filename,
+                                                             ilasp_task_filename)
+                old_sol_penalty = get_ilasp_solution_penalty(self.log_folder, self._curr_ilasp_solution_filename,
+                                                             ilasp_task_filename)
+
+                # If the RMs are equal or they are equally good for the current task
+                if candidate_rm == curr_rm or new_sol_penalty >= old_sol_penalty:
+                    self.min_rm_num_episodes *= 2
                     return None
+
+                self.min_rm_num_episodes = self._initial_min_rm_num_episodes
 
                 rm_plot_filename = os.path.join(
                     self.log_folder, f"plot_{self.rm_learning_counter}"
                 )
                 candidate_rm.plot(rm_plot_filename)
+                self._curr_ilasp_solution_filename = ilasp_solution_filename
                 return candidate_rm
             else:
                 LOGGER.debug(f"[{self.agent_id}] ILASP task unsolvable")
@@ -191,8 +207,8 @@ class ProbFFNSLLearner(RMLearner):
 
         correct_threshold = self._rm_success_trace_cnt / len(self._seen_traces)
 
-        if len(self._seen_traces) % 100 == 0:
-            return True
+        # if len(self._seen_traces) % 100 == 0:
+        #     return True
 
         return correct_threshold < self.rm_recognize_threshold
 

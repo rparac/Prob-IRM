@@ -1,5 +1,6 @@
 from collections import defaultdict
 import copy
+from typing import Type
 
 import numpy as np
 
@@ -41,10 +42,31 @@ class RewardMachine:
                 )
         return s
 
+    # def tranitions_eq(self, __o):
+    #     def not_less_tup_eq(from1, from2):
+    #         f_from1 = [x for x in from1 if not x.startswith('~')]
+    #         f_from2 = [x for x in from2 if not x.startswith('~')]
+    #
+    #     if self.states != __o.states:
+    #         return False
+    #
+    #     for s1, s2 in zip(self.states, __o.states):
+    #         t1 = self.transitions[s1]
+    #         t2 = __o.transitions[s2]
+    #
+    #         for (from1, to1), (from2, to2) in zip(t1.items(), t2.items())
+    #
+    #             t1.keys()
+    #         t2.keys()
+
     def __eq__(self, __o: object) -> bool:
+
+        if not isinstance(__o, RewardMachine):
+            return False
+
         return (
             set(self.states) == set(__o.states)
-            and self.events == __o.events
+            and self.events == __o.events  # - comparing transitions is enough
             and self.u0 == __o.u0
             and self.uacc == __o.uacc
             and self.urej == __o.urej
@@ -67,10 +89,12 @@ class RewardMachine:
     def set_uacc(self, state) -> None:
         assert state in self.states, f"{state} is unknown"
         self.uacc = state
+        self.transitions[state] = self._transition_constructor()
 
     def set_urej(self, state) -> None:
         assert state in self.states, f"{state} is unknown"
         self.urej = state
+        self.transitions[state] = self._transition_constructor()
 
     def copy(self) -> "RewardMachine":
         return copy.deepcopy(self)
@@ -142,6 +166,13 @@ class RewardMachine:
         return u1
 
     def get_reward(self, u1, u2):
+        if isinstance(u1, np.ndarray):
+            state_diff = u2 - u1
+            # Difference between how much "closer" we are to the accepting state
+            #  compared to the rejecting state
+            reward = self.accepting_state_prob(state_diff) - self.rejecting_state_prob(state_diff)
+            return reward
+
         if u1 not in (self.uacc, self.urej):
             if u2 == self.uacc:
                 return 1

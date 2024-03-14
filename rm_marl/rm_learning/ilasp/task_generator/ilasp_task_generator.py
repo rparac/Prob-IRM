@@ -23,12 +23,13 @@ def generate_ilasp_task(num_states, accepting_state, rejecting_state, observable
     if len(goal_examples) == 0:
         accepting_state = None
 
-    with open(os.path.join(output_folder, output_filename), 'w') as f:
+    # with open(os.path.join(output_folder, output_filename), 'w') as f:
+    with open(output_filename, 'w') as f:
         task = _generate_ilasp_task_str(num_states, accepting_state, rejecting_state, observables, goal_examples,
-                                        dend_examples, inc_examples, output_folder, symmetry_breaking_method,
-                                        max_disj_size, learn_acyclic, use_compressed_traces,
-                                        avoid_learning_only_negative,
-                                        prioritize_optimal_solutions, binary_folder_name)
+                                    dend_examples, inc_examples, output_folder, symmetry_breaking_method,
+                                    max_disj_size, learn_acyclic, use_compressed_traces,
+                                    avoid_learning_only_negative,
+                                    prioritize_optimal_solutions, binary_folder_name)
         f.write(task)
 
 

@@ -2,6 +2,7 @@
 This file showcases how code is intended to be used in the single agent case.
 Hydra configuration helps with duplicate configuration, but is not immediately clear to a user.
 """
+import cProfile
 import os
 import random
 
@@ -14,11 +15,10 @@ from rm_marl.algo import QRM
 from rm_marl.envs.gym_subgoal_automata_wrapper import GymSubgoalAutomataAdapter, \
     OfficeWorldOfficeLabelingFunctionWrapper, OfficeWorldPlantLabelingFunctionWrapper, \
     OfficeWorldCoffeeLabelingFunctionWrapper
-from rm_marl.envs.wrappers import AutomataWrapper, NoisyLabelingFunctionComposer
+from rm_marl.envs.wrappers import AutomataWrapper, NoisyLabelingFunctionComposer, RewardMachineWrapper
 from rm_marl.rm_learning.ilasp.noisy_learner.ProbFFNSLLearner import ProbFFNSLLearner
 from rm_marl.rm_transition.prob_rm_transitioner import ProbRMTransitioner
 from rm_marl.trainer import Trainer
-
 
 def get_base_env(seed, agent_id):
     env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
@@ -26,13 +26,13 @@ def get_base_env(seed, agent_id):
     env = GymSubgoalAutomataAdapter(env, agent_id, render_mode="rgb_array", max_episode_length=250)  # type: ignore
     office_l = OfficeWorldOfficeLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)
     plant_l = OfficeWorldPlantLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)
-    coffee_l = OfficeWorldCoffeeLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)
+    coffee_l = OfficeWorldCoffeeLabelingFunctionWrapper(env, sensor_true_confidence=0.9, sensor_false_confidence=0.9)
     env = NoisyLabelingFunctionComposer([office_l, plant_l, coffee_l])
 
     rm_transitioner = ProbRMTransitioner(rm=None)
     # AutomataWrapper here only provides the filter_label function (used in counter_factual update).
     #  It also logs RM states
-    env = AutomataWrapper(
+    env = RewardMachineWrapper(
         env,
         rm_transitioner=rm_transitioner,
         label_mode=AutomataWrapper.LabelMode.ALL,
@@ -90,5 +90,7 @@ learning_ag = RewardMachineLearningAgent(
 agent_dict = {ag.agent_id: learning_ag for ag in rm_agents}
 env_dict = {f"E{i}": env for i, env in enumerate(envs)}
 
+
 trainer = Trainer(env_dict, env_dict, agent_dict)
 trainer.run(trainer_run_config)
+

@@ -1,0 +1,17 @@
+defaults:
+  - agent: successful_tuning_parameters
+  - coffee_label_factory: perfect
+  - plant_label_factory: perfect
+  - office_label_factory: perfect
+#  - _self_
+
+name: 'TODO: replace'
+render_mode: 'rgb_array'
+max_episode_steps: 250
+
+label_factories:
+  # Inserts the configuration of coffee, office and plant label factories
+  # This setup allows modifying the values of label factories while accessing them through this variable
+  - ${env.coffee_label_factory}
+  - ${env.office_label_factory}
+  - ${env.plant_label_factory}
