@@ -74,6 +74,9 @@ class Trainer:
         losses = defaultdict(list)
         rewards = defaultdict(list)
         shaping_rewards = defaultdict(list)
+        successes = defaultdict(int)
+        failures = defaultdict(int)
+        timeouts = defaultdict(int)
 
         _ = [a.set_log_folder(os.path.join(logger.log_dir, aid)) for aid, a in self.agents.items()]
 
@@ -224,8 +227,17 @@ class Trainer:
             for env_id in envs.keys():
                 prefix = "training" if run_config["training"] else "eval"
 
-                steps[env_id].append(infos[env_id]["episode"]["l"])
-                rewards[env_id].append(infos[env_id]["episode"]["r"])
+                episode_reward = infos[env_id]["episode"]["r"]
+                episode_length = infos[env_id]["episode"]["l"]
+
+                steps[env_id].append(episode_length)
+                rewards[env_id].append(episode_reward)
+                successes[env_id] += 1 if episode_reward == 1 else 0
+                failures[env_id] += 1 if episode_reward == -1 else 0
+                timeouts[env_id] += 1 if episode_reward == 0 else 0
+
+                assert successes[env_id] + failures[env_id] + timeouts[env_id] == episode, "Something is wrong"
+
                 if episode_losses[env_id]:
                     losses[env_id].append(np.mean(episode_losses[env_id]))
 
@@ -233,10 +245,14 @@ class Trainer:
                     shaping_rewards[env_id] = episode_shaping_rewards[env_id]
 
                 if episode % run_config["log_freq"] == 0:
+
+                    # Loss information
                     if losses[env_id]:
                         logger.add_scalar(
                             f"{prefix}/loss/{env_id}", np.mean(losses[env_id]), self.total_steps
                         )
+
+                    # Reward shaping information
                     if shaping_rewards[env_id]:
                         np_data = np.array(shaping_rewards[env_id])
                         unique, counts = np.unique(np_data, return_counts=True)
@@ -253,14 +269,33 @@ class Trainer:
                         logger.add_histogram(
                             f"{prefix}/reward_shaping/{env_id}", np_data, self.total_steps
                         )
+
+                    # Episode number of steps
                     logger.add_scalar(
                         f"{prefix}/num_steps/{env_id}", steps[env_id][-1],
                         episode if run_config["training"] else self.test_episode
                     )
+
+                    # Episode reward
                     logger.add_scalar(
                         f"{prefix}/reward/{env_id}", rewards[env_id][-1],
                         episode if run_config["training"] else self.test_episode
                     )
+
+                    # Success/Failure/Timeouts rate
+                    logger.add_scalar(
+                        f"{prefix}/success_rate/{env_id}", successes[env_id] / episode,
+                        episode if run_config["training"] else self.test_episode
+                    )
+                    logger.add_scalar(
+                        f"{prefix}/failure_rate/{env_id}", failures[env_id] / episode,
+                        episode if run_config["training"] else self.test_episode
+                    )
+                    logger.add_scalar(
+                        f"{prefix}/timeout_rate/{env_id}", timeouts[env_id] / episode,
+                        episode if run_config["training"] else self.test_episode
+                    )
+
                     self.all_recorded_rm_states[env_id] = self.all_recorded_rm_states[env_id].union(
                         last_timestep_in_u[env_id].keys())
 
