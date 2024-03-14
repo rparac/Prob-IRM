@@ -73,6 +73,7 @@ class Trainer:
         steps = defaultdict(list)
         losses = defaultdict(list)
         rewards = defaultdict(list)
+        shaping_rewards = defaultdict(list)
 
         _ = [a.set_log_folder(os.path.join(logger.log_dir, aid)) for aid, a in self.agents.items()]
 
@@ -82,6 +83,7 @@ class Trainer:
 
             episode_losses = defaultdict(list)
             episode_frames = defaultdict(list)
+            episode_shaping_rewards = defaultdict(list)
 
             # seperate for each env_id
             last_timestep_in_u = {}
@@ -159,6 +161,9 @@ class Trainer:
                             most_likely_state = curr_a.rm.states[most_likely_state_idx]
                         last_timestep_in_u[env_id][most_likely_state] = steps_count
 
+                    if "shaping_reward" in info:
+                        episode_shaping_rewards[env_id].append(info["shaping_reward"])
+
                     # update the agent's RM and Q-functions
                     agent_loss = []
                     interrupt_episode = terminated or truncated
@@ -224,10 +229,29 @@ class Trainer:
                 if episode_losses[env_id]:
                     losses[env_id].append(np.mean(episode_losses[env_id]))
 
+                if episode_shaping_rewards[env_id]:
+                    shaping_rewards[env_id] = episode_shaping_rewards[env_id]
+
                 if episode % run_config["log_freq"] == 0:
                     if losses[env_id]:
                         logger.add_scalar(
                             f"{prefix}/loss/{env_id}", np.mean(losses[env_id]), self.total_steps
+                        )
+                    if shaping_rewards[env_id]:
+                        np_data = np.array(shaping_rewards[env_id])
+                        unique, counts = np.unique(np_data, return_counts=True)
+                        freq_strings = [f"{value}: #{freq} | " for value, freq in zip(unique, counts)]
+                        logged_text = "  \n".join(freq_strings)
+                        logger.add_text(
+                            f"{prefix}/reward_shaping/frequencies/{env_id}", str(logged_text), self.total_steps
+                        )
+
+                        logged_text = "  \n".join([f"{i}: {value}" for i, value in enumerate(shaping_rewards[env_id])])
+                        logger.add_text(
+                            f"{prefix}/reward_shaping/history/{env_id}", logged_text, self.total_steps
+                        )
+                        logger.add_histogram(
+                            f"{prefix}/reward_shaping/{env_id}", np_data, self.total_steps
                         )
                     logger.add_scalar(
                         f"{prefix}/num_steps/{env_id}", steps[env_id][-1],
