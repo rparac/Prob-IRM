@@ -11,6 +11,7 @@ import joblib
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+from PIL import Image, ImageDraw
 
 from rm_marl.utils.logging import create_rm_state_logs, create_learnt_rm_logs
 
@@ -120,12 +121,12 @@ class Trainer:
 
                 for env_id, env in envs.items():
 
+                    if dones[env_id]:
+                        continue
+
                     # env.render with pygame does not work in a headless mode
                     if episode % run_config["recording_freq"] == 0 and not run_config["no_display"]:
                         episode_frames[env_id].append(env.render())
-
-                    if dones[env_id]:
-                        continue
 
                     actions = {
                         aid: a.action(
@@ -312,6 +313,7 @@ class Trainer:
                     video = np.array(episode_frames[env_id]).transpose(0, 3, 1, 2)[
                             np.newaxis, :
                             ]
+                    video = self._add_steps_to_replay(video)
                     logger.add_video(f"{prefix}/replay/{env_id}", video, self.total_steps)
 
             if run_config["training"] and episode % run_config["testing_freq"] == 0:
@@ -329,6 +331,25 @@ class Trainer:
         # TODO: make cleaner
         # Sums the rewards of the last 100 episodes
         return sum(rewards[list(self.testing_envs.keys())[0]][run_config["total_episodes"] - 100:])
+
+    @staticmethod
+    def _add_steps_to_replay(video_data):
+
+        num_frames, channels, video_h, video_w = video_data.shape[1:]
+        steps_bar_h = int(video_h / 5)
+
+        steps_bar = np.zeros((1, num_frames, channels, steps_bar_h, video_w), dtype=video_data.dtype)
+        full_video = np.concatenate((steps_bar, video_data), axis=3)
+
+        for i in range(num_frames):
+            transposed_steps_bar = np.transpose(steps_bar[0, i], axes=(1, 2, 0))
+            with Image.fromarray(transposed_steps_bar, mode='RGB') as steps_bar_img:
+                drawer = ImageDraw.Draw(steps_bar_img)
+                drawer.text((0, 0), f"# Steps: {i}", font_size=54, fill='#ffffff')
+                steps_bar_data = np.transpose(np.asarray(steps_bar_img), axes=(2, 0, 1))
+                full_video[0, i, :, 0:steps_bar_h, :] = steps_bar_data
+
+        return full_video
 
     @staticmethod
     def _project_labels(labels, a, aid):
