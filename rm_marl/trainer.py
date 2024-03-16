@@ -334,6 +334,24 @@ class Trainer:
 
     @staticmethod
     def _add_steps_to_replay(video_data):
+        """
+        Expand a replay to visualize the step number of each frame.
+
+        Aside from being some nice quality-of-life, this method is also needed due to a quirk in the
+        inner functioning of SummaryWriter.add_video(). Since Tensorboard, at the time of writing, does not
+        *really* support video data, a workaround is used instead, consisting in adding video data by means
+        of animated GIF images. For some reason, when such a GIF is created, if a number of consecutive frames
+        is identical to each other, the resulting GIF will contain only one copy of the frame.
+
+        Parameters
+        ----------
+        video_data Numpy array with shape (1, num_frames, n_channels, video_height, video_width)
+
+        Returns
+        -------
+        Numpy array containing the replay and steps information
+
+        """
 
         num_frames, channels, video_h, video_w = video_data.shape[1:]
         steps_bar_h = int(video_h / 5)
