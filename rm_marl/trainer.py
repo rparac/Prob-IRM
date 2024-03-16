@@ -233,9 +233,13 @@ class Trainer:
 
                 steps[env_id].append(episode_length)
                 rewards[env_id].append(episode_reward)
-                successes[env_id] += 1 if episode_reward == 1 else 0
-                failures[env_id] += 1 if episode_reward == -1 else 0
-                timeouts[env_id] += 1 if episode_reward == 0 else 0
+
+                if episode_reward == 1:
+                    successes[env_id] += 1
+                elif episode_reward == -1:
+                    failures[env_id] += 1
+                else:
+                    timeouts[env_id] += 1
 
                 assert successes[env_id] + failures[env_id] + timeouts[env_id] == episode, "Something is wrong"
 
