@@ -11,8 +11,9 @@ import joblib
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+from PIL import Image, ImageDraw
 
-from rm_marl.utils.logging import create_rm_state_logs
+from rm_marl.utils.logging import create_rm_state_logs, create_learnt_rm_logs
 
 
 class Trainer:
@@ -54,10 +55,11 @@ class Trainer:
             result = None
 
         if run_config["extra_debug_information"]:
-            create_rm_state_logs(log_dir, run_config["total_episodes"], self.test_episode,
+            create_rm_state_logs(log_dir, logger, run_config["total_episodes"], self.test_episode,
                                  run_config["testing_freq"], self.last_timestep_train_info,
                                  self.last_timestep_test_info,
                                  self.all_recorded_rm_states, self.rm_relearned_episodes)
+            create_learnt_rm_logs(log_dir, logger)
 
         _ = [e.close() for e in self.envs.values()]
         logger.close()
@@ -72,6 +74,10 @@ class Trainer:
         steps = defaultdict(list)
         losses = defaultdict(list)
         rewards = defaultdict(list)
+        shaping_rewards = defaultdict(list)
+        successes = defaultdict(int)
+        failures = defaultdict(int)
+        timeouts = defaultdict(int)
 
         _ = [a.set_log_folder(os.path.join(logger.log_dir, aid)) for aid, a in self.agents.items()]
 
@@ -81,6 +87,7 @@ class Trainer:
 
             episode_losses = defaultdict(list)
             episode_frames = defaultdict(list)
+            episode_shaping_rewards = defaultdict(list)
 
             # seperate for each env_id
             last_timestep_in_u = {}
@@ -114,12 +121,12 @@ class Trainer:
 
                 for env_id, env in envs.items():
 
+                    if dones[env_id]:
+                        continue
+
                     # env.render with pygame does not work in a headless mode
                     if episode % run_config["recording_freq"] == 0 and not run_config["no_display"]:
                         episode_frames[env_id].append(env.render())
-
-                    if dones[env_id]:
-                        continue
 
                     actions = {
                         aid: a.action(
@@ -157,6 +164,9 @@ class Trainer:
                             curr_a = list(env_agents[env_id].values())[0]
                             most_likely_state = curr_a.rm.states[most_likely_state_idx]
                         last_timestep_in_u[env_id][most_likely_state] = steps_count
+
+                    if "shaping_reward" in info:
+                        episode_shaping_rewards[env_id].append(info["shaping_reward"])
 
                     # update the agent's RM and Q-functions
                     agent_loss = []
@@ -227,24 +237,79 @@ class Trainer:
             for env_id in envs.keys():
                 prefix = "training" if run_config["training"] else "eval"
 
-                steps[env_id].append(infos[env_id]["episode"]["l"])
-                rewards[env_id].append(infos[env_id]["episode"]["r"])
+                episode_reward = infos[env_id]["episode"]["r"]
+                episode_length = infos[env_id]["episode"]["l"]
+
+                steps[env_id].append(episode_length)
+                rewards[env_id].append(episode_reward)
+
+                if episode_reward == 1:
+                    successes[env_id] += 1
+                elif episode_reward == -1:
+                    failures[env_id] += 1
+                else:
+                    timeouts[env_id] += 1
+
+                assert successes[env_id] + failures[env_id] + timeouts[env_id] == episode, "Something is wrong"
+
                 if episode_losses[env_id]:
                     losses[env_id].append(np.mean(episode_losses[env_id]))
 
+                if episode_shaping_rewards[env_id]:
+                    shaping_rewards[env_id] = episode_shaping_rewards[env_id]
+
                 if episode % run_config["log_freq"] == 0:
+
+                    # Loss information
                     if losses[env_id]:
                         logger.add_scalar(
                             f"{prefix}/loss/{env_id}", np.mean(losses[env_id]), self.total_steps
                         )
+
+                    # Reward shaping information
+                    if shaping_rewards[env_id]:
+                        np_data = np.array(shaping_rewards[env_id])
+                        unique, counts = np.unique(np_data, return_counts=True)
+                        freq_strings = [f"{value}: #{freq} | " for value, freq in zip(unique, counts)]
+                        logged_text = "  \n".join(freq_strings)
+                        logger.add_text(
+                            f"{prefix}/reward_shaping/frequencies/{env_id}", str(logged_text), self.total_steps
+                        )
+
+                        logged_text = "  \n".join([f"{i}: {value}" for i, value in enumerate(shaping_rewards[env_id])])
+                        logger.add_text(
+                            f"{prefix}/reward_shaping/history/{env_id}", logged_text, self.total_steps
+                        )
+                        logger.add_histogram(
+                            f"{prefix}/reward_shaping/{env_id}", np_data, self.total_steps
+                        )
+
+                    # Episode number of steps
                     logger.add_scalar(
                         f"{prefix}/num_steps/{env_id}", steps[env_id][-1],
                         episode if run_config["training"] else self.test_episode
                     )
+
+                    # Episode reward
                     logger.add_scalar(
                         f"{prefix}/reward/{env_id}", rewards[env_id][-1],
                         episode if run_config["training"] else self.test_episode
                     )
+
+                    # Success/Failure/Timeouts rate
+                    logger.add_scalar(
+                        f"{prefix}/success_rate/{env_id}", successes[env_id] / episode,
+                        episode if run_config["training"] else self.test_episode
+                    )
+                    logger.add_scalar(
+                        f"{prefix}/failure_rate/{env_id}", failures[env_id] / episode,
+                        episode if run_config["training"] else self.test_episode
+                    )
+                    logger.add_scalar(
+                        f"{prefix}/timeout_rate/{env_id}", timeouts[env_id] / episode,
+                        episode if run_config["training"] else self.test_episode
+                    )
+
                     self.all_recorded_rm_states[env_id] = self.all_recorded_rm_states[env_id].union(
                         last_timestep_in_u[env_id].keys())
 
@@ -261,6 +326,7 @@ class Trainer:
                     video = np.array(episode_frames[env_id]).transpose(0, 3, 1, 2)[
                             np.newaxis, :
                             ]
+                    video = self._add_steps_to_replay(video)
                     logger.add_video(f"{prefix}/replay/{env_id}", video, self.total_steps)
 
             if run_config["training"] and episode % run_config["testing_freq"] == 0:
@@ -278,6 +344,43 @@ class Trainer:
         # TODO: make cleaner
         # Sums the rewards of the last 100 episodes
         return sum(rewards[list(self.testing_envs.keys())[0]][run_config["total_episodes"] - 100:])
+
+    @staticmethod
+    def _add_steps_to_replay(video_data):
+        """
+        Expand a replay to visualize the step number of each frame.
+
+        Aside from being some nice quality-of-life, this method is also needed due to a quirk in the
+        inner functioning of SummaryWriter.add_video(). Since Tensorboard, at the time of writing, does not
+        *really* support video data, a workaround is used instead, consisting in adding video data by means
+        of animated GIF images. For some reason, when such a GIF is created, if a number of consecutive frames
+        is identical to each other, the resulting GIF will contain only one copy of the frame.
+
+        Parameters
+        ----------
+        video_data Numpy array with shape (1, num_frames, n_channels, video_height, video_width)
+
+        Returns
+        -------
+        Numpy array containing the replay and steps information
+
+        """
+
+        num_frames, channels, video_h, video_w = video_data.shape[1:]
+        steps_bar_h = int(video_h / 5)
+
+        steps_bar = np.zeros((1, num_frames, channels, steps_bar_h, video_w), dtype=video_data.dtype)
+        full_video = np.concatenate((steps_bar, video_data), axis=3)
+
+        for i in range(num_frames):
+            transposed_steps_bar = np.transpose(steps_bar[0, i], axes=(1, 2, 0))
+            with Image.fromarray(transposed_steps_bar, mode='RGB') as steps_bar_img:
+                drawer = ImageDraw.Draw(steps_bar_img)
+                drawer.text((0, 0), f"# Steps: {i}", font_size=54, fill='#ffffff')
+                steps_bar_data = np.transpose(np.asarray(steps_bar_img), axes=(2, 0, 1))
+                full_video[0, i, :, 0:steps_bar_h, :] = steps_bar_data
+
+        return full_video
 
     @staticmethod
     def _project_labels(labels, a, aid):
