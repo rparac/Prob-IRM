@@ -16,4 +16,4 @@ hydra:
 
 run:
   no_display: True
-  name: "task"
+  name: "true_confidence_experiment"

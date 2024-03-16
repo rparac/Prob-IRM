@@ -1,4 +1,3 @@
-# Try out sensor_false_confidence only for coffee
 # @package _global_
 defaults:
   - override /hydra/sweeper: optuna
@@ -21,4 +20,4 @@ hydra:
 
 run:
   no_display: True
-  name: "task"
+  name: "false_confidence_experiment"

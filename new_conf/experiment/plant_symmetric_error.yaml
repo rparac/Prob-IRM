@@ -16,7 +16,7 @@ hydra:
 
 run:
   no_display: True
-  name: "task"
+  name: "plant_symmetric_experiment"
 
 
 # Hydra optuna plugin doesn't support $ interpolation.

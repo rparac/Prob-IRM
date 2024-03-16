@@ -47,6 +47,9 @@ def _get_base_env(seed, agent_id, label_factories):
 # Hydra doesn't support overriding multiple values at once with optuna
 #  We override values that should be overriden with this function
 def _manual_value_override(cfg):
+    if 'manual_overrides' not in cfg:
+        return
+
     override_values = cfg['manual_overrides']
 
     for override_value in override_values:
@@ -54,19 +57,9 @@ def _manual_value_override(cfg):
         exec(command)
 
 
-
 @hydra.main(version_base=None, config_path="new_conf", config_name="config")
 def run(cfg: DictConfig) -> int:
-    # print(cfg['env'])
-    print(cfg)
-    print(cfg['manual_overrides'])
-
     _manual_value_override(cfg)
-
-    print(cfg['env']['coffee_label_factory'])
-
-    return 0
-
 
     run_config = cfg['run']
 

@@ -4,7 +4,7 @@ from ..utils.ilasp_task_generator_state import get_state_names
 from ...task_parser.ilasp_parser_utils import parse_edge_rule, parse_negative_transition_rule
 from ...task_solver.ilasp_solver import solve_ilasp_task
 
-MAX_PENALTY = 100
+MAX_PENALTY = 150 # 100
 TMP_OUTPUT_FILENAME = "tmp_task.las"
 TMP_SEARCH_SPACE_FILENAME = "search_space.txt"
 

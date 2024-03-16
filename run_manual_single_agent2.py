@@ -25,8 +25,8 @@ def get_base_env(seed, agent_id):
                    params={"generation": "random", "environment_seed": seed, "hide_state_variables": True})
     env = GymSubgoalAutomataAdapter(env, agent_id, render_mode="rgb_array", max_episode_length=250)  # type: ignore
     office_l = OfficeWorldOfficeLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)
-    plant_l = OfficeWorldPlantLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)
-    coffee_l = OfficeWorldCoffeeLabelingFunctionWrapper(env, sensor_true_confidence=0.9, sensor_false_confidence=0.9)
+    plant_l = OfficeWorldPlantLabelingFunctionWrapper(env, sensor_true_confidence=0.9, sensor_false_confidence=0.9)
+    coffee_l = OfficeWorldCoffeeLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)
     env = NoisyLabelingFunctionComposer([office_l, plant_l, coffee_l])
 
     rm_transitioner = ProbRMTransitioner(rm=None)
