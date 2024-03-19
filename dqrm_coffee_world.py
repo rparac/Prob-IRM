@@ -11,9 +11,7 @@ from omegaconf import DictConfig
 from rm_marl.agent import RewardMachineAgent, RewardMachineLearningAgent
 from rm_marl.algo import QRM
 from rm_marl.algo.deepqrm import DeepQRM
-from rm_marl.envs.gym_subgoal_automata_wrapper import GymSubgoalAutomataAdapter, \
-    OfficeWorldOfficeLabelingFunctionWrapper, \
-    OfficeWorldPlantLabelingFunctionWrapper, OfficeWorldCoffeeLabelingFunctionWrapper
+from rm_marl.envs.gym_subgoal_automata_wrapper import GymSubgoalAutomataAdapter
 from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer, AutomataWrapper, RewardMachineWrapper
 from rm_marl.rm_learning.ilasp.noisy_learner.ProbFFNSLLearner import ProbFFNSLLearner
 from rm_marl.rm_transition.prob_rm_transitioner import ProbRMTransitioner

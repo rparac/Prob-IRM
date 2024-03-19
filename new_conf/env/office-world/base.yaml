@@ -1,0 +1,18 @@
+defaults:
+  - agent: successful_tuning_parameters
+  - coffee_label_factory: perfect
+  - plant_label_factory: perfect
+  - office_label_factory: perfect
+
+name: 'TODO: replace'
+render_mode: 'rgb_array'
+max_episode_steps: 250
+
+# Variables that can be overriden with Optuna
+overridable:
+  - env.coffee_label_factory.sensor_true_confidence
+  - env.coffee_label_factory.sensor_false_confidence
+  - env.plant_label_factory.sensor_true_confidence
+  - env.plant_label_factory.sensor_false_confidence
+  - env.office_label_factory.sensor_true_confidence
+  - env.office_label_factory.sensor_false_confidence
