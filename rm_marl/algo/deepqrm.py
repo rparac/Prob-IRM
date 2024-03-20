@@ -201,13 +201,13 @@ class DeepQRM(Algo):
         # carrying out the conversion when sampling from the replay memory
         flat_state = torch.as_tensor(
             gym.spaces.utils.flatten(self._obs_space, state),
-            dtype=torch.float
+            dtype=torch.float32
         )
         flat_next_state = torch.as_tensor(
             gym.spaces.utils.flatten(self._obs_space, next_state),
-            dtype=torch.float
+            dtype=torch.float32
         )
-        reward = torch.as_tensor([reward], device=self.device)
+        reward = torch.as_tensor([reward], dtype=torch.float32, device=self.device)
         action = torch.as_tensor([action], device=self.device)
 
         # Add experience to the replay buffer
