@@ -25,34 +25,52 @@ def generate_ilasp_task(num_states, accepting_state, rejecting_state, observable
 
     # with open(os.path.join(output_folder, output_filename), 'w') as f:
     with open(output_filename, 'w') as f:
-        task = _generate_ilasp_task_str(num_states, accepting_state, rejecting_state, observables, goal_examples,
-                                    dend_examples, inc_examples, output_folder, symmetry_breaking_method,
-                                    max_disj_size, learn_acyclic, use_compressed_traces,
-                                    avoid_learning_only_negative,
-                                    prioritize_optimal_solutions, binary_folder_name)
-        f.write(task)
+        background = _generate_ilasp_task_background(accepting_state,
+                                                     avoid_learning_only_negative, dend_examples,
+                                                     goal_examples, inc_examples, learn_acyclic, max_disj_size,
+                                                     num_states,
+                                                     prioritize_optimal_solutions, rejecting_state,
+                                                     use_compressed_traces)
+
+        hyp = _generate_ilasp_hypothesis_space(num_states, accepting_state, rejecting_state, observables, goal_examples,
+                                               dend_examples, inc_examples, output_folder, symmetry_breaking_method,
+                                               max_disj_size, learn_acyclic, use_compressed_traces,
+                                               avoid_learning_only_negative,
+                                               prioritize_optimal_solutions, binary_folder_name)
+        examples = generate_examples(goal_examples, dend_examples, inc_examples)
+        f.write(background)
+        f.write('\n' + hyp)
+        f.write('\n' + examples)
+    with open(f"{output_filename}_examples", 'w') as f:
+        f.write(background)
+        f.write('\n' + examples)
 
 
-def _generate_ilasp_task_str(num_states, accepting_state, rejecting_state, observables,
-                             goal_examples: List[ISAILASPExample], dend_examples: List[ISAILASPExample],
-                             inc_examples: List[ISAILASPExample], output_folder, symmetry_breaking_method,
-                             max_disj_size, learn_acyclic,
-                             use_compressed_traces, avoid_learning_only_negative, prioritize_optimal_solutions,
-                             binary_folder_name):
+def _generate_ilasp_hypothesis_space(num_states, accepting_state, rejecting_state, observables,
+                                     goal_examples: List[ISAILASPExample], dend_examples: List[ISAILASPExample],
+                                     inc_examples: List[ISAILASPExample], output_folder, symmetry_breaking_method,
+                                     max_disj_size, learn_acyclic,
+                                     use_compressed_traces, avoid_learning_only_negative, prioritize_optimal_solutions,
+                                     binary_folder_name):
+    task = get_hypothesis_space(num_states, accepting_state, rejecting_state, observables, output_folder,
+                                symmetry_breaking_method, max_disj_size, learn_acyclic, binary_folder_name)
+
+    if symmetry_breaking_method is not None:
+        task += generate_symmetry_breaking_statements(num_states, accepting_state, rejecting_state, observables,
+                                                      symmetry_breaking_method, max_disj_size, learn_acyclic)
+
+    return task
+
+
+def _generate_ilasp_task_background(accepting_state, avoid_learning_only_negative, dend_examples, goal_examples,
+                                    inc_examples, learn_acyclic, max_disj_size, num_states,
+                                    prioritize_optimal_solutions, rejecting_state, use_compressed_traces):
     task = generate_state_statements(num_states, accepting_state, rejecting_state)
     task += generate_timestep_statements(goal_examples, dend_examples, inc_examples)
     task += _generate_edge_indices_facts(max_disj_size)
     task += generate_state_at_timestep_statements(num_states, accepting_state, rejecting_state)
     task += generate_transition_statements(learn_acyclic, use_compressed_traces, avoid_learning_only_negative,
                                            prioritize_optimal_solutions)
-    task += get_hypothesis_space(num_states, accepting_state, rejecting_state, observables, output_folder,
-                                 symmetry_breaking_method, max_disj_size, learn_acyclic, binary_folder_name)
-
-    if symmetry_breaking_method is not None:
-        task += generate_symmetry_breaking_statements(num_states, accepting_state, rejecting_state, observables,
-                                                      symmetry_breaking_method, max_disj_size, learn_acyclic)
-
-    task += generate_examples(goal_examples, dend_examples, inc_examples)
     return task
 
 

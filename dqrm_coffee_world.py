@@ -19,7 +19,8 @@ from rm_marl.trainer import Trainer
 
 
 def _get_base_env(seed, agent_id, label_factories):
-    env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
+    # env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
+    env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffeeAndMail-v0",
                    params={"generation": "random", "environment_seed": seed, "hide_state_variables": True})
     env = GymSubgoalAutomataAdapter(env, agent_id, render_mode="rgb_array", max_episode_length=250)  # type: ignore
     labeling_funs = []
@@ -51,8 +52,9 @@ def _manual_value_override(cfg):
     override_values = cfg['manual_overrides']
 
     for override_value in override_values:
-        command = f"cfg.{override_value} = {cfg['x']}"
-        exec(command)
+        if override_value in cfg["env"]["overridable"]:
+            command = f"cfg.{override_value} = {cfg['x']}"
+            exec(command)
 
 
 @hydra.main(version_base=None, config_path="new_conf", config_name="config")

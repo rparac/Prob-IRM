@@ -50,7 +50,7 @@ seed = 123
 
 trainer_run_config = {
     "training": True,
-    "total_episodes": 10000,  # 10000,
+    "total_episodes": 2000,  # 10000,
     "log_freq": 1,
     "log_dir": os.path.join(os.path.dirname(__file__), "logs"),
     "testing_freq": 1000,  # 1000,
