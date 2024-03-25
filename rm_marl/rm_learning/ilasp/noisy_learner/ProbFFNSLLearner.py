@@ -31,7 +31,7 @@ class ProbFFNSLLearner(RMLearner):
 
         # Minimum is 3 states (accepting, rejecting, u0)
         # self.rm_num_states = 4
-        self.rm_num_states = 5
+        self.rm_num_states = 8  # 5
 
         # Minimum number of new traces before we validate if the
         # reward machine is the correct one
@@ -44,19 +44,28 @@ class ProbFFNSLLearner(RMLearner):
 
         # The percentage of traces that need to conform to the reward
         # machine to avoid relearning
-        self.rm_recognize_threshold = 0.6  # 0.35
+        self.rm_recognize_threshold = 0.4  # 0.6  # 0.35
 
         # Debug tracking
         self.num_pos_ex = 0
         self.num_neg_ex = 0
         self.overriden_with_debugger = False
 
-        self._rm_success_trace_cnt = 0
+        # TODO: delete after debugging is finished
+        self._debug_ratio = []
+
+        self._rm_goal_trace_success = 0
+        self._rm_incomplete_trace_success = 0
+        self._rm_dend_trace_success = 0
+
         # TODO: unused at the moment, but could be useful for debugging
         self._rm_cnt_since_restart = 0
 
         # TODO: We might want to make this more efficient (if there are repeated traces)
-        self._seen_traces: List[TraceTracker] = []
+        # self._seen_traces: List[TraceTracker] = []
+        self._seen_positive_traces: List[TraceTracker] = []
+        self._seen_negative_traces: List[TraceTracker] = []
+        self._seen_incomplete_traces: List[TraceTracker] = []
 
         self._curr_ilasp_solution_filename = None
 
@@ -65,7 +74,14 @@ class ProbFFNSLLearner(RMLearner):
               is_positive_trace):
         assert isinstance(curr_state, np.ndarray)
 
-        self._seen_traces.append(copy.deepcopy(trace))
+        if trace.is_complete:
+            if trace.is_positive:
+                self._seen_positive_traces.append(copy.deepcopy(trace))
+            else:
+                self._seen_negative_traces.append(copy.deepcopy(trace))
+        else:
+            self._seen_incomplete_traces.append(copy.deepcopy(trace))
+
         self._update_trace_counters(curr_rm, curr_state, trace)
         if terminated or truncated:
             self._update_examples(trace)
@@ -107,7 +123,8 @@ class ProbFFNSLLearner(RMLearner):
 
     def _update_reward_machine(self, curr_rm):
         self.rm_learning_counter += 1
-        self.last_relearning_trace_num = len(self._seen_traces)
+        self.last_relearning_trace_num = len(self._seen_positive_traces) + len(self._seen_negative_traces) + len(
+            self._seen_incomplete_traces)
 
         ilasp_task_filename = os.path.join(
             self.log_folder, f"task_{self.rm_learning_counter}"
@@ -129,10 +146,11 @@ class ProbFFNSLLearner(RMLearner):
                 if len(self.dend_examples) > 0 and "u_rej" in candidate_rm.states:
                     candidate_rm.set_urej("u_rej")
 
+                # TODO: abstract example file name away
                 new_sol_penalty = get_ilasp_solution_penalty(self.log_folder, ilasp_solution_filename,
-                                                             ilasp_task_filename)
+                                                             f"{ilasp_task_filename}_examples")
                 old_sol_penalty = get_ilasp_solution_penalty(self.log_folder, self._curr_ilasp_solution_filename,
-                                                             ilasp_task_filename)
+                                                             f"{ilasp_task_filename}_examples")
 
                 # If the RMs are equal or they are equally good for the current task
                 if candidate_rm == curr_rm or new_sol_penalty >= old_sol_penalty:
@@ -202,15 +220,30 @@ class ProbFFNSLLearner(RMLearner):
         return list(ret.keys())
 
     def _should_relearn_rm(self) -> bool:
-        if len(self._seen_traces) < self.last_relearning_trace_num + self.min_rm_num_episodes:
+        num_seen_traces = len(self._seen_positive_traces) + len(self._seen_incomplete_traces) + len(
+            self._seen_negative_traces)
+        if num_seen_traces < self.last_relearning_trace_num + self.min_rm_num_episodes:
             return False
 
-        correct_threshold = self._rm_success_trace_cnt / len(self._seen_traces)
+        # positive
+        if (len(self._seen_positive_traces) >= 1 and
+                self._rm_goal_trace_success / len(self._seen_positive_traces) < self.rm_recognize_threshold):
+            return True
 
-        # if len(self._seen_traces) % 100 == 0:
-        #     return True
+        # negative
+        if (len(self._seen_negative_traces) >= 1 and
+                self._rm_dend_trace_success / len(self._seen_negative_traces) < self.rm_recognize_threshold):
+            return True
 
-        return correct_threshold < self.rm_recognize_threshold
+        ratio = self._rm_incomplete_trace_success / len(self._seen_incomplete_traces)
+        if len(self._seen_incomplete_traces) % 100 == 0:
+            self._debug_ratio.append(ratio)
+
+        if (len(self._seen_incomplete_traces) >= 1 and
+                self._rm_incomplete_trace_success / len(self._seen_incomplete_traces) < self.rm_recognize_threshold):
+            return True
+
+        return False
 
     def _update_trace_counters(self, curr_rm, curr_state, trace):
         self._rm_cnt_since_restart += 1
@@ -224,29 +257,23 @@ class ProbFFNSLLearner(RMLearner):
         else:
             trace_outcome = ISAILASPExample.ExType.INCOMPLETE
 
-        # TODO: remove this if not needed
-        # state_outcome = ISAILASPExample.ExType.INCOMPLETE
-        # if curr_rm.is_accepting_state(curr_state):
-        #     state_outcome = ISAILASPExample.ExType.GOAL
-        # if curr_rm.is_rejecting_state(curr_state):
-        #     state_outcome = ISAILASPExample.ExType.DEND
-        #
-        # if trace_outcome == state_outcome:
-        #     self._rm_success_trace_cnt += 1
-        if trace_outcome == ISAILASPExample.ExType.GOAL:
-            self._rm_success_trace_cnt += curr_rm.accepting_state_prob(curr_state)
-        if trace_outcome == ISAILASPExample.ExType.DEND:
-            self._rm_success_trace_cnt += curr_rm.rejecting_state_prob(curr_state)
         if trace_outcome == ISAILASPExample.ExType.INCOMPLETE:
-            self._rm_success_trace_cnt \
-                += 1 - curr_rm.accepting_state_prob(curr_state) - curr_rm.rejecting_state_prob(curr_state)
+            self._rm_incomplete_trace_success += 1 - curr_rm.accepting_state_prob(
+                curr_state) - curr_rm.rejecting_state_prob(curr_state)
+        elif trace_outcome == ISAILASPExample.ExType.GOAL:
+            self._rm_goal_trace_success += curr_rm.accepting_state_prob(curr_state)
+        else:
+            self._rm_dend_trace_success += curr_rm.rejecting_state_prob(curr_state)
 
     # Replays old traces to the success rate
     def _initialize_trace_counters(self, candidate_rm):
-        self._rm_success_trace_cnt = 0
+        self._rm_goal_trace_success = 0
+        self._rm_incomplete_trace_success = 0
+        self._rm_dend_trace_success = 0
 
         transitioner = ProbRMTransitioner(candidate_rm)
-        for trace in self._seen_traces:
+        for trace in itertools.chain(self._seen_positive_traces, self._seen_negative_traces,
+                                     self._seen_incomplete_traces):
             curr_state = transitioner.get_initial_state()
             for event in trace.trace:
                 curr_state = transitioner.get_next_state(curr_state, event)

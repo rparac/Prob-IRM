@@ -1,8 +1,5 @@
 defaults:
-  - agent: successful_tuning_parameters
-  - coffee_label_factory: perfect
-  - plant_label_factory: perfect
-  - office_label_factory: perfect
+  - base
 #  - _self_
 
 name: 'TODO: replace'

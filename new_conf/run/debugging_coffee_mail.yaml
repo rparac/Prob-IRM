@@ -1,12 +1,12 @@
 training: True
-total_episodes: 2000 # 500
+total_episodes: 1000 # 500
 log_freq: 1
 log_dir: logs
-testing_freq: 1000 # 250
+testing_freq: 400 # 250
 greedy: True
 synchronize: False
 counterfactual_update: False
-recording_freq: 1000 # 250
+recording_freq: 400 # 250
 no_display: False
 seed: 123
 name: "coffee-mail" # should make ???
