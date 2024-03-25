@@ -209,11 +209,23 @@ class RewardMachine:
 
     def compute_state_pontentials(self):
 
-        assert self.uacc is not None, "No accepting state defined for the reward machine"
+        # An accepting state exist: high-potential = close to accepting state
+        if self.uacc is not None:
 
-        # First, we need to compute the distance matrix between each pair of states
-        min_distances = self._comput_state_min_distance_matrix()
-        self.state_potentials = [len(self.states) - min_distances[u][self.uacc] for u in self.states]
+            # First, we need to compute the distance matrix between each pair of states
+            min_distances = self._comput_state_min_distance_matrix()
+            self.state_potentials = {u: len(self.states) - min_distances[u][self.uacc] for u in self.states}
+
+        # No accepting state but rejecting state exists: high-potential = far from rejecting state
+        elif self.urej is not None:
+
+            min_distances = self._comput_state_min_distance_matrix()
+            self.state_potentials = {u: min_distances[u][self.urej] for u in self.states}
+
+        # Neither accepting nor rejecting states exist: use zero potentials everywhere
+        else:
+
+            self.state_potentials = {u: 0 for u in self.states}
 
     def get_valid_events(self, u1=None):
         if u1 is None:
