@@ -35,11 +35,11 @@ class ProbabilisticRewardShaping(gym.Wrapper):
 
         self._discount_factor = discount_factor
 
-        self._rm = shaping_rm
-        self._rm.compute_state_pontentials()
-
-        self._rm_transitioner = ProbRMTransitioner(self._rm)
+        self._rm = None
+        self._rm_transitioner = None
         self._rm_state_belief = None
+
+        self.set_shaping_rm(shaping_rm)
 
     def reset(self, **kwargs):
 
@@ -78,6 +78,14 @@ class ProbabilisticRewardShaping(gym.Wrapper):
         shaping_reward = self._discount_factor * next_prob_potentials - current_prob_potentials
 
         return shaping_reward
+
+    def set_shaping_rm(self, shaping_rm):
+
+        self._rm = shaping_rm
+        self._rm.compute_state_pontentials()
+
+        self._rm_transitioner = ProbRMTransitioner(self._rm)
+        self._rm_state_belief = None
 
 
 class LabelingFunctionWrapper(gym.Wrapper):
