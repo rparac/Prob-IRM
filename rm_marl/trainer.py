@@ -276,15 +276,18 @@ class Trainer:
                         freq_strings = [f"{value}: #{freq} | " for value, freq in zip(unique, counts)]
                         logged_text = "  \n".join(freq_strings)
                         logger.add_text(
-                            f"{prefix}/reward_shaping/frequencies/{env_id}", str(logged_text), self.total_steps
+                            f"{prefix}/reward_shaping/frequencies/{env_id}", str(logged_text),
+                            episode if run_config["training"] else self.test_episode
                         )
 
                         logged_text = "  \n".join([f"{i}: {value}" for i, value in enumerate(shaping_rewards[env_id])])
                         logger.add_text(
-                            f"{prefix}/reward_shaping/history/{env_id}", logged_text, self.total_steps
+                            f"{prefix}/reward_shaping/history/{env_id}", logged_text,
+                            episode if run_config["training"] else self.test_episode
                         )
                         logger.add_histogram(
-                            f"{prefix}/reward_shaping/{env_id}", np_data, self.total_steps
+                            f"{prefix}/reward_shaping/{env_id}", np_data,
+                            episode if run_config["training"] else self.test_episode
                         )
 
                     # Episode number of steps
@@ -330,7 +333,10 @@ class Trainer:
                             np.newaxis, :
                             ]
                     video = self._add_steps_to_replay(video)
-                    logger.add_video(f"{prefix}/replay/{env_id}", video, self.total_steps)
+                    logger.add_video(
+                        f"{prefix}/replay/{env_id}", video,
+                        episode if run_config["training"] else self.test_episode
+                    )
 
             if run_config["training"] and episode % run_config["testing_freq"] == 0:
                 self._run(self.testing_envs, {
