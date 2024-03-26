@@ -5,11 +5,13 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, List
 
+import numpy as np
 import gym
 from gym.wrappers import RecordEpisodeStatistics, TimeLimit
 
 from ..reward_machine import RewardMachine
 from ..rm_transition.rm_transitioner import RMTransitioner
+from ..rm_transition.prob_rm_transitioner import ProbRMTransitioner
 
 
 class NumberStepsDiscountedRewardWrapper(gym.Wrapper):
@@ -23,6 +25,67 @@ class NumberStepsDiscountedRewardWrapper(gym.Wrapper):
             raise ValueError(info)
 
         return observation, reward, terminated, truncated, info
+
+
+class ProbabilisticRewardShaping(gym.Wrapper):
+
+    def __init__(self, env, shaping_rm: RewardMachine, discount_factor: float = 0.99):
+
+        super().__init__(env)
+
+        self._discount_factor = discount_factor
+
+        self._rm = None
+        self._rm_transitioner = None
+        self._rm_state_belief = None
+
+        self.set_shaping_rm(shaping_rm)
+
+    def reset(self, **kwargs):
+
+        self._rm_state_belief = self._rm_transitioner.get_initial_state()
+        return super().reset(**kwargs)
+
+    def step(self, action):
+
+        assert self._rm_state_belief is not None, "Environment was not properly reset before step()"
+
+        obs, reward, terminated, truncated, info = super().step(action)
+
+        assert "labels" in info and type(info["labels"]) == dict, "Unsupported labeling function, list of events needed"
+        assert "rm_state" in info and type(info["rm_state"]) == np.ndarray, "Unsupported env, belief over RM states needed"
+
+        # Determine additional reward due to reward shaping
+        new_rm_state_belief = self._rm_transitioner.get_next_state(self._rm_state_belief, info["labels"])
+        shaping_reward = self._compute_shaping_reward(new_rm_state_belief)
+        self._rm_state_belief = new_rm_state_belief
+
+        # Provide info relating to the shaped reward
+        info["shaping_reward"] = shaping_reward
+
+        return obs, reward + shaping_reward, terminated, truncated, info
+
+    def _compute_shaping_reward(self, next_belief_vector):
+
+        current_belief_vector = self._rm_state_belief
+        state_potentials = np.array([self._rm.state_potentials[u] for u in self._rm.states])
+
+        finite_indexes = np.isfinite(state_potentials)
+        finite_potentials = np.where(finite_indexes, state_potentials, 0)
+
+        current_prob_potentials = np.dot(finite_potentials, current_belief_vector)
+        next_prob_potentials = np.dot(finite_potentials, next_belief_vector)
+        shaping_reward = self._discount_factor * next_prob_potentials - current_prob_potentials
+
+        return shaping_reward
+
+    def set_shaping_rm(self, shaping_rm):
+
+        self._rm = shaping_rm
+        self._rm.compute_state_pontentials()
+
+        self._rm_transitioner = ProbRMTransitioner(self._rm)
+        self._rm_state_belief = None
 
 
 class LabelingFunctionWrapper(gym.Wrapper):

@@ -91,7 +91,7 @@ class RewardMachineLearningAgent(Agent):
     ):
 
         rm_agent = self.rm_agents[agent_id]
-        loss, agents_to_interrupt, rm_updated = rm_agent.update_agent(
+        loss, agents_to_interrupt, updated_rm = rm_agent.update_agent(
             state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning
         )
 
@@ -111,12 +111,12 @@ class RewardMachineLearningAgent(Agent):
                     for agent in self.rm_agents.values():
                         agent.rm = candidate_rm
                         agent.algo.reset(self.rm)
-                    rm_updated = True
+                    updated_rm = candidate_rm
                     # We can always interrupt if a new rm is learned
                     # TODO: check if we need the interrupt variable; looks like it is fully captured by rm_updated
                     agents_to_interrupt = set(self.rm_agents.keys())
 
-        return loss, agents_to_interrupt, rm_updated
+        return loss, agents_to_interrupt, updated_rm
 
     def project_labels(self, labels):
         if isinstance(labels, list):

@@ -38,7 +38,7 @@ class NoRMAgent(Agent):
             )
 
         self.u = next_u
-        return loss, set(), False
+        return loss, set(), None
 
     def project_labels(self, labels):
         return tuple(labels)

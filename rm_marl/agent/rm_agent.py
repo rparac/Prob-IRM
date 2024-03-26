@@ -58,7 +58,7 @@ class RewardMachineAgent(Agent):
             )
 
         self.u = next_u
-        return loss, set(), False
+        return loss, set(), None
 
     def set_log_folder(self, folder):
         super().set_log_folder(folder)

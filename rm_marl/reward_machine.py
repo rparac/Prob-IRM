@@ -20,6 +20,9 @@ class RewardMachine:
         self.events = set()
         self.transitions = defaultdict(self._transition_constructor)
 
+        # Associates u -> phi(u), which can be used for potential-based reward shaping
+        self.state_potentials = {}
+
         self.u0 = None
         self.uacc = None
         self.urej = None
@@ -179,6 +182,50 @@ class RewardMachine:
             elif u2 == self.urej:
                 return -1
         return 0
+
+    def _comput_state_min_distance_matrix(self):
+
+        distance_matrix = {}
+        for u1 in self.states:
+
+            distances = {s: float("inf") for s in self.states}
+            distances[u1] = 0
+
+            queue = [(u1, 0)]
+            visited = {u1}
+            while len(queue) > 0:
+                current_state, current_distance = queue.pop()
+
+                successor_states = [self.transitions[current_state][e] for e in self.transitions[current_state].keys()]
+
+                for u2 in [u for u in successor_states if u not in visited and u is not None]:
+                    queue.append((u2, current_distance + 1))
+                    visited.add(u2)
+                    distances[u2] = current_distance + 1
+
+            distance_matrix[u1] = distances
+
+        return distance_matrix
+
+    def compute_state_pontentials(self):
+
+        # An accepting state exist: high-potential = close to accepting state
+        if self.uacc is not None:
+
+            # First, we need to compute the distance matrix between each pair of states
+            min_distances = self._comput_state_min_distance_matrix()
+            self.state_potentials = {u: len(self.states) - min_distances[u][self.uacc] for u in self.states}
+
+        # No accepting state but rejecting state exists: high-potential = far from rejecting state
+        elif self.urej is not None:
+
+            min_distances = self._comput_state_min_distance_matrix()
+            self.state_potentials = {u: min_distances[u][self.urej] for u in self.states}
+
+        # Neither accepting nor rejecting states exist: use zero potentials everywhere
+        else:
+
+            self.state_potentials = {u: 0 for u in self.states}
 
     def get_valid_events(self, u1=None):
         if u1 is None:

@@ -173,7 +173,7 @@ class Trainer:
                     interrupt_episode = terminated or truncated
                     for aid, a in env_agents[env_id].items():
                         current_u = a.get_current_state(agent_id=aid)
-                        loss, agents_to_interrupt, rm_updated = a.update_agent(
+                        loss, agents_to_interrupt, updated_rm = a.update_agent(
                             self._project_obs(obs[env_id], a, aid),
                             actions[aid],
                             reward,
@@ -186,10 +186,13 @@ class Trainer:
                             agent_id=aid,
                         )
 
-                        if rm_updated:
+                        if updated_rm is not None:
                             curr_relearned_episodes = self.rm_relearned_episodes.get(env_id, [])
                             curr_relearned_episodes.append(episode)
                             self.rm_relearned_episodes[env_id] = curr_relearned_episodes
+
+                            if "shaping_reward" in info:
+                                env.set_shaping_rm(updated_rm)
 
                         if run_config["training"]:
                             if agents_to_interrupt:
