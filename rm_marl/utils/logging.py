@@ -71,9 +71,15 @@ def create_learnt_rm_logs(log_dir: str, tb_logger: SummaryWriter):
 
         rm_plot_entries: List[os.DirEntry] = [
             f for f in os.scandir(agent_dir_entry.path)
-            if f.name.startswith('plot_') and f.name.endswith('pdf')
+            if f.name.startswith('plot_') and f.name.endswith('.pdf')
         ]
-        for i, rm_plot_entry in enumerate(rm_plot_entries):
+
+        sorted_plot_entries = sorted(
+            rm_plot_entries,
+            key=lambda entry: int(entry.name.removeprefix("plot_").removesuffix(".pdf"))
+        )
+
+        for i, rm_plot_entry in enumerate(sorted_plot_entries):
 
             plot_image = read_pdf_image(rm_plot_entry.path)[0]
             plot_rgb_array = np.transpose(np.asarray(plot_image), axes=[2, 0, 1])
