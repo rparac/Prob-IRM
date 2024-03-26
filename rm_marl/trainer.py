@@ -72,6 +72,7 @@ class Trainer:
         base_seed = run_config["seed"]
 
         steps = defaultdict(list)
+        cumulative_steps = defaultdict(list)
         losses = defaultdict(list)
         rewards = defaultdict(list)
         shaping_rewards = defaultdict(list)
@@ -246,6 +247,12 @@ class Trainer:
                 steps[env_id].append(episode_length)
                 rewards[env_id].append(episode_reward)
 
+                if len(cumulative_steps[env_id]) > 0:
+                    total_steps_so_far = episode_length + cumulative_steps[env_id][-1]
+                else:
+                    total_steps_so_far = episode_length
+                cumulative_steps[env_id].append(total_steps_so_far)
+
                 if episode_reward == 1:
                     successes[env_id] += 1
                 elif episode_reward == -1:
@@ -290,11 +297,19 @@ class Trainer:
                             episode if run_config["training"] else self.test_episode
                         )
 
-                    # Episode number of steps
+                    # Number of steps taken by the agent in each episode
                     logger.add_scalar(
                         f"{prefix}/num_steps/{env_id}", steps[env_id][-1],
                         episode if run_config["training"] else self.test_episode
                     )
+
+                    # Cumulative number of steps so far, among all episodes
+                    # Only logged during training, as in evaluation we only care about the steps taken in each episode
+                    if run_config["training"]:
+                        logger.add_scalar(
+                            f"{prefix}/tot_steps/{env_id}", cumulative_steps[env_id][-1],
+                            episode
+                        )
 
                     # Episode reward
                     logger.add_scalar(
