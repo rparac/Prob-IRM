@@ -100,12 +100,13 @@ class RewardMachineLearningAgent(Agent):
 
             # TODO: we may need to rethink is_state_terminal
             if terminated or truncated or self.rm.is_state_terminal(rm_agent.u):
-                if self.rm.is_state_terminal(rm_agent.u):
+
+                if not (terminated or truncated):
                     LOGGER.debug(f"[{self.agent_id}] the RM {self.rm_learner.rm_learning_counter} is wrong.")
+                    agents_to_interrupt = {rm_agent}
 
                 candidate_rm = self.rm_learner.learn(self.rm, rm_agent.u, self.traces[agent_id], terminated, truncated,
                                                      is_positive_trace)
-                agents_to_interrupt = {rm_agent}
                 if candidate_rm:
                     self.rm = candidate_rm
                     for agent in self.rm_agents.values():

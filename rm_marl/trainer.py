@@ -198,11 +198,15 @@ class Trainer:
 
                         if run_config["training"]:
                             if agents_to_interrupt:
-                                interrupt_episode = True
-                                info["episode"] = {
-                                    "l": env.episode_lengths[0],
-                                    "r": env.episode_returns[0]
-                                }
+
+                                if aid in agents_to_interrupt:
+                                    interrupt_episode = True
+                                    info["episode"] = {
+                                        "l": env.episode_lengths[0],
+                                        "r": env.episode_returns[0]
+                                    }
+                                    agents_to_interrupt.remove(aid)
+
                                 for _env_id in self.env_ids_to_interrupt(env_agents, agents_to_interrupt):
                                     dones[_env_id] = True
                                     infos[_env_id]["episode"] = {
