@@ -235,8 +235,8 @@ class ProbFFNSLLearner(RMLearner):
                 self._rm_dend_trace_success / len(self._seen_negative_traces) < self.rm_recognize_threshold):
             return True
 
-        ratio = self._rm_incomplete_trace_success / len(self._seen_incomplete_traces)
-        if len(self._seen_incomplete_traces) % 100 == 0:
+        if len(self._seen_incomplete_traces) > 0 and len(self._seen_incomplete_traces) % 100 == 0:
+            ratio = self._rm_incomplete_trace_success / len(self._seen_incomplete_traces)
             self._debug_ratio.append(ratio)
 
         if (len(self._seen_incomplete_traces) >= 1 and
