@@ -192,7 +192,8 @@ class Trainer:
                             self.rm_relearned_episodes[env_id] = curr_relearned_episodes
 
                             if "shaping_reward" in info:
-                                env.set_shaping_rm(updated_rm)
+                                for _env_id in self.env_ids_to_interrupt(env_agents, agents_to_interrupt):
+                                    envs[_env_id].set_shaping_rm(updated_rm)
 
                         if run_config["training"]:
                             if agents_to_interrupt:
@@ -201,14 +202,13 @@ class Trainer:
                                     "l": env.episode_lengths[0],
                                     "r": env.episode_returns[0]
                                 }
-                                for _env_id, ag_dict in env_agents.items():
-                                    # There is an agent that should be interrupted
-                                    if agents_to_interrupt.intersection(set(ag_dict.keys())) != set():
-                                        dones[_env_id] = True
-                                        infos[_env_id]["episode"] = {
-                                            "l": envs[_env_id].episode_lengths[0],
-                                            "r": envs[_env_id].episode_returns[0]
-                                        }
+                                for _env_id in self.env_ids_to_interrupt(env_agents, agents_to_interrupt):
+                                    dones[_env_id] = True
+                                    infos[_env_id]["episode"] = {
+                                        "l": envs[_env_id].episode_lengths[0],
+                                        "r": envs[_env_id].episode_returns[0]
+                                    }
+
                                 break
 
                             agent_loss.append(loss)
@@ -384,6 +384,13 @@ class Trainer:
                 full_video[0, i, :, 0:steps_bar_h, :] = steps_bar_data
 
         return full_video
+
+    @staticmethod
+    def env_ids_to_interrupt(env_agents, agents_to_interrupt):
+        for _env_id, ag_dict in env_agents.items():
+            # There is an agent that should be interrupted
+            if agents_to_interrupt.intersection(set(ag_dict.keys())) != set():
+                yield _env_id
 
     @staticmethod
     def _project_labels(labels, a, aid):
