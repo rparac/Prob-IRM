@@ -137,9 +137,6 @@ class OfficeWorldDeliverCoffeeLabelingFunctionWrapper(LabelingFunctionWrapper):
         ]
 
 
-# TODO: I tried to remove the duplication but I had unknown Hydra bugs when doing it.
-#   Tried making an abstract class or using factory methods. Both failed
-
 class OfficeWorldAbstractLabelingFunctionWrapper(LabelingFunctionWrapper, abc.ABC):
     def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
                  sensor_false_confidence: float,
