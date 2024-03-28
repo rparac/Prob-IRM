@@ -126,6 +126,3 @@ def run(cfg: DictConfig) -> int:
 
 if __name__ == '__main__':
     run()
-
-# Reward shaping bug
-# Bug - there is a bug with updating reward shaping; only one agent is updated
