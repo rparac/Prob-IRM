@@ -1,13 +1,7 @@
-training: True
-total_episodes: 2000 # 500
-log_freq: 1
-log_dir: logs
-testing_freq: 1000 # 250
-greedy: True
-synchronize: False
-counterfactual_update: False
-recording_freq: 1000 # 250
-no_display: False
-seed: 123
-name: "coffee-mail" # should make ???
-extra_debug_information: False
+defaults:
+  - base
+
+total_episodes: 500
+testing_freq: 100
+recording_freq: 100
+name: "deliver-coffee"
