@@ -4,13 +4,15 @@ from ..utils.ilasp_task_generator_state import get_state_names
 from ...task_parser.ilasp_parser_utils import parse_edge_rule, parse_negative_transition_rule
 from ...task_solver.ilasp_solver import solve_ilasp_task
 
-MAX_PENALTY = 150 # 100
+# TODO: add back to reasonable levels - currently trying out things
+MAX_PENALTY = 5000 # 150 # 100
 TMP_OUTPUT_FILENAME = "tmp_task.las"
 TMP_SEARCH_SPACE_FILENAME = "search_space.txt"
 
 
 def get_hypothesis_space(num_states, accepting_state, rejecting_state, observables, output_folder,
-                         symmetry_breaking_method, max_disj_size, learn_acyclic, binary_folder_name):
+                         symmetry_breaking_method, max_disj_size, learn_acyclic, binary_folder_name, n_phi_cost,
+                         edge_cost):
     tmp_output_path = os.path.join(output_folder, TMP_OUTPUT_FILENAME)
     tmp_search_space_path = os.path.join(output_folder, TMP_SEARCH_SPACE_FILENAME)
 
@@ -24,7 +26,7 @@ def get_hypothesis_space(num_states, accepting_state, rejecting_state, observabl
                      binary_folder_name=binary_folder_name)
 
     # return the new hypothesis space with the injections to pos and neg atoms
-    return _get_hypothesis_space_with_injections(tmp_search_space_path)
+    return _get_hypothesis_space_with_injections(tmp_search_space_path, n_phi_cost, edge_cost)
 
 
 def _generate_base_ilasp_task(num_states, accepting_state, rejecting_state, observables, output_path,
@@ -104,18 +106,19 @@ def _generate_connected_hypothesis_rules(num_states, accepting_state, rejecting_
     return stmt
 
 
-def _get_hypothesis_space_with_injections(hypothesis_space_filename):
+def _get_hypothesis_space_with_injections(hypothesis_space_filename, n_phi_cost, edge_cost):
+
     hypothesis_space = ["#max_penalty(%d).\n" % MAX_PENALTY]
     with open(hypothesis_space_filename) as f:
         counter = 0
         for line in f:
             line = line.strip()
-            hypothesis_space.append(line)
-
             line = line.strip("2 ~ ")
             if line.startswith(N_TRANSITION_STR):
+                hypothesis_space.append(f"{n_phi_cost} ~ {line}")
                 hypothesis_space.append(_get_negative_transition_injection(parse_negative_transition_rule(line), counter))
             elif line.startswith(CONNECTED_STR):
+                hypothesis_space.append(f"{edge_cost} ~ {line}")
                 hypothesis_space.append(_get_edge_injection(parse_edge_rule(line), counter))
 
             counter += 1

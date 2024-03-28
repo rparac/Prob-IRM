@@ -15,7 +15,8 @@ def generate_ilasp_task(num_states, accepting_state, rejecting_state, observable
                         inc_examples: List[ISAILASPExample], output_folder, output_filename, symmetry_breaking_method,
                         max_disj_size,
                         learn_acyclic, use_compressed_traces, avoid_learning_only_negative,
-                        prioritize_optimal_solutions, binary_folder_name):
+                        prioritize_optimal_solutions, binary_folder_name,
+                        n_phi_cost=2, edge_cost=2):
     # statements will not be generated for the rejecting state if there are not deadend examples
     if len(dend_examples) == 0:
         rejecting_state = None
@@ -36,7 +37,8 @@ def generate_ilasp_task(num_states, accepting_state, rejecting_state, observable
                                                dend_examples, inc_examples, output_folder, symmetry_breaking_method,
                                                max_disj_size, learn_acyclic, use_compressed_traces,
                                                avoid_learning_only_negative,
-                                               prioritize_optimal_solutions, binary_folder_name)
+                                               prioritize_optimal_solutions, binary_folder_name,
+                                               n_phi_cost, edge_cost)
         examples = generate_examples(goal_examples, dend_examples, inc_examples)
         f.write(background)
         f.write('\n' + hyp)
@@ -51,9 +53,11 @@ def _generate_ilasp_hypothesis_space(num_states, accepting_state, rejecting_stat
                                      inc_examples: List[ISAILASPExample], output_folder, symmetry_breaking_method,
                                      max_disj_size, learn_acyclic,
                                      use_compressed_traces, avoid_learning_only_negative, prioritize_optimal_solutions,
-                                     binary_folder_name):
+                                     binary_folder_name,
+                                     n_phi_cost, edge_cost):
     task = get_hypothesis_space(num_states, accepting_state, rejecting_state, observables, output_folder,
-                                symmetry_breaking_method, max_disj_size, learn_acyclic, binary_folder_name)
+                                symmetry_breaking_method, max_disj_size, learn_acyclic, binary_folder_name,
+                                n_phi_cost, edge_cost)
 
     if symmetry_breaking_method is not None:
         task += generate_symmetry_breaking_statements(num_states, accepting_state, rejecting_state, observables,

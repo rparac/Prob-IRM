@@ -21,7 +21,12 @@ LOGGER = getLogger(__name__)
 
 
 class ProbFFNSLLearner(RMLearner):
-    def __init__(self, agent_id):
+    """
+    # edge_cost - ILASP penalty for using the ed predicate
+    # n_phi_cost - ILASP penalty for using the n_phi_predicate
+    # ex_penalty_multiplier - multipler for the ILASP penalties
+    """
+    def __init__(self, agent_id, edge_cost=2, n_phi_cost=2, ex_penalty_multiplier=1):
         super().__init__(agent_id)
 
         self.goal_examples = ISAExampleContainer()
@@ -68,6 +73,11 @@ class ProbFFNSLLearner(RMLearner):
         self._seen_incomplete_traces: List[TraceTracker] = []
 
         self._curr_ilasp_solution_filename = None
+
+        self.edge_cost = edge_cost
+        self.n_phi_cost = n_phi_cost
+        self.ex_penalty_multipler = ex_penalty_multiplier
+
 
     # We assume this function be called when a trace is fully generated
     def learn(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated,
@@ -166,10 +176,10 @@ class ProbFFNSLLearner(RMLearner):
                 self._curr_ilasp_solution_filename = ilasp_solution_filename
                 return candidate_rm
             else:
+                # Can't solve with the current set of examples. Wait for more traces
                 LOGGER.debug(f"[{self.agent_id}] ILASP task unsolvable")
-                self.rm_num_states += 1
-                return self._update_reward_machine(curr_rm)
-
+                self.min_rm_num_episodes *= 2
+                return None
         else:
             raise RuntimeError(
                 "Error: Couldn't find an automaton within the specified timeout!"
@@ -187,14 +197,15 @@ class ProbFFNSLLearner(RMLearner):
         )
 
     def _generate_ilasp_task(self, ilasp_task_filename):
+        total_ex_sum = int(100 * self.ex_penalty_multipler)
         generate_ilasp_task(
             self.rm_num_states,
             "u_acc",
             "u_rej",
             self._observables,
-            self.goal_examples.as_list_reweighted(100),
-            self.dend_examples.as_list_reweighted(100),
-            self.inc_examples.as_list_reweighted(100),
+            self.goal_examples.as_list_reweighted(total_ex_sum),
+            self.dend_examples.as_list_reweighted(total_ex_sum),
+            self.inc_examples.as_list_reweighted(total_ex_sum),
             self.log_folder,
             ilasp_task_filename,
             symmetry_breaking_method="bfs-alternative",
@@ -204,6 +215,8 @@ class ProbFFNSLLearner(RMLearner):
             avoid_learning_only_negative=True,
             prioritize_optimal_solutions=False,
             binary_folder_name=None,
+            n_phi_cost=self.n_phi_cost,
+            edge_cost=self.edge_cost,
         )
 
     # TODO: move logic inside a container if this is too slow
@@ -235,9 +248,9 @@ class ProbFFNSLLearner(RMLearner):
                 self._rm_dend_trace_success / len(self._seen_negative_traces) < self.rm_recognize_threshold):
             return True
 
-        ratio = self._rm_incomplete_trace_success / len(self._seen_incomplete_traces)
-        if len(self._seen_incomplete_traces) % 100 == 0:
-            self._debug_ratio.append(ratio)
+        # ratio = self._rm_incomplete_trace_success / len(self._seen_incomplete_traces)
+        # if len(self._seen_incomplete_traces) % 100 == 0:
+        #     self._debug_ratio.append(ratio)
 
         if (len(self._seen_incomplete_traces) >= 1 and
                 self._rm_incomplete_trace_success / len(self._seen_incomplete_traces) < self.rm_recognize_threshold):
