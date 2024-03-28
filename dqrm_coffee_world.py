@@ -12,23 +12,25 @@ from rm_marl.agent import RewardMachineAgent, RewardMachineLearningAgent
 from rm_marl.algo import QRM
 from rm_marl.algo.deepqrm import DeepQRM
 from rm_marl.envs.gym_subgoal_automata_wrapper import GymSubgoalAutomataAdapter
-from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer, AutomataWrapper, RewardMachineWrapper
+from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer, AutomataWrapper, RewardMachineWrapper, \
+    ProbabilisticRewardShaping
 from rm_marl.rm_learning.ilasp.noisy_learner.ProbFFNSLLearner import ProbFFNSLLearner
 from rm_marl.rm_transition.prob_rm_transitioner import ProbRMTransitioner
 from rm_marl.trainer import Trainer
 
 
-def _get_base_env(seed, agent_id, label_factories):
-    # env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
-    env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffeeAndMail-v0",
-                   params={"generation": "random", "environment_seed": seed, "hide_state_variables": True})
+def _get_base_env(env_name, seed, agent_id, label_factories):
+    rm_transitioner = ProbRMTransitioner(rm=RewardMachineAgent.default_rm())
+
+    # env=gym.make(
+    env = gym.make(env_name,
+            params={"generation": "random", "environment_seed": seed, "hide_state_variables": True})
     env = GymSubgoalAutomataAdapter(env, agent_id, render_mode="rgb_array", max_episode_length=250)  # type: ignore
     labeling_funs = []
     for label_factory in label_factories:
         labeling_funs.append(label_factory(env))
     env = NoisyLabelingFunctionComposer(labeling_funs)
 
-    rm_transitioner = ProbRMTransitioner(rm=None)
     # AutomataWrapper here only provides the filter_label function (used in counter_factual update).
     #  It also logs RM states
     env = RewardMachineWrapper(
@@ -37,6 +39,8 @@ def _get_base_env(seed, agent_id, label_factories):
         label_mode=AutomataWrapper.LabelMode.ALL,
         termination_mode=AutomataWrapper.TerminationMode.ENV,
     )
+
+    env = ProbabilisticRewardShaping(env, shaping_rm=rm_transitioner.rm, discount_factor=0.99)
     env = RecordEpisodeStatistics(env)  # type: ignore
 
     return env
@@ -62,6 +66,7 @@ def run(cfg: DictConfig) -> int:
     _manual_value_override(cfg)
 
     run_config = cfg['run']
+    print(run_config)
 
     np.random.seed(run_config["seed"])
     random.seed(run_config["seed"])
@@ -69,13 +74,27 @@ def run(cfg: DictConfig) -> int:
     env_config = cfg["env"]
     label_factories = [instantiate(label_factory_conf) for label_factory_conf in env_config["label_factories"]]
 
+    agent_config = env_config["agent"]
+
     envs = []
     rm_agents = []
     num_envs = 10
     for i in range(num_envs):
         agent_id = f"A{i + 1}"
-        env = _get_base_env(run_config["seed"] + i, agent_id, label_factories)
+        env = _get_base_env(env_config["name"], run_config["seed"] + i, agent_id, label_factories)
         envs.append(env)
+        # algo = DeepQRM(
+        #     action_space=env.action_space,
+        #     obs_space=env.observation_space,
+        #     use_crm=True,
+        #     num_policy_layers=agent_config["num_policy_layers"],
+        #     policy_layer_size=agent_config["policy_layer_size"],
+        #     gamma=agent_config["gamma"],
+        #     epsilon_start=agent_config["epsilon_start"],
+        #     epsilon_end=agent_config["epsilon_end"],
+        #     epsilon_decay=agent_config["epsilon_decay"],
+        # )
+
         algo = QRM(**{
             "action_space": env.action_space,
             "seed": 123,
@@ -91,6 +110,11 @@ def run(cfg: DictConfig) -> int:
     learning_ag = RewardMachineLearningAgent(
         rm_agent=rm_agents,
         rm_learner_cls=ProbFFNSLLearner,
+        rm_learner_kws={
+            "edge_cost": run_config["edge_cost"],
+            "n_phi_cost": run_config["n_phi_cost"],
+            "ex_penalty_multiplier": run_config["ex_penalty_multiplier"],
+        }
     )
 
     agent_dict = {ag.agent_id: learning_ag for ag in rm_agents}
@@ -102,3 +126,6 @@ def run(cfg: DictConfig) -> int:
 
 if __name__ == '__main__':
     run()
+
+# Reward shaping bug
+# Bug - there is a bug with updating reward shaping; only one agent is updated
