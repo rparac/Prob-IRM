@@ -55,6 +55,7 @@ class ProbFFNSLLearner(RMLearner):
         self.num_pos_ex = 0
         self.num_neg_ex = 0
         self.overriden_with_debugger = False
+        self._rm_cnt_since_restart = 0
 
         # TODO: delete after debugging is finished
         self._debug_ratio = []
@@ -62,9 +63,6 @@ class ProbFFNSLLearner(RMLearner):
         self._rm_goal_trace_success = 0
         self._rm_incomplete_trace_success = 0
         self._rm_dend_trace_success = 0
-
-        # TODO: unused at the moment, but could be useful for debugging
-        self._rm_cnt_since_restart = 0
 
         # TODO: We might want to make this more efficient (if there are repeated traces)
         # self._seen_traces: List[TraceTracker] = []
