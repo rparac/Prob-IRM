@@ -13,6 +13,7 @@ from omegaconf import DictConfig
 
 from rm_marl.agent import NoRMAgent
 from rm_marl.algo.deepqrm import DeepQRM
+from rm_marl.envs.wrappers import LabelingFunctionWrapper
 from rm_marl.trainer import Trainer
 
 
