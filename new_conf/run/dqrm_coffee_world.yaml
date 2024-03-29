@@ -1,7 +1,7 @@
 defaults:
   - base
 
-total_episodes: 500
-testing_freq: 100
-recording_freq: 100
+total_episodes: 2000
+testing_freq: 400
+recording_freq: 400
 name: "deliver-coffee"

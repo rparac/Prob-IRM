@@ -12,7 +12,7 @@ hydra:
     n_trials: 5
     n_jobs: 1
     params:
-      x: choice(0.6, 0.7, 0.8, 0.9, 1)
+      x: choice(0.9, 0.95, 0.97, 0.99, 1)
 
 run:
   no_display: True
@@ -25,5 +25,5 @@ run:
 x: 0
 
 manual_overrides:
-  - env.coffee_label_factory.sensor_true_confidence
-  - env.coffee_label_factory.sensor_false_confidence
+  - env.a_label_factory.sensor_true_confidence
+  - env.a_label_factory.sensor_false_confidence

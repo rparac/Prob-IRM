@@ -3,8 +3,6 @@ defaults:
 #  - _self_
 
 name: 'gym_subgoal_automata:OfficeWorldDeliverCoffee-v0'
-render_mode: 'rgb_array'
-max_episode_steps: 250
 
 label_factories:
   # Inserts the configuration of coffee, office and plant label factories

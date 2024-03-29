@@ -1,5 +1,4 @@
 defaults:
-  - agent: successful_tuning_parameters
   - a_label_factory: perfect
   - b_label_factory: perfect
   - c_label_factory: perfect
@@ -8,7 +7,7 @@ defaults:
 
 name: 'gym_subgoal_automata:OfficeWorldPatrolABCD-v0'
 render_mode: 'rgb_array'
-max_episode_steps: 250
+max_episode_length: 500
 
 
 label_factories:

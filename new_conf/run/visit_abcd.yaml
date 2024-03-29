@@ -1,9 +1,9 @@
-total_episodes: 2000 # 500
-testing_freq: 500 # 250
-recording_freq: 500 # 250
-name: "visit-abcd" # should make ???
+defaults:
+  - base
 
-# TODO: move somewhere else
-edge_cost: 2
-n_phi_cost: 2
-ex_penalty_multiplier: 1
+total_episodes: 20000 # 500
+testing_freq: 5000 # 250
+recording_freq: 5000 # 250
+name: "visit-abcd"
+num_envs: 50
+
