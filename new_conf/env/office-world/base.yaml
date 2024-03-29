@@ -1,12 +1,11 @@
 defaults:
-  - agent: successful_tuning_parameters
   - coffee_label_factory: perfect
   - plant_label_factory: perfect
   - office_label_factory: perfect
 
-name: 'TODO: replace'
+name: ???
 render_mode: 'rgb_array'
-max_episode_steps: 250
+max_episode_length: 250
 
 # Variables that can be overriden with Optuna
 overridable:

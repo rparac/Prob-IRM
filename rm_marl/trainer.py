@@ -9,6 +9,7 @@ from typing import Dict, List
 import joblib
 # import joblib
 import numpy as np
+from omegaconf import DictConfig, OmegaConf
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from PIL import Image, ImageDraw
@@ -47,6 +48,9 @@ class Trainer:
 
         config_path = os.path.join(log_dir, "run_config.json")
         with open(config_path, 'w') as f:
+            # DictConfig can't be serialized
+            if isinstance(run_config, DictConfig):
+                run_config = OmegaConf.to_container(run_config)
             json.dump(dict(run_config), f, indent=4)
 
         try:
@@ -371,7 +375,12 @@ class Trainer:
 
         # TODO: make cleaner
         # Sums the rewards of the last 100 episodes
-        return sum(rewards[list(self.testing_envs.keys())[0]][run_config["total_episodes"] - 100:])
+        total = 0
+        for _env in self.testing_envs.keys():
+            total += sum(rewards[_env][run_config["total_episodes"] - 100:])
+
+        return total / len(self.testing_envs)
+        # return sum(rewards[list(self.testing_envs.keys())[0]][run_config["total_episodes"] - 100:])
 
     @staticmethod
     def _add_steps_to_replay(video_data):

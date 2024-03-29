@@ -8,6 +8,8 @@ env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
                params={"hide_state_variables": true, ...})
 env = DanielGymAdapter(env)
 """
+import abc
+
 import gym
 import numpy as np
 
@@ -135,9 +137,7 @@ class OfficeWorldDeliverCoffeeLabelingFunctionWrapper(LabelingFunctionWrapper):
         ]
 
 
-# TODO: I tried to remove the duplication but I had unknown Hydra bugs when doing it.
-#   Tried making an abstract class or using factory methods. Both failed
-class OfficeWorldCoffeeLabelingFunctionWrapper(LabelingFunctionWrapper):
+class OfficeWorldAbstractLabelingFunctionWrapper(LabelingFunctionWrapper, abc.ABC):
     def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
                  sensor_false_confidence: float,
                  seed: int = 0):
@@ -151,83 +151,56 @@ class OfficeWorldCoffeeLabelingFunctionWrapper(LabelingFunctionWrapper):
         self.num_steps += 1
         # TODO: this may be slow; as we do it a number of times
         unwrapped_obs = gym.spaces.unflatten(self.env.unflatten_obs_space, obs[self.agent_id])
-        if unwrapped_obs["f"]:
+        if unwrapped_obs[self.get_label()]:
             coffee_predicted = bool(self.rng.binomial(1, self.sensor_true_confidence))
         else:
             coffee_predicted = bool(1 - self.rng.binomial(1, self.sensor_false_confidence))
-        labels = {'f': self.get_label_confidence(coffee_predicted, value_true_prior=2 / (12 * 9))}
+        labels = {self.get_label(): self.get_label_confidence(coffee_predicted, value_true_prior=2 / (12 * 9))}
         return labels
 
-    def get_all_labels(self):
-        return ['f']  # coffee
-
-
-class OfficeWorldOfficeLabelingFunctionWrapper(LabelingFunctionWrapper):
-    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
-                 sensor_false_confidence: float,
-                 seed: int = 0):
-        super().__init__(env, noisy=True, sensor_true_confidence=sensor_true_confidence,
-                         sensor_false_confidence=sensor_false_confidence)
-        self.env = env
-        self.rng = np.random.default_rng(seed)
-
-    def get_labels(self, obs: dict, prev_obs: dict):
-        # TODO: this may be slow; as we do it a number of times
-        unwrapped_obs = gym.spaces.unflatten(self.env.unflatten_obs_space, obs[self.agent_id])
-        if unwrapped_obs["g"]:
-            goal_predicted = bool(self.rng.binomial(1, self.sensor_true_confidence))
-        else:
-            goal_predicted = bool(1 - self.rng.binomial(1, self.sensor_false_confidence))
-        labels = {'g': self.get_label_confidence(goal_predicted)}
-        return labels
+    @abc.abstractmethod
+    def get_label(self):
+        raise RuntimeError("Not implemented")
 
     def get_all_labels(self):
-        return ['g']  # office
+        return [self.get_label()]
 
 
-class OfficeWorldPlantLabelingFunctionWrapper(LabelingFunctionWrapper):
-    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
-                 sensor_false_confidence: float,
-                 seed: int = 0):
-        super().__init__(env, noisy=True, sensor_true_confidence=sensor_true_confidence,
-                         sensor_false_confidence=sensor_false_confidence)
-        self.env = env
-        self.rng = np.random.default_rng(seed)
-
-    def get_labels(self, obs: dict, prev_obs: dict):
-        # TODO: this may be slow; as we do it a number of times
-        unwrapped_obs = gym.spaces.unflatten(self.env.unflatten_obs_space, obs[self.agent_id])
-        if unwrapped_obs["n"]:
-            goal_predicted = bool(self.rng.binomial(1, self.sensor_true_confidence))
-        else:
-            goal_predicted = bool(1 - self.rng.binomial(1, self.sensor_false_confidence))
-        labels = {'n': self.get_label_confidence(goal_predicted)}
-        return labels
-
-    def get_all_labels(self):
-        return ['n']  # plant
+class OfficeWorldCoffeeLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def get_label(self):
+        return 'f'  # coffee
 
 
-class OfficeWorldMailLabelingFunctionWrapper(LabelingFunctionWrapper):
-    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
-                 sensor_false_confidence: float,
-                 seed: int = 0):
-        super().__init__(env, noisy=True, sensor_true_confidence=sensor_true_confidence,
-                         sensor_false_confidence=sensor_false_confidence)
-        self.env = env
-        self.rng = np.random.default_rng(seed)
-        self.num_steps = 0
+class OfficeWorldOfficeLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def get_label(self):
+        return 'g'  # office
 
-    def get_labels(self, obs: dict, prev_obs: dict):
-        self.num_steps += 1
-        # TODO: this may be slow; as we do it a number of times
-        unwrapped_obs = gym.spaces.unflatten(self.env.unflatten_obs_space, obs[self.agent_id])
-        if unwrapped_obs["m"]:
-            coffee_predicted = bool(self.rng.binomial(1, self.sensor_true_confidence))
-        else:
-            coffee_predicted = bool(1 - self.rng.binomial(1, self.sensor_false_confidence))
-        labels = {'m': self.get_label_confidence(coffee_predicted, value_true_prior=2 / (12 * 9))}
-        return labels
 
-    def get_all_labels(self):
-        return ['m']  # mail
+class OfficeWorldPlantLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def get_label(self):
+        return 'n'  # plant
+
+
+class OfficeWorldMailLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def get_label(self):
+        return 'm'  # mail
+
+
+class OfficeWorldALabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def get_label(self):
+        return "a"
+
+
+class OfficeWorldBLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def get_label(self):
+        return "b"
+
+
+class OfficeWorldCLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def get_label(self):
+        return "c"
+
+
+class OfficeWorldDLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def get_label(self):
+        return "d"

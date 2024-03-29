@@ -4,6 +4,3 @@ gamma: 0.9351864733566505
 epsilon_start: 0.989763629350516
 epsilon_end: 0.02069953263195696
 epsilon_decay: 50
-coffee: coffee_sensor
-plant: plant_sensor
-office: office_sensor

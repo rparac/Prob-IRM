@@ -2,9 +2,7 @@ defaults:
   - base
 #  - _self_
 
-name: 'TODO: replace'
-render_mode: 'rgb_array'
-max_episode_steps: 250
+name: 'gym_subgoal_automata:OfficeWorldDeliverCoffee-v0'
 
 label_factories:
   # Inserts the configuration of coffee, office and plant label factories

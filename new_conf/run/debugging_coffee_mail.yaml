@@ -1,13 +1,12 @@
-training: True
-total_episodes: 1000 # 500
-log_freq: 1
-log_dir: logs
+defaults:
+  - base
+
+total_episodes: 2000 # 500
 testing_freq: 400 # 250
-greedy: True
-synchronize: False
-counterfactual_update: False
 recording_freq: 400 # 250
-no_display: False
-seed: 123
-name: "coffee-mail" # should make ???
-extra_debug_information: False
+name: "coffee-mail"
+
+# TODO: move somewhere else
+edge_cost: 2
+n_phi_cost: 2
+ex_penalty_multiplier: 1
