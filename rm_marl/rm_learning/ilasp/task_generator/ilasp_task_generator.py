@@ -39,6 +39,7 @@ def generate_ilasp_task(num_states, accepting_state, rejecting_state, observable
                                                avoid_learning_only_negative,
                                                prioritize_optimal_solutions, binary_folder_name,
                                                n_phi_cost, edge_cost)
+
         examples = generate_examples(goal_examples, dend_examples, inc_examples)
         f.write(background)
         f.write('\n' + hyp)

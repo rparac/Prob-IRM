@@ -56,6 +56,7 @@ class ProbFFNSLLearner(RMLearner):
         self.num_pos_ex = 0
         self.num_neg_ex = 0
         self.overriden_with_debugger = False
+
         self._rm_cnt_since_restart = 0
 
         # TODO: delete after debugging is finished

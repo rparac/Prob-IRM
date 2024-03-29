@@ -76,6 +76,7 @@ class Trainer:
         base_seed = run_config["seed"]
 
         steps = defaultdict(list)
+        cumulative_steps = defaultdict(list)
         losses = defaultdict(list)
         rewards = defaultdict(list)
         shaping_rewards = defaultdict(list)
@@ -201,11 +202,15 @@ class Trainer:
 
                         if run_config["training"]:
                             if agents_to_interrupt:
-                                interrupt_episode = True
-                                info["episode"] = {
-                                    "l": env.episode_lengths[0],
-                                    "r": env.episode_returns[0]
-                                }
+
+                                if aid in agents_to_interrupt:
+                                    interrupt_episode = True
+                                    info["episode"] = {
+                                        "l": env.episode_lengths[0],
+                                        "r": env.episode_returns[0]
+                                    }
+                                    agents_to_interrupt.remove(aid)
+
                                 for _env_id in self.env_ids_to_interrupt(env_agents, agents_to_interrupt):
                                     dones[_env_id] = True
                                     infos[_env_id]["episode"] = {
@@ -250,6 +255,12 @@ class Trainer:
                 steps[env_id].append(episode_length)
                 rewards[env_id].append(episode_reward)
 
+                if len(cumulative_steps[env_id]) > 0:
+                    total_steps_so_far = episode_length + cumulative_steps[env_id][-1]
+                else:
+                    total_steps_so_far = episode_length
+                cumulative_steps[env_id].append(total_steps_so_far)
+
                 if episode_reward == 1:
                     successes[env_id] += 1
                 elif episode_reward == -1:
@@ -280,22 +291,33 @@ class Trainer:
                         freq_strings = [f"{value}: #{freq} | " for value, freq in zip(unique, counts)]
                         logged_text = "  \n".join(freq_strings)
                         logger.add_text(
-                            f"{prefix}/reward_shaping/frequencies/{env_id}", str(logged_text), self.total_steps
+                            f"{prefix}/reward_shaping/frequencies/{env_id}", str(logged_text),
+                            episode if run_config["training"] else self.test_episode
                         )
 
                         logged_text = "  \n".join([f"{i}: {value}" for i, value in enumerate(shaping_rewards[env_id])])
                         logger.add_text(
-                            f"{prefix}/reward_shaping/history/{env_id}", logged_text, self.total_steps
+                            f"{prefix}/reward_shaping/history/{env_id}", logged_text,
+                            episode if run_config["training"] else self.test_episode
                         )
                         logger.add_histogram(
-                            f"{prefix}/reward_shaping/{env_id}", np_data, self.total_steps
+                            f"{prefix}/reward_shaping/{env_id}", np_data,
+                            episode if run_config["training"] else self.test_episode
                         )
 
-                    # Episode number of steps
+                    # Number of steps taken by the agent in each episode
                     logger.add_scalar(
                         f"{prefix}/num_steps/{env_id}", steps[env_id][-1],
                         episode if run_config["training"] else self.test_episode
                     )
+
+                    # Cumulative number of steps so far, among all episodes
+                    # Only logged during training, as in evaluation we only care about the steps taken in each episode
+                    if run_config["training"]:
+                        logger.add_scalar(
+                            f"{prefix}/tot_steps/{env_id}", cumulative_steps[env_id][-1],
+                            episode
+                        )
 
                     # Episode reward
                     logger.add_scalar(
@@ -334,7 +356,10 @@ class Trainer:
                             np.newaxis, :
                             ]
                     video = self._add_steps_to_replay(video)
-                    logger.add_video(f"{prefix}/replay/{env_id}", video, self.total_steps)
+                    logger.add_video(
+                        f"{prefix}/replay/{env_id}", video,
+                        episode if run_config["training"] else self.test_episode
+                    )
 
             if run_config["training"] and episode % run_config["testing_freq"] == 0:
                 self._run(self.testing_envs, {
