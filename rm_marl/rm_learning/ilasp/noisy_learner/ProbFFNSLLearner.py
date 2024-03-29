@@ -25,14 +25,15 @@ class ProbFFNSLLearner(RMLearner):
     # edge_cost - ILASP penalty for using the ed predicate
     # n_phi_cost - ILASP penalty for using the n_phi_predicate
     # ex_penalty_multiplier - multipler for the ILASP penalties
+    # min_penalty - the penalty threshold for discarding an ILASP example - makes the ILASP task simpler
     """
-    def __init__(self, agent_id, edge_cost=2, n_phi_cost=2, ex_penalty_multiplier=1):
+    def __init__(self, agent_id, edge_cost=2, n_phi_cost=2, ex_penalty_multiplier=1, min_penalty=1):
         super().__init__(agent_id)
 
         self.goal_examples = ISAExampleContainer()
         self.dend_examples = ISAExampleContainer()
         self.inc_examples = ISAExampleContainer()
-        self.ex_generator = NoisyILASPExampleGenerator()
+        self.ex_generator = NoisyILASPExampleGenerator(min_penalty)
 
         # Minimum is 3 states (accepting, rejecting, u0)
         # self.rm_num_states = 4
@@ -40,8 +41,8 @@ class ProbFFNSLLearner(RMLearner):
 
         # Minimum number of new traces before we validate if the
         # reward machine is the correct one
-        # TODO: current choice is to double this number every time the same RM is learned
-        self._initial_min_rm_num_episodes = 10
+        # TODO: current choice is to double this number every time the same RM is learned. Need to think this through
+        self._initial_min_rm_num_episodes = 100 # 10
         self.min_rm_num_episodes = self._initial_min_rm_num_episodes
 
         # the number of traces when the automata was relearned
@@ -75,6 +76,7 @@ class ProbFFNSLLearner(RMLearner):
         self.edge_cost = edge_cost
         self.n_phi_cost = n_phi_cost
         self.ex_penalty_multipler = ex_penalty_multiplier
+        # self.min_penalty = min_penalty
 
 
     # We assume this function be called when a trace is fully generated
@@ -165,7 +167,8 @@ class ProbFFNSLLearner(RMLearner):
                     self.min_rm_num_episodes *= 2
                     return None
 
-                self.min_rm_num_episodes = self._initial_min_rm_num_episodes
+                # self.min_rm_num_episodes = self._initial_min_rm_num_episodes
+                self.min_rm_num_episodes *= 2
 
                 rm_plot_filename = os.path.join(
                     self.log_folder, f"plot_{self.rm_learning_counter}"
@@ -187,7 +190,7 @@ class ProbFFNSLLearner(RMLearner):
         return solve_ilasp_task(
             ilasp_task_filename,
             ilasp_solution_filename,
-            timeout=3600,
+            timeout=60 * 10,
             version="2",
             max_body_literals=1,
             binary_folder_name=None,
@@ -246,10 +249,7 @@ class ProbFFNSLLearner(RMLearner):
                 self._rm_dend_trace_success / len(self._seen_negative_traces) < self.rm_recognize_threshold):
             return True
 
-        # ratio = self._rm_incomplete_trace_success / len(self._seen_incomplete_traces)
-        # if len(self._seen_incomplete_traces) % 100 == 0:
-        #     self._debug_ratio.append(ratio)
-
+        # incomplete
         if (len(self._seen_incomplete_traces) >= 1 and
                 self._rm_incomplete_trace_success / len(self._seen_incomplete_traces) < self.rm_recognize_threshold):
             return True

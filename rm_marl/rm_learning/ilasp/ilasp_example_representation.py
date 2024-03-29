@@ -58,10 +58,12 @@ class ISAILASPExample:
     observable_context: List[ObservablePredicate]
     last_predicate: Optional[LastPredicate]
     is_positive: bool
+    penalty_threshold: int
 
     def __init__(self, ex_id: str, ex_penalty: Optional[float], example_type: ExType,
                  observable_context: List[ObservablePredicate],
-                 last_predicate: Optional[LastPredicate], is_positive: bool = True):
+                 last_predicate: Optional[LastPredicate], is_positive: bool = True,
+                 penalty_threshold: int = 1):
         self.ex_id = ex_id
         self.penalty = ex_penalty
         self.example_type = example_type
@@ -71,6 +73,8 @@ class ISAILASPExample:
 
         # Large number to reduce the rounding error to int
         self.penalty_rounding_scale = 1  # 10
+
+        self.penalty_threshold = penalty_threshold
 
     def __eq__(self, other):
         if not isinstance(other, ISAILASPExample):
@@ -101,8 +105,9 @@ class ISAILASPExample:
         return f"{{{inc_str}}}, {{{exc_str}}},"
 
     # Example is active if it has a non-zero penalty
+    # Example is active if it has a penalty larger than the threshold
     def is_active(self):
-        return self.penalty is None or round(self.penalty * self.penalty_rounding_scale) > 0
+        return self.penalty is None or round(self.penalty * self.penalty_rounding_scale) >= self.penalty_threshold
 
     def __repr__(self):
         context_str = '  '.join([elem.as_predicate_str() for elem in self.observable_context])
@@ -160,7 +165,7 @@ class ISAILASPExample:
             ex_id = f"{self.ex_id}_inc_{i}"
             sols.append(
                 ISAILASPExample(ex_id, self.penalty, ISAILASPExample.ExType.INCOMPLETE, self.observable_context[:i],
-                                LastPredicate(i - 1))
+                                LastPredicate(i - 1), penalty_threshold=self.penalty_threshold)
             )
         return sols
 

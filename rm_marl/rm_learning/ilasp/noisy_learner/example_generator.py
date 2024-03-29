@@ -11,7 +11,7 @@ from rm_marl.rm_learning.trace_tracker import TraceTracker
 # Computes the classification examples for the logic-based learning method
 # TODO: Merge this with ProbFFNSLLearner
 class NoisyILASPExampleGenerator:
-    def __init__(self):
+    def __init__(self, ilasp_penalty_threshold: int):
         # Number of samples
         self.I = 100
         # The probability that an example is incorrect
@@ -24,6 +24,8 @@ class NoisyILASPExampleGenerator:
         self.max_rule_len = 10
 
         self.ex_counter = 0
+
+        self.ilasp_penalty_threshold = ilasp_penalty_threshold
 
         random.seed(0)
 
@@ -42,7 +44,8 @@ class NoisyILASPExampleGenerator:
             context = self.create_example_context(trace)
             penalty = -np.log(self.epsilon / (1 - self.epsilon)) / self.I
             last_predicate = LastPredicate(len(trace.trace) - 1)
-            sol.add(ISAILASPExample(ex_id, penalty, ex_type, context, last_predicate))
+            sol.add(ISAILASPExample(ex_id, penalty, ex_type, context, last_predicate,
+                                    penalty_threshold=self.ilasp_penalty_threshold))
             self.ex_counter += 1
         return sol.as_list()
 
