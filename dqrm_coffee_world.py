@@ -76,12 +76,6 @@ def run(cfg: DictConfig) -> int:
 
     env_config = cfg["env"]
 
-    # Save env_config
-    env_conf_path = os.path.join(run_config["log_dir"], "env_config.json")
-    with open(env_conf_path, 'w') as f:
-        e_conf = OmegaConf.to_container(env_config)
-        json.dump(dict(e_conf), f, indent=4)
-
     label_factories = [instantiate(label_factory_conf) for label_factory_conf in env_config["label_factories"]]
 
     print(env_config)
