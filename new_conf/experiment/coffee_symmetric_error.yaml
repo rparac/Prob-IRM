@@ -9,14 +9,13 @@ hydra:
     direction: maximize
     study_name: tuning
     storage: null
-    n_trials: 5
+    n_trials: 4
     n_jobs: 1
     params:
-      x: choice(0.6, 0.7, 0.8, 0.9, 1)
+      x: choice(0.9, 0.95, 0.99, 1)
 
 run:
-  no_display: True
-  name: "visit_abcd"
+  name: "coffee_symmetric_experiment"
 
 
 # Hydra optuna plugin doesn't support $ interpolation.
