@@ -18,10 +18,13 @@ from rm_marl.utils.logging import create_rm_state_logs, create_learnt_rm_logs
 
 
 class Trainer:
-    def __init__(self, local_envs: dict, shared_envs: dict, agents: dict):
+    def __init__(self, local_envs: dict, shared_envs: dict, agents: dict, env_config: DictConfig = None):
         self.envs = local_envs or shared_envs
         self.testing_envs = shared_envs
         self.agents = agents
+
+        # Stores configuration used to run this experiment
+        self.env_config = OmegaConf.to_container(env_config)
 
         self.total_steps = 0
         self.test_episode = 0
@@ -38,8 +41,7 @@ class Trainer:
         #  Dict[env_id -> List[episode_when_relearned]]
         self.rm_relearned_episodes: Dict[str, List[int]] = {}
 
-    # env_config added for logging (if needed)
-    def run(self, run_config: Union[dict, DictConfig], env_config: DictConfig = None):
+    def run(self, run_config: Union[dict, DictConfig]):
         log_dir = os.path.join(
             run_config["log_dir"],
             run_config["name"],
@@ -54,10 +56,9 @@ class Trainer:
                 run_config = OmegaConf.to_container(run_config)
             json.dump(dict(run_config), f, indent=4)
 
-        if env_config is not None:
+        if self.env_config is not None:
             with open(os.path.join(log_dir, "env_config.json"), 'w') as f:
-                env_config = OmegaConf.to_container(env_config)
-                json.dump(dict(env_config), f, indent=4)
+                json.dump(dict(self.env_config), f, indent=4)
 
         try:
             result = self._run(self.envs, run_config, logger)

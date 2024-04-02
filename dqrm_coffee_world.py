@@ -121,8 +121,8 @@ def run(cfg: DictConfig) -> int:
     agent_dict = {ag.agent_id: learning_ag for ag in rm_agents}
     env_dict = {f"E{i}": env for i, env in enumerate(envs)}
 
-    trainer = Trainer(env_dict, env_dict, agent_dict)
-    result = trainer.run(run_config, env_config)
+    trainer = Trainer(env_dict, env_dict, agent_dict, env_config)
+    result = trainer.run(run_config)
     print(f"Result for this session was {result}")
     return result
 
