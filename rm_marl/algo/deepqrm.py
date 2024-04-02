@@ -13,7 +13,6 @@ Icarte himself in this repository: https://bitbucket.org/RToroIcarte/lrm/src
 We kindly thank the original authors for their amazing contribution to the neuro-symbolic reinforcement learning
 literature and for making their code freely available for the research community.
 """
-import cProfile
 import math
 
 import numpy as np
@@ -23,19 +22,17 @@ from torch.optim import Optimizer, AdamW
 import gym
 
 from typing import Type
-from collections import namedtuple, deque, defaultdict
-import random
+from collections import namedtuple, defaultdict
 import os
 import os.path
 
 from ._base import Algo
-from .deepq.memory import ReplayMemoryRM, ReplayMemoryRM
+from .deepq.memory import ReplayMemoryRM
 from .deepq.networks import DeepQNetwork, CRMNetwork
 from ..reward_machine import RewardMachine
 
 
 class DeepQRM(Algo):
-    # TODO: Seeding
 
     RMStatePolicy = namedtuple("RMStatePolicy", [
         'policy_network',
@@ -109,7 +106,7 @@ class DeepQRM(Algo):
         self._epsilon_decay = epsilon_decay
 
         # Statistics
-        # NB: These are NOT reset when self.reset() is called
+        self._policy_age = 0
         self._learn_calls = 0
         self._target_updates = 0
         self._subpolicy_updates = defaultdict(lambda: 0)
@@ -120,7 +117,7 @@ class DeepQRM(Algo):
     @property
     def _epsilon(self):
         return self._epsilon_end + (self._epsilon_start - self._epsilon_end) * math.exp(
-            -1 * self.n_steps / self._epsilon_decay)
+            -1 * self._policy_age / self._epsilon_decay)
 
     def _init_memory(self):
         return ReplayMemoryRM(self._replay_size, self._curr_seed)
@@ -229,16 +226,15 @@ class DeepQRM(Algo):
             loss = self._subpolicy_training_step(policy_net, optimizer, target_net, memory)
             losses.append(loss)
 
-        # Training has been done: reset the corresponding timer
+        # Training has been done: reset the corresponding timer and update policy age
         self._policies_train_timer = self._policy_train_freq
+        self._policy_age += 1
 
         # Check if the target networks need to be updated
         self._target_update_timer -= 1
         if self._target_update_timer == 0:
             self._update_target_networks()
             self._target_update_timer = self._target_update_freq
-
-        self.n_steps += 1
 
         # The overall loss is the mean loss obtained among all sub-policies
         valid_losses = [loss for loss in losses if loss is not None]
@@ -399,15 +395,22 @@ class DeepQRM(Algo):
 
         """
 
+        # Clear the sub-policies
         self._num_rm_states = len(rm.states)
         self._init_q_networks()
+
         # Clear replay memory
         self._init_replay_memory()
 
+        # Reset internal timers
         self._policies_train_timer = self._policy_train_freq
         self._target_update_timer = self._target_update_freq
 
+        # Re-seed the PRNGs
         self._np_random, self._curr_seed = gym.utils.seeding.np_random(self._curr_seed)
+
+        # Reset statistics
+        self._policy_age = 0
 
     def set_save_path(self, path, **kwargs):
 
@@ -448,7 +451,6 @@ class DeepQRM(Algo):
 
         See https://docs.python.org/3/library/pickle.html#pickle-state for more info
         """
-
 
         self.__dict__.update(state)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
