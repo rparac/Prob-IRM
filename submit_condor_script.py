@@ -25,10 +25,9 @@ export PATH=$PATH:/homes/rp218/bin
 
 
 # Activate python environment
-source /vol/rp218-tmp/miniconda3/bin/activate
+source /vol/rp218-tmp/miniconda3/etc/profile.d/conda.sh
 conda activate rm_marl
 
-cd ..
 """
 
 condor_cmd_base = """
