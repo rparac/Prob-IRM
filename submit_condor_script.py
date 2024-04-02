@@ -9,6 +9,7 @@ import shutil
 import stat
 import subprocess
 import sys
+from typing import List
 
 script_directory = "outputs"
 
@@ -50,8 +51,8 @@ requirements    = regexp("^(arc|beech|curve|edge|gpu|oak|point|ray|texel|vertex|
 """
 
 
-def generate_condor_script(args: str, name: str) -> str:
-    python_run = f"python {args}"
+def generate_condor_script(args: List[str], name: str) -> str:
+    python_run = f"python {' '.join(args)}"
 
     out_file = f"{script_directory}/script_{name}.sh"
 
