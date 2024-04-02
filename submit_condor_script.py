@@ -62,7 +62,7 @@ def generate_condor_script(args: List[str], name: str) -> str:
 
     # Make file executable
     st = os.stat(out_file)
-    os.chmod(out_file, st.st_mode | stat.S_IEXEC)
+    os.chmod(out_file, 0o755)
     return out_file
 
 
