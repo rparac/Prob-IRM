@@ -51,7 +51,6 @@ requirements    = regexp("^(arc|beech|curve|edge|gpu|oak|point|ray|texel|vertex|
 def generate_condor_script(args: str, name: str) -> str:
     python_run = f"python {args}"
 
-    os.makedirs(script_directory, exist_ok=True)
     out_file = f"{script_directory}/script_{name}.sh"
 
     with open(out_file, 'w') as f:
@@ -91,5 +90,6 @@ if __name__ == "__main__":
     name = arguments[1]
     args = arguments[2:]
 
+    os.makedirs(script_directory, exist_ok=True)
     run_condor(args, name)
 
