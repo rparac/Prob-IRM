@@ -9,9 +9,6 @@ class Algo(abc.ABC):
     should follow to be compatible with the codebase.
     """
 
-    def __init__(self, *args, **kwargs):
-        self.n_steps = 0
-
     @abc.abstractmethod
     def learn(self, *args, **kwargs):
         raise NotImplementedError("learn")
@@ -27,6 +24,10 @@ class Algo(abc.ABC):
         to know its dimension to properly initialize
         """
         raise NotImplementedError("reset")
+
+    @abc.abstractmethod
+    def get_statistics(self):
+        raise NotImplementedError("get_statistics")
 
     @abc.abstractmethod
     def set_save_path(self, path, **kwargs):

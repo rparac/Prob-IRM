@@ -38,13 +38,16 @@ class QRM(Algo):
 
         self.q = defaultdict(self._q_sa_constructor)
 
+        # Policy statistics
+        self._policy_age = 0
+
         # Q-table doesn't need RM information
         self.reset(rm=None, seed=seed)
 
     @property
     def epsilon(self):
         return self.epsilon_end + (self.epsilon_start - self.epsilon_end) * math.exp(
-            -1 * self.n_steps / self.epsilon_decay)
+            -1 * self._policy_age / self.epsilon_decay)
 
     def _q_a_constructor(self):
         return np.zeros((self.action_space.n))
@@ -58,7 +61,8 @@ class QRM(Algo):
             self._np_random, seed = seeding.np_random(seed)
 
         self.q.clear()
-        self.n_steps = 0
+
+        self._policy_age = 0
 
     @staticmethod
     def _to_hashable_state_(state):
@@ -92,7 +96,8 @@ class QRM(Algo):
                                                                                                  1 - self.alpha
                                                                                          ) * current_q + self.alpha * target_q
 
-        self.n_steps += 1
+        self._policy_age += 1
+
         return loss
 
     def action(self, state, u, greedy: bool = False, testing: bool = False, **kwargs):
@@ -131,6 +136,15 @@ class QRM(Algo):
                     break
 
         return action
+
+    def get_statistics(self):
+
+        stats = {
+            "policy_age": self._policy_age,
+            "epsilon": self.epsilon
+        }
+
+        return stats
 
     def set_save_path(self, path, **kwargs):
         """

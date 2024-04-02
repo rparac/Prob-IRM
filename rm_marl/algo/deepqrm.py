@@ -412,6 +412,15 @@ class DeepQRM(Algo):
         # Reset statistics
         self._policy_age = 0
 
+    def get_statistics(self):
+
+        stats = {
+            "policy_age": self._policy_age,
+            "epsilon": self._epsilon
+        }
+
+        return stats
+
     def set_save_path(self, path, **kwargs):
 
         assert os.path.isdir(path), f"An invalid save path was specified: {path}"
