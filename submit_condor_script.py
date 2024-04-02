@@ -29,9 +29,7 @@ export PATH=$PATH:/homes/rp218/bin
 source /vol/rp218-tmp/miniconda3/bin/activate
 conda activate rm_marl
 
-
-fold_id=${1}
-# use --id ${fold_id}
+cd ..
 """
 
 condor_cmd_base = """
