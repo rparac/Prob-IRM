@@ -14,8 +14,7 @@ from typing import List
 script_directory = "outputs"
 
 
-condor_script_base = """
-#!/bin/bash
+condor_script_base = """#!/bin/bash
 
 # Fail if there is an error
 set -e
