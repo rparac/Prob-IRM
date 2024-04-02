@@ -4,7 +4,7 @@ import json
 import os
 import warnings
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import joblib
 # import joblib
@@ -38,7 +38,8 @@ class Trainer:
         #  Dict[env_id -> List[episode_when_relearned]]
         self.rm_relearned_episodes: Dict[str, List[int]] = {}
 
-    def run(self, run_config: dict):
+    # env_config added for logging (if needed)
+    def run(self, run_config: Union[dict, DictConfig], env_config: DictConfig = None):
         log_dir = os.path.join(
             run_config["log_dir"],
             run_config["name"],
@@ -52,6 +53,11 @@ class Trainer:
             if isinstance(run_config, DictConfig):
                 run_config = OmegaConf.to_container(run_config)
             json.dump(dict(run_config), f, indent=4)
+
+        if env_config is not None:
+            with open(os.path.join(log_dir, "env_config.json"), 'w') as f:
+                env_config = OmegaConf.to_container(env_config)
+                json.dump(dict(env_config), f, indent=4)
 
         try:
             result = self._run(self.envs, run_config, logger)
@@ -326,6 +332,8 @@ class Trainer:
                     )
 
                     # Success/Failure/Timeouts rate
+                    # At test time, they are either 0/1 while at training they are the rate of
+                    # success up until a specific episode number
                     logger.add_scalar(
                         f"{prefix}/success_rate/{env_id}", successes[env_id] / episode,
                         episode if run_config["training"] else self.test_episode

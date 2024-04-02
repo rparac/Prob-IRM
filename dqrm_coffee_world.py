@@ -1,3 +1,4 @@
+import json
 import os
 import random
 
@@ -41,9 +42,9 @@ def _get_base_env(env_name, seed, agent_id, label_factories, render_mode, max_ep
         termination_mode=AutomataWrapper.TerminationMode.ENV,
     )
 
+    env = RecordEpisodeStatistics(env)  # type: ignore
     if use_rs:
         env = ProbabilisticRewardShaping(env, shaping_rm=rm_transitioner.rm, discount_factor=0.99)
-    env = RecordEpisodeStatistics(env)  # type: ignore
 
     return env
 
@@ -74,6 +75,13 @@ def run(cfg: DictConfig) -> int:
     random.seed(run_config["seed"])
 
     env_config = cfg["env"]
+
+    # Save env_config
+    env_conf_path = os.path.join(run_config["log_dir"], "env_config.json")
+    with open(env_conf_path, 'w') as f:
+        e_conf = OmegaConf.to_container(env_config)
+        json.dump(dict(e_conf), f, indent=4)
+
     label_factories = [instantiate(label_factory_conf) for label_factory_conf in env_config["label_factories"]]
 
     print(env_config)
@@ -114,7 +122,7 @@ def run(cfg: DictConfig) -> int:
     env_dict = {f"E{i}": env for i, env in enumerate(envs)}
 
     trainer = Trainer(env_dict, env_dict, agent_dict)
-    result = trainer.run(run_config)
+    result = trainer.run(run_config, env_config)
     print(f"Result for this session was {result}")
     return result
 

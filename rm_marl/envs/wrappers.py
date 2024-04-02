@@ -27,6 +27,7 @@ class NumberStepsDiscountedRewardWrapper(gym.Wrapper):
         return observation, reward, terminated, truncated, info
 
 
+# Important: This class needs to be the last one used. This also includes the RecordEpisodeStatisticsWrapper
 class ProbabilisticRewardShaping(gym.Wrapper):
 
     def __init__(self, env, shaping_rm: RewardMachine, discount_factor: float = 0.99):
