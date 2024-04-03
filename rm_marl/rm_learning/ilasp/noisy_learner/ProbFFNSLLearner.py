@@ -7,7 +7,8 @@ import numpy as np
 
 from rm_marl.reward_machine import RewardMachine
 from rm_marl.rm_learning import RMLearner
-from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample, ISAExampleContainer
+from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample, ISAExampleContainer, \
+    MultiISAExampleContainer
 from rm_marl.rm_learning.ilasp.noisy_learner.example_generator import NoisyILASPExampleGenerator
 from rm_marl.rm_learning.ilasp.task_generator import generate_ilasp_task
 from rm_marl.rm_learning.ilasp.task_improvement_validator import get_ilasp_solution_penalty
@@ -27,12 +28,15 @@ class ProbFFNSLLearner(RMLearner):
     # ex_penalty_multiplier - multipler for the ILASP penalties
     # min_penalty - the penalty threshold for discarding an ILASP example - makes the ILASP task simpler
     """
+
     def __init__(self, agent_id, edge_cost=2, n_phi_cost=2, ex_penalty_multiplier=1, min_penalty=1):
         super().__init__(agent_id)
 
-        self.goal_examples = ISAExampleContainer()
-        self.dend_examples = ISAExampleContainer()
-        self.inc_examples = ISAExampleContainer()
+        # self.goal_examples = ISAExampleContainer()
+        # self.dend_examples = ISAExampleContainer()
+        # self.inc_examples = ISAExampleContainer()
+        self.examples = MultiISAExampleContainer()
+
         self.ex_generator = NoisyILASPExampleGenerator(min_penalty)
 
         # Minimum is 3 states (accepting, rejecting, u0)
@@ -42,7 +46,7 @@ class ProbFFNSLLearner(RMLearner):
         # Minimum number of new traces before we validate if the
         # reward machine is the correct one
         # TODO: current choice is to double this number every time the same RM is learned. Need to think this through
-        self._initial_min_rm_num_episodes = 100 # 10
+        self._initial_min_rm_num_episodes = 100  # 10
         self.min_rm_num_episodes = self._initial_min_rm_num_episodes
 
         # the number of traces when the automata was relearned
@@ -78,7 +82,6 @@ class ProbFFNSLLearner(RMLearner):
         self.n_phi_cost = n_phi_cost
         self.ex_penalty_multipler = ex_penalty_multiplier
         # self.min_penalty = min_penalty
-
 
     # We assume this function be called when a trace is fully generated
     def learn(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated,
@@ -116,21 +119,23 @@ class ProbFFNSLLearner(RMLearner):
         if trace.is_complete and not trace.is_positive:
             self.num_neg_ex += 1
 
-        examples = self.ex_generator.create_examples_from(trace)
-        for ex in examples:
-            ex.compact_observations()
-            # Imporant to do before the .add function as it may change the example penalty
-            #  Using deepcopy in the .add function results in a significant
-            #  increase in runtime (+50%)
-            incomplete_examples = ex.generate_incomplete_examples()
-            if ex.example_type == ISAILASPExample.ExType.GOAL:
-                self.goal_examples.add(ex)
-            elif ex.example_type == ISAILASPExample.ExType.DEND:
-                self.dend_examples.add(ex)
-            else:
-                self.inc_examples.add(ex)
-            for inc_ex in incomplete_examples:
-                self.inc_examples.add(inc_ex)
+        examples, ex_type = self.ex_generator.create_examples_from(trace)
+        self.examples.merge(examples, ex_type)
+
+        # for ex in examples:
+        #     # ex.compact_observations()
+        #     # Imporant to do before the .add function as it may change the example penalty
+        #     #  Using deepcopy in the .add function results in a significant
+        #     #  increase in runtime (+50%)
+        #     incomplete_examples = ex.generate_incomplete_examples()
+        #     if ex.example_type == ISAILASPExample.ExType.GOAL:
+        #         self.goal_examples.add(ex)
+        #     elif ex.example_type == ISAILASPExample.ExType.DEND:
+        #         self.dend_examples.add(ex)
+        #     else:
+        #         self.inc_examples.add(ex)
+        #     for inc_ex in incomplete_examples:
+        #         self.inc_examples.add(inc_ex)
 
     def _update_reward_machine(self, curr_rm):
         self.rm_learning_counter += 1
@@ -152,9 +157,12 @@ class ProbFFNSLLearner(RMLearner):
             # TODO: remove duplication here with ILASPLearner
             if candidate_rm.states:
                 candidate_rm.set_u0("u0")
-                if len(self.goal_examples) > 0 and "u_acc" in candidate_rm.states:
+                # TODO now: delete these log lines if all is well
+                # if len(self.goal_examples) > 0 and "u_acc" in candidate_rm.states:
+                if "u_acc" in candidate_rm.states:
                     candidate_rm.set_uacc("u_acc")
-                if len(self.dend_examples) > 0 and "u_rej" in candidate_rm.states:
+                # if len(self.dend_examples) > 0 and "u_rej" in candidate_rm.states:
+                if "u_rej" in candidate_rm.states:
                     candidate_rm.set_urej("u_rej")
 
                 # TODO: abstract example file name away
@@ -200,14 +208,16 @@ class ProbFFNSLLearner(RMLearner):
 
     def _generate_ilasp_task(self, ilasp_task_filename):
         total_ex_sum = int(100 * self.ex_penalty_multipler)
+        goal_ex, dend_ex, inc_ex = self.examples.generate_goal_dend_inc(total_ex_sum)
+
         generate_ilasp_task(
             self.rm_num_states,
             "u_acc",
             "u_rej",
-            self._observables,
-            self.goal_examples.as_list_reweighted(total_ex_sum),
-            self.dend_examples.as_list_reweighted(total_ex_sum),
-            self.inc_examples.as_list_reweighted(total_ex_sum),
+            self.examples.get_observables(),  # self._observables,
+            goal_ex,  # self.goal_examples.generate_goal_dend_inc(total_ex_sum),
+            dend_ex,  # self.dend_examples.generate_goal_dend_inc(total_ex_sum),
+            inc_ex,  # self.inc_examples.generate_goal_dend_inc(total_ex_sum),
             self.log_folder,
             ilasp_task_filename,
             symmetry_breaking_method="bfs-alternative",
@@ -222,17 +232,17 @@ class ProbFFNSLLearner(RMLearner):
         )
 
     # TODO: move logic inside a container if this is too slow
-    @property
-    def _observables(self):
-        # Using dict for reproducibility - converting set into a list does not preserve the ordering
-        # (only changing the number of episodes changed the list)
-        ret = dict()
-        # ret = set()
-        for ex in itertools.chain(self.goal_examples.as_list(), self.dend_examples.as_list(),
-                                  self.inc_examples.as_list()):
-            for obs in ex.observable_context:
-                ret[obs.label] = None
-        return list(ret.keys())
+    # @property
+    # def _observables(self):
+    #     # Using dict for reproducibility - converting set into a list does not preserve the ordering
+    #     # (only changing the number of episodes changed the list)
+    #     ret = dict()
+    #     # ret = set()
+    #     for ex in itertools.chain(self.goal_examples.as_list(), self.dend_examples.as_list(),
+    #                               self.inc_examples.as_list()):
+    #         for obs in ex.observable_context:
+    #             ret[obs.label] = None
+    #     return list(ret.keys())
 
     def _should_relearn_rm(self) -> bool:
         num_seen_traces = len(self._seen_positive_traces) + len(self._seen_incomplete_traces) + len(

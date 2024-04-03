@@ -29,7 +29,7 @@ class NoisyILASPExampleGenerator:
 
         random.seed(0)
 
-    def create_examples_from(self, trace: TraceTracker) -> List[ISAILASPExample]:
+    def create_examples_from(self, trace: TraceTracker) -> (ISAExampleContainer, ISAILASPExample.ExType):
         if trace.is_complete:
             if trace.is_positive:
                 ex_type = ISAILASPExample.ExType.GOAL
@@ -44,10 +44,13 @@ class NoisyILASPExampleGenerator:
             context = self.create_example_context(trace)
             penalty = -np.log(self.epsilon / (1 - self.epsilon)) / self.I
             last_predicate = LastPredicate(len(trace.trace) - 1)
-            sol.add(ISAILASPExample(ex_id, penalty, ex_type, context, last_predicate,
-                                    penalty_threshold=self.ilasp_penalty_threshold))
+            ex = ISAILASPExample(ex_id, penalty, ex_type, context, last_predicate,
+                                               penalty_threshold=self.ilasp_penalty_threshold)
+            ex.compact_observations()
+            sol.add(ex)
             self.ex_counter += 1
-        return sol.as_list()
+        return sol, ex_type
+        # return sol.as_list()
 
     # TODO: this method is called often so it might need to be sped up
     def create_example_context(self, trace: TraceTracker) -> List[ObservablePredicate]:

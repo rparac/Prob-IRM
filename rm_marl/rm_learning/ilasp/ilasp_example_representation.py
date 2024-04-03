@@ -1,6 +1,7 @@
 import abc
 import copy
 import enum
+import itertools
 from typing import Optional, List, Set, Type, Dict, Union
 
 
@@ -183,30 +184,82 @@ class ISAILASPExample:
 
 class ISAExampleContainer:
     def __init__(self):
-        self._storage: Dict[ISAILASPExample, float] = {}
+        self.storage: Dict[ISAILASPExample, float] = {}
 
     def add(self, ex):
-        if ex in self._storage:
-            curr_pen = self._storage[ex]
-            del self._storage[ex]
-            ex.penalty += curr_pen
-        self._storage[ex] = ex.penalty
+        self.storage[ex] = self.storage.get(ex, 0) + ex.penalty
 
-    def as_list(self):
-        return list(self._storage.keys())
+        # if ex in self._storage:
+        #     curr_pen = self._storage[ex]
+        #     del self._storage[ex]
+        #     ex.penalty += curr_pen
+        # self._storage[ex] = ex.penalty
+
+    def merge(self, ex_container):
+        for ex, val in ex_container.storage.items():
+            self.storage[ex] = self.storage.get(ex, 0) + val
+
+    # Should be called before a direct call to ISAILASPExample
+    def fix_penalties(self):
+        for ex, pen in self.storage.items():
+            ex.penalty = pen
 
     # Return examples such that their penalties sum to total_sum
     def as_list_reweighted(self, total_sum: Union[int, float]) -> List[ISAILASPExample]:
-        ex_pen_sum = sum(self._storage.values())
+        self.fix_penalties()
+        ex_pen_sum = sum(self.storage.values())
         ret = []
-        for ex, ex_val in self._storage.items():
+        for ex, ex_val in self.storage.items():
             new_ex = copy.deepcopy(ex)
             new_ex.penalty = (ex_val / ex_pen_sum) * total_sum
             ret.append(new_ex)
         return ret
 
     def __len__(self):
-        return len(self._storage)
+        return len(self.storage)
+
+
+class MultiISAExampleContainer:
+    def __init__(self):
+        self._goal_examples = ISAExampleContainer()
+        self._dend_examples = ISAExampleContainer()
+        self._inc_examples = ISAExampleContainer()
+
+    def merge(self, ex_container: ISAExampleContainer, ex_type: ISAILASPExample.ExType):
+        if ex_type == ISAILASPExample.ExType.GOAL:
+            self._goal_examples.merge(ex_container)
+        elif ex_type == ISAILASPExample.ExType.DEND:
+            self._dend_examples.merge(ex_container)
+        else:
+            self._inc_examples.merge(ex_container)
+
+    def get_observables(self):
+        out = set()
+        for ex in itertools.chain(self._goal_examples.storage.keys(), self._dend_examples.storage.keys(),
+                                  self._inc_examples.storage.keys()):
+            out = out.union([obs.label for obs in ex.observable_context])
+
+        # Sorting is important for reproducibility (sets are not)
+        return list(sorted(out))
+
+    def generate_incomplete_examples(self):
+        out = ISAExampleContainer()
+        for ex_container in [self._goal_examples, self._dend_examples, self._inc_examples]:
+            ex_container.fix_penalties()
+            for base_ex in ex_container.storage.keys():
+                for ex in base_ex.generate_incomplete_examples():
+                    out.add(ex)
+        return out
+
+    def generate_goal_dend_inc(self, total_ex_sum: int) -> \
+            (List[ISAILASPExample], List[ISAILASPExample], List[ISAILASPExample]):
+        new_inc = self.generate_incomplete_examples()
+        self.merge(new_inc, ISAILASPExample.ExType.INCOMPLETE)
+
+        gl = self._goal_examples.as_list_reweighted(total_ex_sum)
+        de = self._dend_examples.as_list_reweighted(total_ex_sum)
+        inc = self._inc_examples.as_list_reweighted(total_ex_sum)
+        return gl, de, inc
 
 
 # Lifts the example representation from Daniel's work to ISAILASPExample
