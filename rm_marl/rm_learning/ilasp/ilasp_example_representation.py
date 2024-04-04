@@ -254,11 +254,12 @@ class MultiISAExampleContainer:
     def generate_goal_dend_inc(self, total_ex_sum: int) -> \
             (List[ISAILASPExample], List[ISAILASPExample], List[ISAILASPExample]):
         new_inc = self.generate_incomplete_examples()
-        self.merge(new_inc, ISAILASPExample.ExType.INCOMPLETE)
+        new_inc.merge(self._inc_examples)
+        # self.merge(new_inc, ISAILASPExample.ExType.INCOMPLETE)
 
         gl = self._goal_examples.as_list_reweighted(total_ex_sum)
         de = self._dend_examples.as_list_reweighted(total_ex_sum)
-        inc = self._inc_examples.as_list_reweighted(total_ex_sum)
+        inc = new_inc.as_list_reweighted(total_ex_sum)
         return gl, de, inc
 
 
