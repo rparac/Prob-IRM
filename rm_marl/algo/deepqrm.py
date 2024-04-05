@@ -316,6 +316,7 @@ class DeepQRM(Algo):
 
         return loss.item()
 
+    @torch.no_grad()
     def action(self, state, u, greedy: bool = True, testing: bool = False, **kwargs):
         """
         Compute an action to be taken based on the state of the policy
