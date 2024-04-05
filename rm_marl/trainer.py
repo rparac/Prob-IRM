@@ -336,15 +336,15 @@ class Trainer:
                     # At test time, they are either 0/1 while at training they are the rate of
                     # success up until a specific episode number
                     logger.add_scalar(
-                        f"{prefix}/success_rate/{env_id}", successes[env_id] / episode,
+                        f"{prefix}/num_successes/{env_id}", successes[env_id],
                         episode if run_config["training"] else self.test_episode
                     )
                     logger.add_scalar(
-                        f"{prefix}/failure_rate/{env_id}", failures[env_id] / episode,
+                        f"{prefix}/num_failures/{env_id}", failures[env_id],
                         episode if run_config["training"] else self.test_episode
                     )
                     logger.add_scalar(
-                        f"{prefix}/timeout_rate/{env_id}", timeouts[env_id] / episode,
+                        f"{prefix}/num_timeouts/{env_id}", timeouts[env_id],
                         episode if run_config["training"] else self.test_episode
                     )
 
