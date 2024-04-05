@@ -336,7 +336,7 @@ class DeepQRM(Algo):
 
         """
 
-        if self._np_random.random() < self._epsilon:
+        if not testing and self._np_random.random() < self._epsilon:
             return self._np_random.choice(range(self._num_actions))
 
         # A non-random action is to be taken, prepare the flat env state and feed it to the Q-network
