@@ -422,7 +422,7 @@ class Trainer:
             transposed_steps_bar = np.transpose(steps_bar[0, i], axes=(1, 2, 0))
             with Image.fromarray(transposed_steps_bar, mode='RGB') as steps_bar_img:
                 drawer = ImageDraw.Draw(steps_bar_img)
-                drawer.text((0, 0), f"# Steps: {i}", font_size=54, fill='#ffffff')
+                drawer.text((0, 0), f"# Steps: {i+1}/{num_frames}", font_size=50, fill='#ffffff')
                 steps_bar_data = np.transpose(np.asarray(steps_bar_img), axes=(2, 0, 1))
                 full_video[0, i, :, 0:steps_bar_h, :] = steps_bar_data
 
