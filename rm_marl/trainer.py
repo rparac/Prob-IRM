@@ -94,6 +94,16 @@ class Trainer:
         _ = [a.set_log_folder(os.path.join(logger.log_dir, aid)) for aid, a in self.agents.items()]
 
         for episode in tqdm(range(1, 1 + run_config["total_episodes"])):
+
+            if run_config["training"] and run_config["extra_debug_information"]:
+                for aid, a in self.agents.items():
+                    if hasattr(a, 'rm_agents'):
+                        algo_stats = a.rm_agents[aid].algo.get_statistics()
+                    else:
+                        algo_stats = a.algo.get_statistics()
+                    logger.add_scalar(f'algo/{aid}/policy_age', algo_stats["policy_age"], episode)
+                    logger.add_scalar(f'algo/{aid}/epsilon', algo_stats["epsilon"], episode)
+
             if not run_config["training"]:
                 self.test_episode += 1
 
