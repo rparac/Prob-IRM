@@ -36,28 +36,13 @@ eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
 
 export PATH=$PATH:/gpfs/home/rp218/bin
 
+module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
+
 cd ${HOME}/rm-marl
 conda activate rm_marl
 """
 
 
-
-
-def generate_condor_script(args: List[str], name: str) -> str:
-    python_run = f"python {' '.join(args)}"
-
-    out_file = f"{script_directory}/script_{name}.sh"
-
-    with open(out_file, 'w') as f:
-        f.write(condor_script_base)
-        f.write('\n')
-        f.write(python_run)
-        f.write('\n')
-
-    # Make file executable
-    st = os.stat(out_file)
-    os.chmod(out_file, 0o755)
-    return out_file
 
 
 def run_pbs(args, name):
