@@ -1,7 +1,7 @@
 #!/bin/bash
 cd ..
 
-noise_levels=(0.99 1)
+noise_levels=(1)
 
 for item in "${noise_levels[@]}"; do
   name="test_${item}"
