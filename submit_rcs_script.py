@@ -49,7 +49,7 @@ def run_pbs(args, name):
     python_run = f"python {' '.join(args)}"
 
     # generate scripts
-    pbs_out = f"{script_directory}/script_{name}.pbs"
+    pbs_out = f"{script_directory}/{name}.pbs"
     with open(pbs_out, 'w') as f:
         f.write(pbs_script_base)
         f.write('\n')
