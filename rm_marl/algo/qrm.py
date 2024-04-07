@@ -10,8 +10,6 @@ from gym.utils import seeding
 from ._base import Algo
 from ..reward_machine import RewardMachine
 
-from memory_profiler import profile
-
 
 class QRM(Algo):
     _np_random: Optional[np.random.Generator] = None
