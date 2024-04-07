@@ -9,3 +9,5 @@ for item in "${noise_levels[@]}"; do
   # run noise on all three
   python submit_condor_script.py ${name} dqrm_coffee_world.py env/office-world@env=visit_abcd run=visit_abcd +experiment=vanilla_a_symmetric_error x=${item} run.name=${name}
 done
+
+# Running on batch1

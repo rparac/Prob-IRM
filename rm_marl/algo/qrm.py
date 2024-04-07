@@ -10,6 +10,8 @@ from gym.utils import seeding
 from ._base import Algo
 from ..reward_machine import RewardMachine
 
+from memory_profiler import profile
+
 
 class QRM(Algo):
     _np_random: Optional[np.random.Generator] = None
@@ -80,7 +82,8 @@ class QRM(Algo):
         # In general, DeepQ should be used instead.
 
         # Represent array as str -> can be hashed
-        u_str = ",".join([str(np.round(elem, decimals=3)) for elem in u])
+        # u_str = ",".join([str(np.round(elem, decimals=3)) for elem in u])
+        u_str = ",".join([str(np.round(elem, decimals=2)) for elem in u])
         return u_str
 
     def learn(self, state, u, action, reward, done, next_state, next_u):
