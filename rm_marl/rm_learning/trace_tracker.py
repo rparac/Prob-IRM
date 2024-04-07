@@ -58,30 +58,3 @@ class TraceTracker:
     @property
     def no_dups_flatten_labels_sequence(self):
         return tuple(i[0] for i in groupby(self.flatten_labels_sequence or tuple()))
-
-# TODO: delete
-# class NoisyTraceTracker:
-#     def __init__(self):
-#         self.trace = []
-#         self.probabilities = []
-#
-#         self.is_positive = False
-#         self.is_complete = False
-#
-#         self.penalty_scale_factor = 10
-#
-#     def reset(self):
-#         self.trace.clear()
-#         self.probabilities.clear()
-#
-#     def update(self, labels: Dict[str, float]):
-#         self.trace.append(labels)
-#
-#     def labels_sequence(self):
-#         ret_labels = []
-#         ret_penalties = []
-#         for es, val in zip(self.trace, self.probabilities):
-#             if es:
-#                 ret_labels.append(tuple(es))
-#                 ret_penalties.append(val)
-#         return ret_labels, ret_penalties
