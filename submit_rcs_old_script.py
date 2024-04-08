@@ -23,7 +23,7 @@ module load anaconda3/personal
 
 export PATH=$PATH:/rds/general/user/rp218/home/bin
 
-source activate rm-marl
+source activate rm_marl
 cd ${HOME}/rm-marl/
 """
 
