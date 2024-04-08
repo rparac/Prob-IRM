@@ -8,6 +8,24 @@ defaults:
 
 name: 'gym_subgoal_automata:OfficeWorldDeliverCoffee-v0'
 
+# Variables that can be overriden with Optuna
+overridable:
+  - env.coffee_label_factory.sensor_true_confidence
+  - env.coffee_label_factory.sensor_false_confidence
+  - env.plant_label_factory.sensor_true_confidence
+  - env.plant_label_factory.sensor_false_confidence
+  - env.office_label_factory.sensor_true_confidence
+  - env.office_label_factory.sensor_false_confidence
+  - env.a_label_factory.sensor_true_confidence
+  - env.a_label_factory.sensor_false_confidence
+  - env.b_label_factory.sensor_true_confidence
+  - env.b_label_factory.sensor_false_confidence
+  - env.c_label_factory.sensor_true_confidence
+  - env.c_label_factory.sensor_false_confidence
+  - env.d_label_factory.sensor_true_confidence
+  - env.d_label_factory.sensor_false_confidence
+
+
 label_factories:
   # Inserts the configuration of coffee, office and plant label factories
   # This setup allows modifying the values of label factories while accessing them through this variable
