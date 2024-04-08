@@ -4,7 +4,7 @@ defaults:
 
 name: 'gym_subgoal_automata:OfficeWorldDeliverCoffeeAndMail-v0'
 
-label_factories:
+core_label_factories:
   # Inserts the configuration of coffee, office and plant label factories
   # This setup allows modifying the values of label factories individually while accessing them through this variable
   - ${env.coffee_label_factory}

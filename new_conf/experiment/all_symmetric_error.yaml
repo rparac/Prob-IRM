@@ -31,6 +31,8 @@ manual_overrides:
   - env.plant_label_factory.sensor_false_confidence
   - env.office_label_factory.sensor_true_confidence
   - env.office_label_factory.sensor_false_confidence
+  - env.mail_label_factory.sensor_true_confidence
+  - env.mail_label_factory.sensor_false_confidence
   - env.a_label_factory.sensor_true_confidence
   - env.a_label_factory.sensor_false_confidence
   - env.b_label_factory.sensor_true_confidence
@@ -39,5 +41,3 @@ manual_overrides:
   - env.c_label_factory.sensor_false_confidence
   - env.d_label_factory.sensor_true_confidence
   - env.d_label_factory.sensor_false_confidence
-#  - env.mail_label_factory.sensor_true_confidence
-#  - env.mail_label_factory.sensor_false_confidence

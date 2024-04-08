@@ -19,7 +19,8 @@ from rm_marl.reward_machine import RewardMachine
 
 
 class GymSubgoalAutomataAdapter(gym.Wrapper):
-    def __init__(self, env: BaseEnv, agent_id: int, render_mode=None, max_episode_length=None):
+    def __init__(self, env: BaseEnv, agent_id: int, render_mode=None, max_episode_length=None,
+                 use_restricted_observables: bool = True):
         # Explicitly returns observables as a part of the observation.
         # We regenerate them in this adapter using the info output.
         env.hide_state_variables = True
@@ -29,7 +30,10 @@ class GymSubgoalAutomataAdapter(gym.Wrapper):
         self.agent_id = agent_id
         self._render_mode = render_mode
         self.env = env
-        self.observables = self.env.get_observables() # self.env.get_restricted_observables()
+        if use_restricted_observables:
+            self.observables = self.env.get_restricted_observables()
+        else:
+            self.observables = self.env.get_observables()  # self.env.get_restricted_observables()
         self.max_episode_length = max_episode_length
         self.current_step = 0
 
