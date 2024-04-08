@@ -2,10 +2,13 @@
 
 cd ..
 
-noise_levels=(0.95 0.97 0.99 1)
+seeds=(123 233 333 433 533)
+noise_levels=(1 0.99 0.95 0.9)
 
-for item in "${noise_levels[@]}"; do
-  name="symmetric_error_deliver_coffee_${item}"
-  # run noise on all three
-  python submit_condor_script.py ${name} dqrm_coffee_world.py env/office-world@env=deliver_coffee run=dqrm_coffee_world +experiment=vanilla_all_symmetric_error x=${item} run.name=${name}
+for seed in "${seeds[@]}"; do
+  for noise_level in "${noise_levels[@]}"; do
+    name="symmetric_error_deliver_coffee_${seed}_${noise_level}"
+    # run noise on all three
+    python submit_rcs_script.py ${name} dqrm_coffee_world.py env/office-world@env=deliver_coffee run=dqrm_coffee_world +experiment=vanilla_all_symmetric_error x=${noise_levels} run.name=${name} run.seed=${seed}
+  done 
 done

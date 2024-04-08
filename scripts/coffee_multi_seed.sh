@@ -1,7 +1,7 @@
 #!/bin/bash
 cd ..
 
-seeds=(123 124 125 126 127)
+seeds=(123 233 333 433 533)
 noise_levels=(1 0.99 0.95 0.9)
 
 for seed in "${seeds[@]}"; do
