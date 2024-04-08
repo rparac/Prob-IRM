@@ -1,6 +1,8 @@
 import json
 import os
+import cProfile
 import random
+import tracemalloc
 
 import gym
 import hydra
@@ -33,6 +35,7 @@ def _get_base_env(env_name, seed, agent_id, label_factories, render_mode, max_ep
         labeling_funs.append(label_factory(env))
     env = NoisyLabelingFunctionComposer(labeling_funs)
 
+    env = RecordEpisodeStatistics(env)  # type: ignore
     # AutomataWrapper here only provides the filter_label function (used in counter_factual update).
     #  It also logs RM states
     env = RewardMachineWrapper(
@@ -42,7 +45,6 @@ def _get_base_env(env_name, seed, agent_id, label_factories, render_mode, max_ep
         termination_mode=AutomataWrapper.TerminationMode.ENV,
     )
 
-    env = RecordEpisodeStatistics(env)  # type: ignore
     if use_rs:
         env = ProbabilisticRewardShaping(env, shaping_rm=rm_transitioner.rm, discount_factor=0.99)
 
@@ -75,6 +77,8 @@ def run(cfg: DictConfig) -> int:
     random.seed(run_config["seed"])
 
     env_config = cfg["env"]
+
+    # agent_config = cfg["algo"]
 
     label_factories = [instantiate(label_factory_conf) for label_factory_conf in env_config["label_factories"]]
 
