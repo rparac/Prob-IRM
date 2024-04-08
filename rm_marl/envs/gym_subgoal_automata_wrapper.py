@@ -29,7 +29,7 @@ class GymSubgoalAutomataAdapter(gym.Wrapper):
         self.agent_id = agent_id
         self._render_mode = render_mode
         self.env = env
-        self.observables = self.env.get_restricted_observables()
+        self.observables = self.env.get_observables() # self.env.get_restricted_observables()
         self.max_episode_length = max_episode_length
         self.current_step = 0
 
