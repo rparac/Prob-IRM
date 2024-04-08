@@ -24,7 +24,7 @@ module load anaconda3/personal
 export PATH=$PATH:/rds/general/user/rp218/home/bin
 
 source activate rm-marl
-cd ${HOME}/SEVC/rule-learning
+cd ${HOME}/rm-marl/
 """
 
 
