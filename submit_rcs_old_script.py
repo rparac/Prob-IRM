@@ -40,7 +40,7 @@ def run_pbs(args, name):
         f.write('\n')
         f.write(python_run)
 
-    result = subprocess.run(['qsub', '-q', 'hx', pbs_out], stdout=subprocess.PIPE, text=True)
+    result = subprocess.run(['qsub', pbs_out], stdout=subprocess.PIPE, text=True)
     print(result.stdout)
     print("Successfully ran all the scripts")
 
