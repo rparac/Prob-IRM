@@ -94,7 +94,8 @@ def run(cfg: DictConfig) -> int:
     rm_agents = []
     for i in range(run_config["num_envs"]):
         agent_id = f"A{i + 1}"
-        env = _get_base_env(env_config["name"], run_config["seed"] + i, agent_id, label_factories,
+        env_seed = 123
+        env = _get_base_env(env_config["name"], env_seed + i, agent_id, label_factories,
                             env_config["render_mode"], env_config["max_episode_length"], run_config["use_rs"],
                             env_config["use_restricted_observables"])
         envs.append(env)

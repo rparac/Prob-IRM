@@ -13,10 +13,9 @@ from typing import List
 
 script_directory = "outputs"
 
-
 pbs_script_gpu = """#!/bin/bash
-#PBS -l walltime=24:00:00
-#PBS -l select=1:ncpus=18:mem=200Gb:ngpus=1:gpu_type=A100
+#PBS -l walltime=48:00:00
+#PBS -l select=1:ncpus=4:mem=200Gb:ngpus=1:gpu_type=A100
 
 eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
 
@@ -30,7 +29,7 @@ conda activate rm_marl
 
 pbs_script_base = """#!/bin/bash
 #PBS -l walltime=48:00:00
-#PBS -l select=1:ncpus=18:mem=200Gb
+#PBS -l select=1:ncpus=4:mem=200Gb
 
 eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
 
@@ -41,8 +40,6 @@ module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 cd ${HOME}/rm-marl
 conda activate rm_marl
 """
-
-
 
 
 def run_pbs(args, name):
@@ -67,4 +64,3 @@ if __name__ == "__main__":
 
     os.makedirs(script_directory, exist_ok=True)
     run_pbs(args, name)
-
