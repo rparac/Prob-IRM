@@ -28,7 +28,7 @@ conda activate rm_marl
 """
 
 pbs_script_base = """#!/bin/bash
-#PBS -l walltime=48:00:00
+#PBS -l walltime=24:00:00
 #PBS -l select=1:ncpus=4:mem=200Gb
 
 eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
