@@ -10,7 +10,7 @@ recording_freq: 250
 no_display: False
 seed: 123
 name: ??? # should make ???
-extra_debug_information: False
+extra_debug_information: True
 num_envs: 10
 # How often is the model stored
 checkpoint_freq: 1000
