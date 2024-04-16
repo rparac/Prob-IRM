@@ -8,7 +8,7 @@ for seed in "${seeds[@]}"; do
   for noise_level in "${noise_levels[@]}"; do
     name="coffee_and_mail_error${seed}_${noise_level}"
     # run noise on all three
-    python submit_rcs_script.py ${name} dqrm_coffee_world.py env/office-world@env=deliver_coffee_mail run=dqrm_coffee_world +experiment=vanilla_coffee_and_mail_symmetric_error x=${noise_level} run.name=${name} run.seed=${seed}
+    python submit_rcs_script.py ${name} dqrm_coffee_world.py env/office-world@env=deliver_coffee_mail run=dqrm_coffee_world +experiment=vanilla_coffee_and_mail_symmetric_error x=${noise_level} run.name=${name} run.seed=${seed} run.extra_debug_information=true
   done
 done
 
