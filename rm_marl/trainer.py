@@ -79,12 +79,12 @@ class Trainer:
         except KeyboardInterrupt:
             result = None
 
-        if run_config["extra_debug_information"]:
-            create_rm_state_logs(log_dir, logger, run_config["total_episodes"], self.test_episode,
-                                 run_config["testing_freq"], self.last_timestep_train_info,
-                                 self.last_timestep_test_info,
-                                 self.all_recorded_rm_states, self.rm_relearned_episodes)
-            create_learnt_rm_logs(log_dir, logger)
+        # if run_config["extra_debug_information"]:
+        #     create_rm_state_logs(log_dir, logger, run_config["total_episodes"], self.test_episode,
+        #                          run_config["testing_freq"], self.last_timestep_train_info,
+        #                          self.last_timestep_test_info,
+        #                          self.all_recorded_rm_states, self.rm_relearned_episodes)
+        #     create_learnt_rm_logs(log_dir, logger)
 
         _ = [e.close() for e in self.envs.values()]
         logger.close()
