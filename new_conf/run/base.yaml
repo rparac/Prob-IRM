@@ -12,6 +12,10 @@ seed: 123
 name: ??? # should make ???
 extra_debug_information: False
 num_envs: 10
+# How often is the model stored
+checkpoint_freq: 1000
+# Should the trainer reload or always start training from scratch
+restart_from_checkpoint: True
 
 use_rs : True
 
