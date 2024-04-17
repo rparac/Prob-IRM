@@ -404,6 +404,7 @@ class Trainer:
                     "greedy": run_config.get("greedy", True),
                     "seed": run_config["seed"],
                     "synchronize": run_config["synchronize"],
+                    "checkpoint_freq": run_config["checkpoint_freq"],
                 }, logger)
 
         # TODO: make cleaner
