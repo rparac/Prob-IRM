@@ -15,7 +15,7 @@ num_envs: 10
 # How often is the model stored
 checkpoint_freq: 1000
 # Should the trainer reload or always start training from scratch
-restart_from_checkpoint: True
+restart_from_checkpoint: False
 
 use_rs : True
 
@@ -26,3 +26,4 @@ rm_learner_kws:
   n_phi_cost: 1
   ex_penalty_multiplier: 2
   min_penalty: 2
+  cross_entropy_threshold: 0.5
