@@ -24,7 +24,10 @@ class Trainer:
         self.agents = agents
 
         # Stores configuration used to run this experiment
-        self.env_config = OmegaConf.to_container(env_config)
+        if env_config is not None:
+            self.env_config = OmegaConf.to_container(env_config)
+        else:
+            self.env_config = None
 
         self.total_steps = 0
         self.test_episode = 0
