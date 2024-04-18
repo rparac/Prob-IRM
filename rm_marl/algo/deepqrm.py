@@ -57,9 +57,11 @@ class DeepQRM(Algo):
             temperature: float = 50.0,
             optimizer_cls: Type[Optimizer] = AdamW,
             optimizer_kws: dict = None,
+            policy_reset_method: str = 'default',
             seed: int = 0,
             use_crm: bool = False,
             num_rm_states: int = 1,
+            max_rm_states: int = 15,
     ):
 
         super().__init__()
@@ -71,6 +73,7 @@ class DeepQRM(Algo):
         self._layers_size = policy_layer_size
         self._num_actions = action_space.n
         self._num_rm_states = num_rm_states
+        self._max_rm_states = max_rm_states
 
         # PRNGs
         self._curr_seed = seed
@@ -104,6 +107,7 @@ class DeepQRM(Algo):
         self._epsilon_start = epsilon_start
         self._epsilon_end = epsilon_end
         self._epsilon_decay = epsilon_decay
+        self._policy_reset_method = policy_reset_method
 
         # Statistics
         self._policy_age = 0
@@ -134,7 +138,7 @@ class DeepQRM(Algo):
         if self._use_crm:
             return CRMNetwork(
                 self._dim_obs,
-                self._num_rm_states,
+                self._max_rm_states,  # Max number of allowed RM states is used due to padding
                 self._num_policy_layers,
                 self._layers_size,
                 self._num_actions,
@@ -149,10 +153,10 @@ class DeepQRM(Algo):
 
     def _init_q_network_pair(self):
         """
-        Initialize a pair of Q-network
+        Initialize a pair of Q-networks
 
         Specifically, this method returns a pair of two Q-networks, where the first can be used as a policy
-        network for any given RM state, while the second can be used as its associated target network.
+        network for any given RM state, while the second can be used as its associated target network (DDQN).
 
         Returns
         -------
@@ -178,6 +182,28 @@ class DeepQRM(Algo):
         target_network.requires_grad_(False)
 
         return DeepQRM.RMStatePolicy(policy_network, policy_optimizer, target_network)
+
+    def _reset_q_networks(self, *, method):
+
+        assert method in ['sum_gaussian', 'random_init'], f'Unrecognized reset method: "{method}"'
+
+        if method == 'sum_gaussian':
+
+            for q_net, _, t_net in self._q_networks.values():
+
+                with torch.no_grad():
+
+                    for param in q_net.parameters():
+                        std_dev, mean = torch.std_mean(param)
+                        gaussian_noise = ((0.015 * std_dev) ** 0.5) * torch.randn_like(param) + mean
+                        param.add_(gaussian_noise)
+
+        elif method == 'random_init':
+
+            self._init_q_networks()
+
+        else:
+            assert False, f'Unrecognized method: "{method}"'
 
     def _update_target_networks(self):
         """
@@ -380,12 +406,33 @@ class DeepQRM(Algo):
             return self._np_random.choice(best_actions)
 
     def _vectorize(self, u):
+        """
+        Return a vector representation of the given RM state
+
+        If the RM state is represented as a simple integer, its one-hot encoding its returned.
+        Otherwise, if the RM is already a vector, it is simply converted to a PyTorch tensor.
+
+        In any case, the returned representation is padded to the maximum number of allowed RM states, as specified
+        when the DeepQRM instance was initialized.
+
+        Parameters
+        ----------
+        u The RM state representation that needs to be vectorized
+
+        Returns
+        -------
+        A torch.Tensor instance containing the vector representation of the given RM state
+
+        """
+        padded_rm_state = torch.zeros(self._max_rm_states, device=self.device, dtype=torch.float32)
+
         if isinstance(u, int):
-            rm_state = torch.zeros(self._num_rm_states, device=self.device, dtype=torch.float32)
-            rm_state[u] = 1
+            padded_rm_state[u] = 1
         else:
             rm_state = torch.tensor(u, device=self.device, dtype=torch.float32)
-        return rm_state
+            padded_rm_state[:len(rm_state)] = rm_state
+
+        return padded_rm_state
 
     def reset(self, rm: RewardMachine, **kwargs):
         """
@@ -396,9 +443,18 @@ class DeepQRM(Algo):
 
         """
 
+        assert len(rm.states) < self._max_rm_states, f'New RM contains to many states: {len(rm.states)} > {self._max_rm_states}'
+
         # Clear the sub-policies
         self._num_rm_states = len(rm.states)
-        self._init_q_networks()
+
+        if self._policy_reset_method != 'default':
+            self._reset_q_networks(method=self._policy_reset_method)
+        else:
+            if self._use_crm:
+                self._reset_q_networks(method='sum_gaussian')
+            else:
+                self._reset_q_networks(method='random_init')
 
         # Clear replay memory
         self._init_replay_memory()
