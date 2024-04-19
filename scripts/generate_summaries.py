@@ -61,6 +61,6 @@ if __name__ == "__main__":
     write_tagged_results(grouped_result, tag_column_name="tag", output_dir=args.output)
     print("Results are written")
 
-    # env_grouped_results = aggregate_by_env(all_df)
-    # write_tagged_results(env_grouped_results, tag_column_name="tag_without_env", output_dir="eval/summary")
+    env_grouped_results = aggregate_by_env(all_df)
+    write_tagged_results(env_grouped_results, tag_column_name="tag_without_env", output_dir="eval/summary")
     # print(f"Results are written")
