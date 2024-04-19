@@ -47,6 +47,10 @@ def run_pbs(args, name):
 
     # generate scripts
     pbs_out = f"{script_directory}/{name}.pbs"
+    containing_directory = os.path.dirname(pbs_out)
+    if not os.path.exists(containing_directory):
+        os.makedirs(containing_directory)
+
     with open(pbs_out, 'w') as f:
         f.write(pbs_script_base)
         f.write('\n')
