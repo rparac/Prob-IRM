@@ -7,7 +7,7 @@ noise_levels=(1 0.99 0.95 0.9)
 for seed in "${seeds[@]}"; do
   for noise_level in "${noise_levels[@]}"; do
     directory="coffee_error"
-    name="${seed}_${noise_level}"
+    name="${directory}_${seed}_${noise_level}"
     # run noise on all three
     python submit_rcs_script.py ${directory} ${name} \
       dqrm_coffee_world.py env/office-world@env=deliver_coffee run=dqrm_coffee_world \

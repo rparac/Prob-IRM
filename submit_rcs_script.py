@@ -32,8 +32,6 @@ def get_pbs_script_base(experiment_directory: str):
     return f"""#!/bin/bash
     #PBS -l walltime=24:00:00
     #PBS -l select=1:ncpus=4:mem=200Gb
-    #PBS -e $HOME/rm-marl/{experiment_directory}/$PBS_JOBID.err
-    #PBS -o $HOME/rm-marl/{experiment_directory}/$PBS_JOBID.out
 
     eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
 
@@ -53,9 +51,6 @@ def run_pbs(args, name, experiment_directory):
     pbs_out = f"{script_directory}/{experiment_directory}/{name}.pbs"
     if not os.path.exists(f"{script_directory}/{experiment_directory}"):
         os.makedirs(f"{script_directory}/{experiment_directory}")
-
-    if not os.path.exists(experiment_directory):
-        os.makedirs(experiment_directory)
 
     with open(pbs_out, 'w') as f:
         f.write(get_pbs_script_base(experiment_directory))
