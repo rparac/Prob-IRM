@@ -32,7 +32,7 @@ class ProbFFNSLLearner(RMLearner):
     """
 
     def __init__(self, agent_id, edge_cost=2, n_phi_cost=2, ex_penalty_multiplier=1, min_penalty=1,
-                 cross_entropy_threshold=0.5, use_cross_entroy=True):
+                 cross_entropy_threshold=0.5, use_cross_entropy=True):
         super().__init__(agent_id)
 
         # self.goal_examples = ISAExampleContainer()
@@ -60,7 +60,7 @@ class ProbFFNSLLearner(RMLearner):
         self.rm_recognize_threshold = 0.4  # 0.6  # 0.35
         self.cross_entropy_threshold = cross_entropy_threshold
         # TODO: remove after experiment with cross entropy
-        self.use_cross_entropy = use_cross_entroy
+        self.use_cross_entropy = use_cross_entropy
 
         # Debug tracking
         self.num_pos_ex = 0
