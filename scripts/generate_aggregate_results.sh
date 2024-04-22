@@ -1,9 +1,11 @@
 #!/bin/bash
 cd ..
 
-log_dir_reg=('/gpfs/home/rp218/rm-marl/saved_logs/coffee_error_*' '/gpfs/home/rp218/rm-marl/saved_logs/all_deliver_coffee_*')
-output_dir=('/gpfs/home/rp218/rm-marl/saved_logs/coffee_error_' '/gpfs/home/rp218/rm-marl/saved_logs/all_deliver_coffee_')
+base_dirs=('/gpfs/home/rp218/rm-marl/saved_logs/')
 
-for i in "${!log_dir_reg[@]}"; do
-  python submit_rcs_script.py "generate_summaries" scripts/generate_summaries.py ${log_dir_reg[i]} ${output_dir[i]}
+directory="generate_summaries"
+for base_dir in "${base_dirs[@]}"; do
+  name="generate_summaries"
+  python submit_rcs_script.py ${name} ${directory} \
+    script/generate_summaries.py ${base_dir}
 done
