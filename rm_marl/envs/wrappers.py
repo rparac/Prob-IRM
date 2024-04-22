@@ -137,7 +137,7 @@ class LabelingFunctionWrapper(gym.Wrapper):
             return p_true_and_false_pred / p_false_pred
 
     @abc.abstractmethod
-    def get_labels(self, obs: dict, prev_obs: dict):
+    def get_labels(self, info: dict):
         raise NotImplementedError("get_labels")
 
     @abc.abstractmethod
@@ -146,15 +146,13 @@ class LabelingFunctionWrapper(gym.Wrapper):
 
     def step(self, action):
         observation, reward, terminated, truncated, info = super().step(action)
-        info["labels"] = self.get_labels(observation, self.prev_obs)
-        self.prev_obs = copy.deepcopy(observation)
+        info["labels"] = self.get_labels(info)
         return observation, reward, terminated, truncated, info
 
     def reset(self, **kwargs):
         """Resets the environment with kwargs."""
         obs, info = super().reset(**kwargs)
-        info["labels"] = self.get_labels(obs, None)
-        self.prev_obs = copy.deepcopy(obs)
+        info["labels"] = self.get_labels(info)
         return obs, info
 
     """
@@ -178,10 +176,10 @@ class NoisyLabelingFunctionComposer(LabelingFunctionWrapper):
         super().__init__(label_funs[0].env, noisy=True)
         self.label_funs = label_funs
 
-    def get_labels(self, obs: dict, prev_obs: dict):
+    def get_labels(self, info):
         labels = {}
         for label_fun in self.label_funs:
-            labels.update(label_fun.get_labels(obs, prev_obs))
+            labels.update(label_fun.get_labels(info))
         return labels
 
     def get_all_labels(self):

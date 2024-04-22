@@ -117,8 +117,9 @@ class RendezVousLabelingFunctionWrapper(LabelingFunctionWrapper):
             "g2"  # Agent 2 reached its goal
         ]
 
-    def get_labels(self, obs: dict, prev_obs: dict):
+    def get_labels(self, info):
         """Returns a modified observation."""
+        raise NotImplementedError("Please pass relevant information into info parameter before using this function")
 
         agent_locations = obs
         prev_agent_locations = prev_obs or {}

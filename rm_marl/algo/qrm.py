@@ -66,8 +66,9 @@ class QRM(Algo):
 
     @staticmethod
     def _to_hashable_state_(state):
+        dict_state = {k: v if isinstance(v, int) else tuple(v) for k, v in state.items()}
         return tuple(
-            sorted({k: tuple(v) for k, v in state.items()}.items(), key=lambda i: i[0])
+            sorted(dict_state.items(), key=lambda i: i[0])
         )
 
     @staticmethod
