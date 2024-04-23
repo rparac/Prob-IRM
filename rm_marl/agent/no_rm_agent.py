@@ -18,11 +18,12 @@ class NoRMAgent(Agent):
 
     def reset(self, seed: Optional[int] = None):
         self.u = 0
+        self.algo.on_env_reset()
 
     def action(self, state, greedy: bool = False, testing: bool = False):
         return self.algo.action(state, self.u, greedy=greedy, testing=testing)
 
-    def learn(self, state, u, action, reward, done, next_state, next_u):
+    def learn(self, state, u, action, reward, done, next_state, next_u, **kwargs):
         return self.algo.learn(state, u, action, reward, done, next_state, next_u)
 
     def update_agent(

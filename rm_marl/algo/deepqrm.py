@@ -27,10 +27,20 @@ import os
 import os.path
 
 from ._base import Algo
-from .deepq.memory import ReplayMemoryRM
 from .deepq.networks import DeepQNetwork, CRMNetwork
 from ..reward_machine import RewardMachine
+from ..utils.memory import ExperienceBuffer
 
+
+DeepQExperience = namedtuple('DeepQExperience', [
+    'u',
+    'state',
+    'action',
+    'reward',
+    'done',
+    'new_state',
+    'new_u'
+])
 
 class DeepQRM(Algo):
 
@@ -120,7 +130,7 @@ class DeepQRM(Algo):
             -1 * self._policy_age / self._epsilon_decay)
 
     def _init_memory(self):
-        return ReplayMemoryRM(self._replay_size, self._curr_seed)
+        return ExperienceBuffer(self._replay_size, self._curr_seed)
 
     def _init_q_network(self):
         """
@@ -208,11 +218,11 @@ class DeepQRM(Algo):
         action = torch.as_tensor([action], device=self.device)
 
         # Add experience to the replay buffer
+        experience = DeepQExperience(u, flat_state, action, reward, done, flat_next_state, next_u)
         if self._use_crm:
-            self._replay_memory[None].push(flat_state, u, action, reward, done, flat_next_state,
-                                           next_u)
+            self._replay_memory[None].push(experience)
         else:
-            self._replay_memory[u].push(flat_state, u, action, reward, done, flat_next_state, next_u)
+            self._replay_memory[u].push(experience)
 
         # Check if the sub-policies need to be trained
         self._policies_train_timer -= 1
@@ -386,7 +396,11 @@ class DeepQRM(Algo):
             rm_state = torch.tensor(u, device=self.device, dtype=torch.float32)
         return rm_state
 
-    def reset(self, rm: RewardMachine, **kwargs):
+    def on_env_reset(self, *args, **kwargs):
+        # Nothing to do
+        return
+
+    def on_rm_reset(self, rm: RewardMachine, **kwargs):
         """
         Resets the DeepQRM policy to its initial state
 
@@ -508,6 +522,6 @@ class DeepQRM(Algo):
 
     def _init_replay_memory(self):
         if self._use_crm:
-            self._replay_memory = {None: ReplayMemoryRM(self._replay_size, self._curr_seed)}
+            self._replay_memory = {None: ExperienceBuffer(self._replay_size, self._curr_seed)}
         else:
             self._replay_memory = defaultdict(self._init_memory)

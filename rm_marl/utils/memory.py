@@ -4,23 +4,13 @@ from collections import namedtuple, deque
 from rm_marl.algo.deepq.exceptions import NotEnoughExperiencesError
 
 
-class ReplayMemoryRM:
+class ExperienceBuffer:
     """
     Experience Replay Memory buffer implementation for Reward Machines
 
     This class implements the circular buffer used to implement the Experience Replay mechanism described by
     Minh et al. in their seminal paper "Playing Atari with Deep Reinforcement Learning" from 2015.
     """
-
-    Experience = namedtuple('Experience', [
-        'u',
-        'state',
-        'action',
-        'reward',
-        'done',
-        'new_state',
-        'new_u'
-    ])
 
     def __init__(self, size, seed):
         """
@@ -30,6 +20,7 @@ class ReplayMemoryRM:
 
         Parameters
         ----------
+        experience : collections.namedtuple containing the memory contents
         size The maximum capacity of the replay memory, in number of experience samples
 
         """
@@ -42,26 +33,15 @@ class ReplayMemoryRM:
     def __len__(self):
         return len(self._buffer)
 
-    def push(self, state, u, action, reward, done, new_state, new_u):
+    def push(self, experience):
         """
         Push a new experience sample into the replay memory
 
         Parameters
         ----------
-        state       The environmental state where the experience began
-        u           The reward machine state where the experience began
-        action      The action taken by the agent
-        reward      The reward obtained by the agent in this experience
-        done        True if the episode ended after this experience
-        new_state   The new state reached by the agent after executing its action
-        new_u       The new state reached by the agent's RM after this experience
+        experience : namedtuple containing the experience
         """
-
-        assert new_state is not None, 'Tried to push an experience leading to a "None" new env state'
-        assert new_u is not None, 'Tried to push an experience leading to a "None" new RM state'
-
-        experience_sample = ReplayMemoryRM.Experience(u, state, action, reward, done, new_state, new_u)
-        self._buffer.append(experience_sample)
+        self._buffer.append(experience)
 
     def sample(self, batch_size):
         """
