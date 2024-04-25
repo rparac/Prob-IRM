@@ -1,4 +1,8 @@
 import abc
+from dataclasses import dataclass
+from typing import Any, Union
+
+import numpy as np
 
 
 class Algo(abc.ABC):
@@ -18,7 +22,11 @@ class Algo(abc.ABC):
         raise NotImplementedError("action")
 
     @abc.abstractmethod
-    def reset(self, rm, *args, **kwargs):
+    def on_env_reset(self):
+        raise NotImplementedError("on_env_reset")
+
+    @abc.abstractmethod
+    def on_rm_reset(self, rm, *args, **kwargs):
         """
         We require a rm as NN implementations need
         to know its dimension to properly initialize

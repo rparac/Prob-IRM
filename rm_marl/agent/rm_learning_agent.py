@@ -111,7 +111,7 @@ class RewardMachineLearningAgent(Agent):
                     self.rm = candidate_rm
                     for agent in self.rm_agents.values():
                         agent.rm = candidate_rm
-                        agent.algo.reset(self.rm)
+                        agent.algo.on_rm_reset(self.rm)
                     updated_rm = candidate_rm
                     # We can always interrupt if a new rm is learned
                     # TODO: check if we need the interrupt variable; looks like it is fully captured by rm_updated

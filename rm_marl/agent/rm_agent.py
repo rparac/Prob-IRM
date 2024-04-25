@@ -34,6 +34,7 @@ class RewardMachineAgent(Agent):
 
     def reset(self, seed: Optional[int] = None, **kwargs):
         self.u = self.rm_transitioner.get_initial_state()
+        self.algo.on_env_reset()
 
     def action(self, state, greedy: bool = False, **algo_args):
         return self.algo.action(state, self.u, greedy=greedy, **algo_args)

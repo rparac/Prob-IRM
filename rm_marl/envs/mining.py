@@ -175,8 +175,12 @@ class MiningLabelingFunctionWrapper(LabelingFunctionWrapper):
         super().__init__(env)
         self.env = env
 
-    def get_labels(self, obs: dict = None, prev_obs: dict = None):
+    def get_labels(self, info):
         """Returns a modified observation."""
+        # This environment should be implemented differently.
+        #  This process would simplify the labeling function wrapper. Not fixed immediately as I am uncertain whether we
+        #  will use this
+        raise NotImplementedError("Please pass relevant information into info parameter before using this function")
         labels = []
 
         unwrapped_obs = gym.spaces.unflatten(self.env.unflatten_obs_space, obs["A1"])

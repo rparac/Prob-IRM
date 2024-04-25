@@ -44,7 +44,7 @@ class InvertedPendulumLabelingFunctionWrapper(LabelingFunctionWrapper):
     def __init__(self, env):
         super().__init__(env)
 
-    def get_labels(self, obs: dict, prev_obs: dict):
+    def get_labels(self, info: dict):
         return []
 
 

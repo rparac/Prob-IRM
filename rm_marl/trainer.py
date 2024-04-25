@@ -2,9 +2,10 @@ import copy
 import datetime as dt
 import json
 import os
+import shutil
 import warnings
 from collections import defaultdict
-from typing import Dict, List, Union
+from typing import Dict, List, Union, DefaultDict, Any
 
 import joblib
 # import joblib
@@ -15,6 +16,7 @@ from tqdm import tqdm
 from PIL import Image, ImageDraw
 
 from rm_marl.utils.logging import create_rm_state_logs, create_learnt_rm_logs
+from rm_marl.utils.trainer_utils import TrainState
 
 
 class Trainer:
@@ -45,11 +47,23 @@ class Trainer:
         self.rm_relearned_episodes: Dict[str, List[int]] = {}
 
     def run(self, run_config: Union[dict, DictConfig]):
-        log_dir = os.path.join(
+        base_dir = os.path.join(
             run_config["log_dir"],
             run_config["name"],
-            dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
         )
+        checkpointed_train_state = None
+        if run_config["restart_from_checkpoint"] and os.path.isdir(base_dir):
+            # Get the last run with the same name
+            log_dir = os.path.join(
+                base_dir,
+                max(os.listdir(base_dir)),
+            )
+            checkpointed_train_state = self.load_checkpoint(log_dir)
+        else:
+            log_dir = os.path.join(
+                base_dir,
+                dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+            )
         logger = SummaryWriter(log_dir)
 
         config_path = os.path.join(log_dir, "run_config.json")
@@ -64,15 +78,15 @@ class Trainer:
                 json.dump(dict(self.env_config), f, indent=4)
 
         try:
-            result = self._run(self.envs, run_config, logger)
+            result = self._run(self.envs, run_config, logger, checkpointed_train_state)
         except KeyboardInterrupt:
             result = None
 
         if run_config["extra_debug_information"]:
-            create_rm_state_logs(log_dir, logger, run_config["total_episodes"], self.test_episode,
-                                 run_config["testing_freq"], self.last_timestep_train_info,
-                                 self.last_timestep_test_info,
-                                 self.all_recorded_rm_states, self.rm_relearned_episodes)
+        #     create_rm_state_logs(log_dir, logger, run_config["total_episodes"], self.test_episode,
+        #                          run_config["testing_freq"], self.last_timestep_train_info,
+        #                          self.last_timestep_test_info,
+        #                          self.all_recorded_rm_states, self.rm_relearned_episodes)
             create_learnt_rm_logs(log_dir, logger)
 
         _ = [e.close() for e in self.envs.values()]
@@ -82,21 +96,26 @@ class Trainer:
 
         return result
 
-    def _run(self, envs: dict, run_config: dict, logger: SummaryWriter):
-        base_seed = run_config["seed"]
+    def _run(self, envs: dict, run_config: dict, logger: SummaryWriter,
+             train_state=None):
 
-        steps = defaultdict(list)
-        cumulative_steps = defaultdict(list)
-        losses = defaultdict(list)
-        rewards = defaultdict(list)
-        shaping_rewards = defaultdict(list)
-        successes = defaultdict(int)
-        failures = defaultdict(int)
-        timeouts = defaultdict(int)
+        train_state = train_state or defaultdict(None)
+
+        episodes_completed = train_state.get("episodes_completed") or 0
+        steps = train_state.get("steps") or defaultdict(list)
+        timeouts = train_state.get("timeouts") or defaultdict(int)
+        failures = train_state.get("failures") or defaultdict(int)
+        successes = train_state.get("successes") or defaultdict(int)
+        shaping_rewards = train_state.get("shaping_rewards") or defaultdict(list)
+        rewards = train_state.get("rewards") or defaultdict(list)
+        losses = train_state.get("losses") or defaultdict(list)
+        cumulative_steps = train_state.get("cumulative_steps") or defaultdict(list)
 
         _ = [a.set_log_folder(os.path.join(logger.log_dir, aid)) for aid, a in self.agents.items()]
 
-        for episode in tqdm(range(1, 1 + run_config["total_episodes"])):
+        for episode in tqdm(range(episodes_completed + 1, 1 + run_config["total_episodes"]),
+                            initial=episodes_completed + 1,
+                            total=run_config["total_episodes"]):
 
             if run_config["training"] and run_config["extra_debug_information"]:
                 for aid, a in self.agents.items():
@@ -117,7 +136,7 @@ class Trainer:
             # seperate for each env_id
             last_timestep_in_u = {}
 
-            seed = base_seed + episode - 1
+            seed = run_config["seed"] + episode - 1
 
             # reset and initial setup
             dones = {env_id: False for env_id in envs.keys()}
@@ -383,6 +402,11 @@ class Trainer:
                         episode if run_config["training"] else self.test_episode
                     )
 
+            if episode % run_config["checkpoint_freq"] == 0:
+                train_state = TrainState(episode, steps, cumulative_steps, losses, rewards, shaping_rewards,
+                                         successes, failures, timeouts)
+                self.save_checkpoint(logger.log_dir, train_state)
+
             if run_config["training"] and episode % run_config["testing_freq"] == 0:
                 self._run(self.testing_envs, {
                     "training": False,
@@ -393,6 +417,7 @@ class Trainer:
                     "greedy": run_config.get("greedy", True),
                     "seed": run_config["seed"],
                     "synchronize": run_config["synchronize"],
+                    "checkpoint_freq": run_config["checkpoint_freq"],
                 }, logger)
 
         # TODO: make cleaner
@@ -499,6 +524,29 @@ class Trainer:
                 r = agent.rm.get_reward(u, next_u)
 
                 agent.learn(state, u, action, r, done, next_state, next_u, agent_id=aid)
+
+    def save_checkpoint(self, path, train_state: TrainState):
+        checkpoint_data = {
+            "trainer": self,
+            "train_state": train_state,
+        }
+
+        checkpoint_path_temp = os.path.join(path, "temp_checkpoint.pkl")
+        joblib.dump(checkpoint_data, checkpoint_path_temp)
+        checkpoint_path = os.path.join(path, "checkpoint.pkl")
+        # Move is used to reduce the chance of being in an inconsistent state (due to an interrupt)
+        shutil.move(checkpoint_path_temp, checkpoint_path)
+
+    def load_checkpoint(self, path):
+        if "checkpoint.pkl" not in path:
+            path = os.path.join(path, "checkpoint.pkl")
+        if not os.path.exists(path):
+            return None
+
+        last_run = joblib.load(path)
+        # Replace the state dictionary
+        self.__dict__ = last_run["trainer"].__dict__
+        return last_run["train_state"]
 
     def save(self, path):
         trainer_path = os.path.join(path, "trainer.pkl")

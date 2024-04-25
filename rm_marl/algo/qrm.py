@@ -42,7 +42,7 @@ class QRM(Algo):
         self._policy_age = 0
 
         # Q-table doesn't need RM information
-        self.reset(rm=None, seed=seed)
+        self.on_rm_reset(rm=None, seed=seed)
 
     @property
     def epsilon(self):
@@ -55,7 +55,11 @@ class QRM(Algo):
     def _q_sa_constructor(self):
         return defaultdict(self._q_a_constructor)
 
-    def reset(self, rm: Optional[RewardMachine], seed: Optional[int] = None, **kwargs):
+    def on_env_reset(self, *args, **kwargs):
+        # Nothing to do
+        pass
+
+    def on_rm_reset(self, rm: Optional[RewardMachine], seed: Optional[int] = None, **kwargs):
         seed = self._seed if seed is None else seed
         if seed is not None:
             self._np_random, seed = seeding.np_random(seed)
@@ -66,8 +70,9 @@ class QRM(Algo):
 
     @staticmethod
     def _to_hashable_state_(state):
+        dict_state = {k: v if isinstance(v, int) else tuple(v) for k, v in state.items()}
         return tuple(
-            sorted({k: tuple(v) for k, v in state.items()}.items(), key=lambda i: i[0])
+            sorted(dict_state.items(), key=lambda i: i[0])
         )
 
     @staticmethod

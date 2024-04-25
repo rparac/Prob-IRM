@@ -1,7 +1,7 @@
 """
 Quick script to run hydra with condor launcher
 Run the file as
-python submit_script.py <NAME> ../dqrm_coffee_world.py <ARGS>
+python submit_script.py <DIRECTORY> <NAME> ../dqrm_coffee_world.py <ARGS>
 
 """
 import os
@@ -13,42 +13,47 @@ from typing import List
 
 script_directory = "outputs"
 
-pbs_script_gpu = """#!/bin/bash
-#PBS -l walltime=48:00:00
-#PBS -l select=1:ncpus=4:mem=200Gb:ngpus=1:gpu_type=A100
 
-eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
+# pbs_script_gpu = """#!/bin/bash
+# #PBS -l walltime=48:00:00
+# #PBS -l select=1:ncpus=4:mem=200Gb:ngpus=1:gpu_type=A100
+#
+# eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
+#
+# export PATH=$PATH:/gpfs/home/rp218/bin
+#
+# module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
+#
+# cd ${HOME}/rm-marl
+# conda activate rm_marl
+# """
 
-export PATH=$PATH:/gpfs/home/rp218/bin
+def get_pbs_script_base(experiment_directory: str):
+    return f"""#!/bin/bash
+    #PBS -l walltime=24:00:00
+    #PBS -l select=1:ncpus=4:mem=200Gb
 
-module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
+    eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
 
-cd ${HOME}/rm-marl
-conda activate rm_marl
-"""
+    export PATH=$PATH:/gpfs/home/rp218/bin
 
-pbs_script_base = """#!/bin/bash
-#PBS -l walltime=24:00:00
-#PBS -l select=1:ncpus=4:mem=200Gb
+    module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 
-eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
-
-export PATH=$PATH:/gpfs/home/rp218/bin
-
-module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
-
-cd ${HOME}/rm-marl
-conda activate rm_marl
-"""
+    cd $HOME/rm-marl
+    conda activate rm_marl
+    """
 
 
-def run_pbs(args, name):
+def run_pbs(args, name, experiment_directory):
     python_run = f"python {' '.join(args)}"
 
     # generate scripts
-    pbs_out = f"{script_directory}/{name}.pbs"
+    pbs_out = f"{script_directory}/{experiment_directory}/{name}.pbs"
+    if not os.path.exists(f"{script_directory}/{experiment_directory}"):
+        os.makedirs(f"{script_directory}/{experiment_directory}")
+
     with open(pbs_out, 'w') as f:
-        f.write(pbs_script_base)
+        f.write(get_pbs_script_base(experiment_directory))
         f.write('\n')
         f.write(python_run)
 
@@ -59,8 +64,9 @@ def run_pbs(args, name):
 
 if __name__ == "__main__":
     arguments = sys.argv
-    name = arguments[1]
-    args = arguments[2:]
+    directory = arguments[1]
+    name = arguments[2]
+    args = arguments[3:]
 
     os.makedirs(script_directory, exist_ok=True)
-    run_pbs(args, name)
+    run_pbs(args, name, directory)

@@ -4,6 +4,8 @@ import os
 from typing import List
 
 import numpy as np
+import torch
+import torch.nn.functional as F
 
 from rm_marl.reward_machine import RewardMachine
 from rm_marl.rm_learning import RMLearner
@@ -29,7 +31,8 @@ class ProbFFNSLLearner(RMLearner):
     # min_penalty - the penalty threshold for discarding an ILASP example - makes the ILASP task simpler
     """
 
-    def __init__(self, agent_id, edge_cost=2, n_phi_cost=2, ex_penalty_multiplier=1, min_penalty=1):
+    def __init__(self, agent_id, edge_cost=2, n_phi_cost=2, ex_penalty_multiplier=1, min_penalty=1,
+                 cross_entropy_threshold=0.5, use_cross_entropy=True):
         super().__init__(agent_id)
 
         # self.goal_examples = ISAExampleContainer()
@@ -55,6 +58,9 @@ class ProbFFNSLLearner(RMLearner):
         # The percentage of traces that need to conform to the reward
         # machine to avoid relearning
         self.rm_recognize_threshold = 0.4  # 0.6  # 0.35
+        self.cross_entropy_threshold = cross_entropy_threshold
+        # TODO: remove after experiment with cross entropy
+        self.use_cross_entropy = use_cross_entropy
 
         # Debug tracking
         self.num_pos_ex = 0
@@ -66,12 +72,16 @@ class ProbFFNSLLearner(RMLearner):
         # TODO: delete after debugging is finished
         self._debug_ratio = []
 
+        # TODO: delete if cross entropy performs better
         self._rm_goal_trace_success = 0
         self._rm_incomplete_trace_success = 0
         self._rm_dend_trace_success = 0
 
+        self._rm_cross_entropy_sum = 0
+
         # TODO: We might want to make this more efficient (if there are repeated traces)
         # self._seen_traces: List[TraceTracker] = []
+
         self._seen_positive_traces: List[TraceTracker] = []
         self._seen_negative_traces: List[TraceTracker] = []
         self._seen_incomplete_traces: List[TraceTracker] = []
@@ -96,13 +106,20 @@ class ProbFFNSLLearner(RMLearner):
         else:
             self._seen_incomplete_traces.append(copy.deepcopy(trace))
 
-        self._update_trace_counters(curr_rm, curr_state, trace)
+        if not self.use_cross_entropy:
+            self._update_trace_counters(curr_rm, curr_state, trace)
+        else:
+            self._new_update_trace_counters(curr_rm, curr_state, trace)
+
         if terminated or truncated:
             self._update_examples(trace)
         elif curr_rm.is_state_terminal(curr_state):
             self._update_examples(trace)
 
-        if not self._should_relearn_rm() and not self.overriden_with_debugger:
+
+        # if not self._should_relearn_rm() and not self.overriden_with_debugger:
+        should_relearn = self._new_should_relearn_rm() if self.use_cross_entropy else self._should_relearn_rm()
+        if not should_relearn and not self.overriden_with_debugger:
             return None
 
         candidate_rm = self._update_reward_machine(curr_rm)
@@ -244,6 +261,14 @@ class ProbFFNSLLearner(RMLearner):
     #             ret[obs.label] = None
     #     return list(ret.keys())
 
+    def _new_should_relearn_rm(self) -> bool:
+        num_seen_traces = len(self._seen_positive_traces) + len(self._seen_incomplete_traces) + len(
+            self._seen_negative_traces)
+        if num_seen_traces < self.last_relearning_trace_num + self.min_rm_num_episodes:
+            return False
+
+        return self._rm_cross_entropy_sum / num_seen_traces > self.cross_entropy_threshold
+
     def _should_relearn_rm(self) -> bool:
         num_seen_traces = len(self._seen_positive_traces) + len(self._seen_incomplete_traces) + len(
             self._seen_negative_traces)
@@ -266,6 +291,29 @@ class ProbFFNSLLearner(RMLearner):
             return True
 
         return False
+
+    def _new_update_trace_counters(self, curr_rm, curr_state, trace):
+        # Set the expected belief based on the trace outcome
+        # accepting, rejecting, incomplete
+        true_vec = [0, 0, 0]
+        accepting_idx, rejecting_idx, incomplete_idx = 0, 1, 2
+        if trace.is_complete:
+            if trace.is_positive:
+                true_vec[accepting_idx] = 1
+            else:
+                true_vec[rejecting_idx] = 1
+        else:
+            true_vec[incomplete_idx] = 1
+        true_vec = torch.Tensor(true_vec)
+
+        pred_vec = [0, 0, 0]
+        pred_vec[accepting_idx] = curr_rm.accepting_state_prob(curr_state)
+        pred_vec[rejecting_idx] = curr_rm.rejecting_state_prob(curr_state)
+        pred_vec[incomplete_idx] = 1 - curr_rm.accepting_state_prob(curr_state) - curr_rm.rejecting_state_prob(
+            curr_state)
+        pred_vec = torch.Tensor(pred_vec)
+
+        self._rm_cross_entropy_sum += F.cross_entropy(pred_vec, true_vec)
 
     def _update_trace_counters(self, curr_rm, curr_state, trace):
         self._rm_cnt_since_restart += 1
@@ -293,13 +341,19 @@ class ProbFFNSLLearner(RMLearner):
         self._rm_incomplete_trace_success = 0
         self._rm_dend_trace_success = 0
 
+        self._rm_goal_trace_success = 0
+
         transitioner = ProbRMTransitioner(candidate_rm)
         for trace in itertools.chain(self._seen_positive_traces, self._seen_negative_traces,
                                      self._seen_incomplete_traces):
             curr_state = transitioner.get_initial_state()
             for event in trace.trace:
                 curr_state = transitioner.get_next_state(curr_state, event)
-            self._update_trace_counters(candidate_rm, curr_state, trace)
+
+            if not self.use_cross_entropy:
+                self._update_trace_counters(candidate_rm, curr_state, trace)
+            else:
+                self._new_update_trace_counters(candidate_rm, curr_state, trace)
 
         # TODO: return after hacky test
         # if self._should_relearn_rm():
