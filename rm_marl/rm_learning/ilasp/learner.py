@@ -169,6 +169,7 @@ class ILASPLearner(RMLearner):
             True,  # use_compressed_traces
             True,  # avoid_learning_only_negative
             False,  # prioritize_optimal_solutions
+            False,  # use_state_id_restrictions - not needed in an iterative procedure
             None,  # bin directory (ILASP is on PATH)
         )
 

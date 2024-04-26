@@ -35,7 +35,8 @@ if __name__ == "__main__":
                         dend_examples, inc_examples, ".", args.task_filename,
                         args.symmetry_breaking_method, config["max_disjunction_size"], config["learn_acyclic"],
                         config["use_compressed_traces"], config["avoid_learning_only_negative"],
-                        config["prioritize_optimal_solutions"], binary_folder_name="../bin")
+                        config["prioritize_optimal_solutions"], use_state_id_restrictions=False,
+                        binary_folder_name="../bin")
 
     solve_ilasp_task(args.task_filename, args.solution_filename, binary_folder_name="../bin")
     automaton = parse_ilasp_solutions(args.solution_filename)

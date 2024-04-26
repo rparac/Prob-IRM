@@ -243,6 +243,7 @@ class ProbFFNSLLearner(RMLearner):
             use_compressed_traces=True,
             avoid_learning_only_negative=True,
             prioritize_optimal_solutions=False,
+            use_state_id_restrictions=True,  # states used need to be used in order
             binary_folder_name=None,
             n_phi_cost=self.n_phi_cost,
             edge_cost=self.edge_cost,
