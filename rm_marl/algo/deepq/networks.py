@@ -93,10 +93,11 @@ class DeepQNetwork(nn.Module):
 
 class SimpleQNetwork(nn.Module):
 
-    def __init__(self, dim_obs, max_rm_states, num_actions=4, *, lear_biases=False):
+    def __init__(self, dim_obs, max_rm_states, num_actions=4, *, learn_biases=False):
         super(SimpleQNetwork, self).__init__()
 
-        self._q_table = nn.Linear(dim_obs + max_rm_states, num_actions, bias=lear_biases)
+        self._q_table = nn.Linear(dim_obs + max_rm_states, num_actions, bias=learn_biases)
+        torch.nn.init.zeros_(self._q_table.weight)
 
     def forward(self, s, u):
 

@@ -27,7 +27,7 @@ import os
 import os.path
 
 from ._base import Algo
-from .deepq.networks import DeepQNetwork, CRMNetwork, OfficeQNetwork
+from .deepq.networks import DeepQNetwork, OfficeQNetwork, SimpleQNetwork
 from ..reward_machine import RewardMachine
 from ..utils.memory import ExperienceBuffer
 
@@ -69,6 +69,7 @@ class DeepQRM(Algo):
             optimizer_kws: dict = None,
             policy_reset_method: str = 'default',
             seed: int = 0,
+            use_simpleqnet: bool = False,
             use_crm: bool = False,
             use_dropout: bool = False,
             num_rm_states: int = 1,
@@ -97,8 +98,11 @@ class DeepQRM(Algo):
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+        # Q-Network related configuration
+        self._use_simpleqnet = use_simpleqnet
         self._use_crm = use_crm
         self._use_dropout = use_dropout
+
         # Mappings from RM states to RMStatePolicy instances
         self._init_q_networks()
 
@@ -163,6 +167,14 @@ class DeepQRM(Algo):
             #     self._layers_size,
             #     self._num_actions,
             # ).to(self.device)
+
+        if self._use_simpleqnet:
+            return SimpleQNetwork(
+                self._dim_obs,
+                self._max_rm_states,
+                num_actions=4,
+                learn_biases=False
+            )
 
         return DeepQNetwork(
             self._dim_obs,
@@ -255,7 +267,7 @@ class DeepQRM(Algo):
 
         # Add experience to the replay buffer
         experience = DeepQExperience(u, flat_state, action, reward, done, flat_next_state, next_u)
-        if self._use_crm:
+        if self._use_crm or self._use_simpleqnet:
             self._replay_memory[None].push(experience)
         else:
             self._replay_memory[u].push(experience)
@@ -353,7 +365,11 @@ class DeepQRM(Algo):
 
         # Compute the Q-values we expected to produce with our policy network
         expected_q_estimates = (self._gamma * next_states_values) + rewards
-        loss = nn.HuberLoss()(q_estimates, expected_q_estimates)
+
+        if self._use_crm:
+            loss = nn.HuberLoss()(q_estimates, expected_q_estimates)
+        else:
+            loss = nn.MSELoss()(q_estimates, expected_q_estimates)
 
         # Reset gradients to zero to avoid being influenced by previous batches
         optimizer.zero_grad()
@@ -392,7 +408,7 @@ class DeepQRM(Algo):
             dtype=torch.float,
             device=self.device
         )
-        if self._use_crm:
+        if self._use_crm or self._use_simpleqnet:
             # TODO: need to deal with string case
             rm_state = self._vectorize(u)
             action_values = self._q_networks[None].policy_network(flat_state, rm_state)
@@ -475,7 +491,7 @@ class DeepQRM(Algo):
         if self._policy_reset_method != 'default':
             self._reset_q_networks(method=self._policy_reset_method)
         else:
-            if self._use_crm:
+            if self._use_crm or self._use_simpleqnet:
                 self._reset_q_networks(method='sum_gaussian')
             else:
                 self._reset_q_networks(method='random_init')
