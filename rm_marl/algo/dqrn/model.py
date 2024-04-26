@@ -5,7 +5,7 @@ import gym
 import numpy as np
 import torch
 from torch.nn.utils.rnn import pad_sequence
-from torch.optim import Optimizer, AdamW
+from torch.optim import Optimizer, AdamW, RMSprop
 
 from rm_marl.algo import Algo
 from rm_marl.algo.dqrn.definitions import EpsilonAnnealingTimescale, DQRNExperience
@@ -14,6 +14,8 @@ from rm_marl.algo.dqrn.utils import embed_labels, get_annealed_exploration_rate
 from rm_marl.utils.math_utils import randargmax
 from rm_marl.utils.memory import ExperienceBuffer
 
+
+# TODO: Daniel doesn't start training until
 
 class DQRN(Algo):
     DQRNStatePolicy = namedtuple("DQRNStatePolicy", [
@@ -26,13 +28,14 @@ class DQRN(Algo):
                  obs_space: "gym.spaces.Space",
                  action_space: "gym.spaces.Discrete",
                  num_observables: int,
-                 seed: int,
-                 size: int,
-                 policy_train_freq: int,  # TODO: copy over
-                 target_update_freq: int,  # TODO: copy over
-                 er_batch_size: int = 8,  # batch size for the experience replay
+                 seed: int = 123,
+                 buffer_size: int = 500000,
+                 policy_train_freq: int = 1,
+                 target_update_freq: int = 1500,
+                 er_start_size: int = 100000, # size of experience replay before experiences can be sampled
+                 er_batch_size: int = 32,  # batch size for the experience replay
                  gamma: float = 0.99,
-                 optimizer_cls: Type[Optimizer] = AdamW,
+                 optimizer_cls: Type[Optimizer] = RMSprop,
                  optimizer_kws: dict = None,
                  lstm_hidden_state=256,
                  use_max_pool=False,
@@ -53,7 +56,7 @@ class DQRN(Algo):
         self._er_batch_size = er_batch_size
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self._replay_memory = ExperienceBuffer(size, seed)
+        self._replay_memory = ExperienceBuffer(buffer_size, seed, er_start_size)
 
         # Internal parameters
         self._policies_train_timer = self._policy_train_freq
@@ -73,7 +76,7 @@ class DQRN(Algo):
 
         # Optimizer
         self._optimizer_cls = optimizer_cls
-        self._optimizer_kws = optimizer_kws or {"lr": 1e-4, "amsgrad": True}  # Defaults assume AdamW
+        self._optimizer_kws = optimizer_kws or {"lr": 5e-4}
 
         # Exploration
         self._exploration_rate_annealing_timescale = exploration_rate_annealing_timescale
