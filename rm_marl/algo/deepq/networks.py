@@ -91,6 +91,19 @@ class DeepQNetwork(nn.Module):
         return self._model(s)
 
 
+class SimpleQNetwork(nn.Module):
+
+    def __init__(self, dim_obs, max_rm_states, num_actions=4, *, lear_biases=False):
+        super(SimpleQNetwork, self).__init__()
+
+        self._q_table = nn.Linear(dim_obs + max_rm_states, num_actions, bias=lear_biases)
+
+    def forward(self, s, u):
+
+        table_entry = torch.cat((s, u), dim=-1)
+        return self._q_table(table_entry)
+
+
 class CRMNetwork(nn.Module):
 
     def __init__(self, dim_obs, num_rm_states, num_layers, layer_size, num_actions):
