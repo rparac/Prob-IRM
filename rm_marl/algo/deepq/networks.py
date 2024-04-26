@@ -101,7 +101,8 @@ class SimpleQNetwork(nn.Module):
 
     def forward(self, s, u):
 
-        table_entry = torch.cat((s, u), dim=-1)
+        quantized_belief = (100 * u).round_()
+        table_entry = torch.cat((s, quantized_belief), dim=-1)
         return self._q_table(table_entry)
 
 
