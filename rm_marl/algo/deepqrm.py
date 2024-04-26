@@ -27,7 +27,7 @@ import os
 import os.path
 
 from ._base import Algo
-from .deepq.networks import DeepQNetwork, CRMNetwork
+from .deepq.networks import DeepQNetwork, CRMNetwork, OfficeQNetwork
 from ..reward_machine import RewardMachine
 from ..utils.memory import ExperienceBuffer
 
@@ -70,6 +70,7 @@ class DeepQRM(Algo):
             policy_reset_method: str = 'default',
             seed: int = 0,
             use_crm: bool = False,
+            use_dropout: bool = False,
             num_rm_states: int = 1,
             max_rm_states: int = 15,
     ):
@@ -97,6 +98,7 @@ class DeepQRM(Algo):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self._use_crm = use_crm
+        self._use_dropout = use_dropout
         # Mappings from RM states to RMStatePolicy instances
         self._init_q_networks()
 
@@ -145,14 +147,22 @@ class DeepQRM(Algo):
         -------
         A newly created DeepQNetwork instance
         """
+
         if self._use_crm:
-            return CRMNetwork(
+            return OfficeQNetwork(
                 self._dim_obs,
-                self._max_rm_states,  # Max number of allowed RM states is used due to padding
-                self._num_policy_layers,
-                self._layers_size,
+                self._max_rm_states,
                 self._num_actions,
+                self._use_dropout
             ).to(self.device)
+
+            # return CRMNetwork(
+            #     self._dim_obs,
+            #     self._max_rm_states,  # Max number of allowed RM states is used due to padding
+            #     self._num_policy_layers,
+            #     self._layers_size,
+            #     self._num_actions,
+            # ).to(self.device)
 
         return DeepQNetwork(
             self._dim_obs,
@@ -343,7 +353,7 @@ class DeepQRM(Algo):
 
         # Compute the Q-values we expected to produce with our policy network
         expected_q_estimates = (self._gamma * next_states_values) + rewards
-        loss = nn.MSELoss()(q_estimates, expected_q_estimates)
+        loss = nn.HuberLoss()(q_estimates, expected_q_estimates)
 
         # Reset gradients to zero to avoid being influenced by previous batches
         optimizer.zero_grad()
