@@ -349,7 +349,6 @@ class DeepQRM(Algo):
             t = t_net(s, u)[best_act].unsqueeze(0)
             t_old = t_net(s, u).max().unsqueeze(0)
             target_values.append(t)
-        target_values = torch.stack(target_values)
 
         #
         # target_values = torch.stack([
@@ -361,7 +360,10 @@ class DeepQRM(Algo):
         # Compute the value estimates V(s') = max_{a'} Q(s', a') for next states according to the target network
         # By definition, V(s) = 0 for a terminal state s
         next_states_values = torch.zeros((self._batch_size, 1), device=self.device)
-        next_states_values[non_terminal_mask] = target_values
+
+        if target_values:
+            target_values = torch.stack(target_values)
+            next_states_values[non_terminal_mask] = target_values
 
         # Compute the Q-values we expected to produce with our policy network
         expected_q_estimates = (self._gamma * next_states_values) + rewards
