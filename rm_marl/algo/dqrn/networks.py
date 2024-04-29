@@ -5,69 +5,49 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from rm_marl.algo.deepq.networks import DeepQNetwork
 
-class MinigridConv(nn.Module):
-    """
-    Convolutional neural network formed by 3 convolutional layers. This network is based on that of the following
-    resources:
-      - "Prioritized Level Replay" by Minqi Jiang, Edward Grefenstette, Tim Rocktäschel (2021).
-        Code: https://github.com/facebookresearch/level-replay. The exact file is the following:
-        https://github.com/facebookresearch/level-replay/blob/main/level_replay/model.py#L413
-      - rl-starter-files GitHub repo (https://github.com/lcswillems/rl-starter-files). The exact file is the following:
-        https://github.com/lcswillems/rl-starter-files/blob/master/model.py
-    In the first source, they also used the 'full' observation provided by Minigrid although they don't use a DQN but
-    PPO. The second source contains a very similar network to the one shown in the first, also used for PPO.
-    """
-    DEFAULT_IN_CHANNELS = 3
-    KERNEL_SIZE = (2, 2)
 
-    def __init__(self, obs_shape, num_out_channels=(16, 32, 32), use_max_pool=False):
-        num_conv_layers = len(num_out_channels)
+class OfficeWorldEmbedding(nn.Module):
+    def __init__(self, state_size, num_layers, layer_size, embedding_dim):
+        super(OfficeWorldEmbedding, self).__init__()
 
-        assert (obs_shape[0] == MinigridConv.DEFAULT_IN_CHANNELS) or (
-                obs_shape[0] == MinigridConv.DEFAULT_IN_CHANNELS - 1), \
-            f"Error: Minigrid observations must consist of {MinigridConv.DEFAULT_IN_CHANNELS} matrices if colors are " \
-            f"not removed, or {MinigridConv.DEFAULT_IN_CHANNELS - 1} if they are."
-        assert num_conv_layers >= 1 and num_conv_layers <= 3, \
-            "Error: The number of convolutional layers must be between 1 and 3."
-
-        super(MinigridConv, self).__init__()
-
-        self.conv1 = self._make_conv(obs_shape[0], num_out_channels[0])
-        self.conv2 = self._make_conv(num_out_channels[0], num_out_channels[1]) if num_conv_layers >= 2 else None
-        self.conv3 = self._make_conv(num_out_channels[1], num_out_channels[2]) if num_conv_layers == 3 else None
-        self.use_max_pool = use_max_pool
-
-        n, m = obs_shape[-2], obs_shape[-1]
-        res_n, res_m, res_channels = n - 1, m - 1, num_out_channels[0]  # first convolution
-        if self.use_max_pool:
-            res_n, res_m = res_n // 2, res_m // 2
-        if self.conv2 is not None:
-            res_n, res_m, res_channels = res_n - 1, res_m - 1, num_out_channels[1]
-        if self.conv3 is not None:
-            res_n, res_m, res_channels = res_n - 1, res_m - 1, num_out_channels[2]
-        self.embedding_size = res_n * res_m * res_channels
-
-    def _make_conv(self, in_channels, out_channels):
-        return nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, MinigridConv.KERNEL_SIZE),
+        self.input_size = state_size
+        self.embedding_dim = embedding_dim
+        self._input_layer = nn.Sequential(
+            nn.Linear(state_size, layer_size),
             nn.ReLU()
         )
 
-    def get_embedding_size(self):
-        return self.embedding_size
+        self._hidden_layers = nn.Sequential()
+        for i in range(num_layers):
+            self._hidden_layers.append(nn.Linear(layer_size, layer_size))
+            self._hidden_layers.append(nn.ReLU())
 
-    def forward(self, obs):
-        # Tip: follow advice in https://stackoverflow.com/questions/55667005/manage-memory-differently-on-train-and-test-time-pytorch
-        out = self.conv1(obs)
-        if self.use_max_pool:
-            out = F.max_pool2d(out, MinigridConv.KERNEL_SIZE)
-        if self.conv2 is not None:
-            out = self.conv2(out)
-        if self.conv3 is not None:
-            out = self.conv3(out)
-        out = out.flatten(1, -1)
-        return out
+        self._output_layer = nn.Linear(layer_size, embedding_dim)
+
+        self._model = nn.Sequential(
+            self._input_layer,
+            self._hidden_layers,
+            self._output_layer
+        )
+
+    def forward(self, x):
+        # convert to 1-hot vector
+        return self._model(x)
+
+    def get_embedding_size(self):
+        return self.embedding_dim
+
+
+class OfficeWorldConv(nn.Module):
+
+    def forward(self, s):
+        # u is ignored in DeepQNetwork, but it requires the argument
+        return self.network(s, None)
+
+    def get_embedding_size(self):
+        return self.dim_obs
 
 
 class MinigridDRQN(nn.Module):
@@ -76,17 +56,20 @@ class MinigridDRQN(nn.Module):
     network and LSTM layer with the same size as the linear layer used in our approach.
     """
 
-    def __init__(self, obs_shape, num_observables, num_actions, lstm_method, hidden_size=256, use_max_pool=False):
+    def __init__(self, obs_shape, num_observables, num_actions, lstm_method, hidden_size, embedding_num_layers=2,
+                 embedding_layer_size=16, embedding_output_size=8):
         super(MinigridDRQN, self).__init__()
 
         self.obs_shape = obs_shape
         self.lstm_method = lstm_method
         self.hidden_size = hidden_size
 
-        self.conv = MinigridConv(
+        # TODO: parameterize
+        self.conv = OfficeWorldEmbedding(
             obs_shape,
-            (16, 32, 32),
-            use_max_pool
+            num_layers=embedding_num_layers,
+            layer_size=embedding_layer_size,
+            embedding_dim=embedding_output_size,
         )
 
         if lstm_method == "state":

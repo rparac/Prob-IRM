@@ -1,0 +1,19 @@
+num_observables: 2
+seed: 123
+buffer_size: 1000
+policy_train_freq: 1
+target_update_freq: 1500
+er_start_size: 1
+er_sequence_length: 128
+er_batch_size: 1
+gamma: 0.99
+optimizer_kws:
+  lr: 5e-4
+lstm_hidden_state: 8
+embedding_num_layers: 2
+embedding_layer_size: 16
+embedding_output_size: 8
+use_double_dqn: True
+exploration_rate_init: 1.0
+exploration_rate_final: 0.1
+exploration_rate_annealing_duration: 5000

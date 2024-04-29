@@ -16,15 +16,15 @@ class NoRMAgent(Agent):
         self.algo = algo
         self.reset()
 
-    def reset(self, seed: Optional[int] = None):
+    def reset(self, seed: Optional[int] = None, **kwargs):
         self.u = 0
         self.algo.on_env_reset()
 
-    def action(self, state, greedy: bool = False, testing: bool = False):
-        return self.algo.action(state, self.u, greedy=greedy, testing=testing)
+    def action(self, state, **kwargs):
+        return self.algo.action(state, self.u, **kwargs)
 
     def learn(self, state, u, action, reward, done, next_state, next_u, **kwargs):
-        return self.algo.learn(state, u, action, reward, done, next_state, next_u)
+        return self.algo.learn(state, u, action, reward, done, next_state, next_u, **kwargs)
 
     def update_agent(
             self, state, action, reward, terminated, truncated, is_positive_trace, next_state, labels, learning=True,
@@ -35,15 +35,20 @@ class NoRMAgent(Agent):
 
         if learning:
             loss = self.learn(
-                state, self.u, action, reward, terminated or truncated, next_state, next_u
+                state, self.u, action, reward, terminated or truncated, next_state, next_u, labels=labels,
             )
 
         self.u = next_u
         return loss, set(), None
 
     def project_labels(self, labels):
+        if isinstance(labels, dict):
+            return labels
         return tuple(labels)
 
     def set_log_folder(self, folder):
         super().set_log_folder(folder)
         self.algo.set_save_path(folder)
+
+    def get_current_state(self, agent_id=None):
+        return self.u

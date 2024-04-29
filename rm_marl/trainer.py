@@ -26,7 +26,7 @@ class Trainer:
         self.agents = agents
 
         # Stores configuration used to run this experiment
-        self.env_config = OmegaConf.to_container(env_config)
+        self.env_config = None if env_config is None else OmegaConf.to_container(env_config)
 
         self.total_steps = 0
         self.test_episode = 0
@@ -167,6 +167,7 @@ class Trainer:
                             else False,
                             testing=not run_config["training"],
                             agent_id=aid,
+                            labels=infos[env_id]['labels'],
                         )
                         for aid, a in env_agents[env_id].items()
                     }
@@ -212,7 +213,7 @@ class Trainer:
                             truncated,
                             info.get("is_positive_trace", True),
                             self._project_obs(next_obs, a, aid),
-                            synchronized_labels[aid],
+                            labels=synchronized_labels[aid],
                             learning=run_config["training"],
                             agent_id=aid,
                         )
@@ -411,7 +412,8 @@ class Trainer:
         # Sums the rewards of the last 100 episodes
         total = 0
         for _env in self.testing_envs.keys():
-            total += sum(rewards[_env][run_config["total_episodes"] - 100:])
+            # Number of steps
+            total += sum(steps[_env][run_config["total_episodes"] - 100:])
 
         return total / len(self.testing_envs)
         # return sum(rewards[list(self.testing_envs.keys())[0]][run_config["total_episodes"] - 100:])
