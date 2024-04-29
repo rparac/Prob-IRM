@@ -5,6 +5,7 @@ We should use a simpler network.
 Also, the shape parameter does not exist in the observation.
   observation_space is a dictionary event though we probably don't want it to be
 """
+from uuid import uuid1
 
 import gym
 import hydra
@@ -20,7 +21,7 @@ from rm_marl.algo.dqrn.model import DQRN
 from rm_marl.trainer import Trainer
 
 run_config = {
-    'training': True, 'total_episodes': 10000, 'log_freq': 1, 'log_dir': 'logs', 'testing_freq': 400,
+    'training': True, 'total_episodes': 5000, 'log_freq': 1, 'log_dir': 'logs', 'testing_freq': 400,
     'greedy': True, 'synchronize': False, 'counterfactual_update': False, 'recording_freq': 400,
     'no_display': True, 'seed': 123, 'name': 'test_dqrn', 'extra_debug_information': True,
     'num_envs': 10, 'checkpoint_freq': 1000, 'restart_from_checkpoint': False, 'use_rs': True,
@@ -53,6 +54,8 @@ def _get_base_env():
 
 @hydra.main(version_base=None, config_path="new_conf", config_name="dqrn")
 def run(cfg: DictConfig):
+    run_config["name"] = f"{run_config['name']}_{uuid1()}"
+
     print(cfg)
     env = _get_base_env()
 
