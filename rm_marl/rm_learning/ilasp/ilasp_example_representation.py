@@ -183,8 +183,10 @@ class ISAILASPExample:
 
 
 class ISAExampleContainer:
-    def __init__(self):
+    def __init__(self, ilasp_filter_threshold=2):
         self.storage: Dict[ISAILASPExample, float] = {}
+
+        self._ilasp_filter_threshold = ilasp_filter_threshold
 
     def add(self, ex):
         self.storage[ex] = self.storage.get(ex, 0) + ex.penalty
@@ -208,11 +210,20 @@ class ISAExampleContainer:
     def as_list_reweighted(self, total_sum: Union[int, float]) -> List[ISAILASPExample]:
         self.fix_penalties()
         ex_pen_sum = sum(self.storage.values())
+
+        # Filter examples that would have a penalty > _ilasp_penalty_threshold after
+        # reweighting
+        threshold = self._ilasp_filter_threshold * ex_pen_sum / total_sum
+
+        # Need to compute the new penalty sum so the final values sum to a desired number (e.g 100)
+        new_ex_penalty_sum = sum(x for x in self.storage.values() if x >= threshold)
+
         ret = []
         for ex, ex_val in self.storage.items():
             new_ex = copy.deepcopy(ex)
-            new_ex.penalty = (ex_val / ex_pen_sum) * total_sum
-            ret.append(new_ex)
+            if new_ex.penalty >= threshold:
+                new_ex.penalty = (ex_val / new_ex_penalty_sum) * total_sum
+                ret.append(new_ex)
         return ret
 
     def __len__(self):
@@ -220,10 +231,10 @@ class ISAExampleContainer:
 
 
 class MultiISAExampleContainer:
-    def __init__(self):
-        self._goal_examples = ISAExampleContainer()
-        self._dend_examples = ISAExampleContainer()
-        self._inc_examples = ISAExampleContainer()
+    def __init__(self, ilasp_filter_threshold=2):
+        self._goal_examples = ISAExampleContainer(ilasp_filter_threshold)
+        self._dend_examples = ISAExampleContainer(ilasp_filter_threshold)
+        self._inc_examples = ISAExampleContainer(ilasp_filter_threshold)
 
     def merge(self, ex_container: ISAExampleContainer, ex_type: ISAILASPExample.ExType):
         if ex_type == ISAILASPExample.ExType.GOAL:
