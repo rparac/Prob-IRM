@@ -10,7 +10,7 @@ from uuid import uuid1
 import gym
 import hydra
 from gym.wrappers import RecordEpisodeStatistics
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from rm_marl.agent import RewardMachineAgent, NoRMAgent
 from rm_marl.envs.gym_subgoal_automata_wrapper import GymSubgoalAutomataAdapter, \
@@ -21,7 +21,7 @@ from rm_marl.algo.dqrn.model import DQRN
 from rm_marl.trainer import Trainer
 
 run_config = {
-    'training': True, 'total_episodes': 10000, 'log_freq': 1, 'log_dir': 'logs', 'testing_freq': 1000,
+    'training': True, 'total_episodes': 15000, 'log_freq': 1, 'log_dir': 'logs', 'testing_freq': 1000,
     'greedy': True, 'synchronize': False, 'counterfactual_update': False, 'recording_freq': 1000,
     'no_display': True, 'seed': 123, 'name': 'test_dqrn', 'extra_debug_information': True,
     'num_envs': 10, 'checkpoint_freq': 1000, 'restart_from_checkpoint': False, 'use_rs': True,
@@ -58,7 +58,7 @@ def run(cfg: DictConfig):
 
     print(cfg)
     # Quick fix to log the hyperparameters
-    run_config.update(cfg)
+    run_config.update(OmegaConf.to_container(cfg))
     env = _get_base_env()
     print(run_config)
 
