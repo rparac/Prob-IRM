@@ -57,7 +57,10 @@ def run(cfg: DictConfig):
     # run_config["name"] = f"{run_config['name']}/{uuid1()}"
 
     print(cfg)
+    # Quick fix to log the hyperparameters
+    run_config.update(cfg)
     env = _get_base_env()
+    print(run_config)
 
     algo = DQRN(env.observation_space, env.action_space, **cfg)
     agent = NoRMAgent(agent_id="A1", algo=algo)
