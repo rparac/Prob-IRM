@@ -13,10 +13,9 @@ from typing import List
 
 script_directory = "outputs"
 
-
 pbs_script_base = """#!/bin/bash
-#PBS -l select=1:ncpus=8:mem=100Gb
-#PBS -l walltime=48:00:00
+#PBS -l select=1:ncpus=4:mem=100Gb:ngpus=1:gpu_type=RTX6000
+#PBS -l walltime=12:00:00
 
 module load tools/prod
 module load anaconda3/personal
