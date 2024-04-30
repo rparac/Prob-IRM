@@ -1,5 +1,7 @@
+import os
 import random
 import subprocess
+import runpy
 
 optimizer_kws_lr = [1e-1, 1e-2, 1e-3, 1e-4]
 policy_train_freq = [1, 4, 8, 16, 32]
@@ -12,7 +14,7 @@ exploration_rate_annealing_duration = list(range(5000, 100000, 1000))
 
 random.seed(123)
 
-num_experiments = 20
+num_experiments = 1  # 20
 
 for i in range(num_experiments):
     lr = random.choice(optimizer_kws_lr)
@@ -24,16 +26,18 @@ for i in range(num_experiments):
     e_output_size = random.choice(embedding_output_size)
     ex_rate_annealing_duration = random.choice(exploration_rate_annealing_duration)
 
-    name = f"test_dqrm/run_{i}"
-    command = f"python submit_rcs_script.py ${name} test_dqrn_hydra.py \
-      optimizer_kws.lr={lr} \
-      policy_train_freq={p_train_freq} \
-      target_update_freq={t_update_freq} \
-      lstm_hidden_state={l_hidden_state} \
-      embedding_num_layers={e_num_layers} \
-      embedding_layer_size={e_layer_size} \
-      embedding_output_size={e_output_size} \
-      exploration_rate_annealing_duration={ex_rate_annealing_duration} \
-      "
+    directory = "test_dqrm"
+    name = f"{directory}_run_{i}"
+    parameters = [
+        f"optimizer_kws.lr={lr}",
+        f"policy_train_freq={p_train_freq}",
+        f"target_update_freq={t_update_freq}",
+        f"lstm_hidden_state={l_hidden_state}",
+        f"embedding_num_layers={e_num_layers}",
+        f"embedding_layer_size={e_layer_size}",
+        f"embedding_output_size={e_output_size}",
+        f"exploration_rate_annealing_duration={ex_rate_annealing_duration}",
+    ]
 
-    subprocess.run(command)
+    subprocess.run(["python", "submit_rcs_script.py", directory, name, "test_dqrn_hydra.py", *parameters])
+    # runpy.run_path("submit_rcs_script.py")
