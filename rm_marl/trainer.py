@@ -396,7 +396,7 @@ class Trainer:
                     video = np.array(episode_frames[env_id]).transpose(0, 3, 1, 2)[
                             np.newaxis, :
                             ]
-                    video = self._add_steps_to_replay(video)
+                    video = self._improve_replay(video, success=episode_reward == 1)
                     logger.add_video(
                         f"{prefix}/replay/{env_id}", video,
                         episode if run_config["training"] else self.test_episode
@@ -430,9 +430,9 @@ class Trainer:
         # return sum(rewards[list(self.testing_envs.keys())[0]][run_config["total_episodes"] - 100:])
 
     @staticmethod
-    def _add_steps_to_replay(video_data):
+    def _improve_replay(video_data, *, success):
         """
-        Expand a replay to visualize the step number of each frame.
+        Expand a replay to visualize additional information..
 
         Aside from being some nice quality-of-life, this method is also needed due to a quirk in the
         inner functioning of SummaryWriter.add_video(). Since Tensorboard, at the time of writing, does not
@@ -443,26 +443,28 @@ class Trainer:
         Parameters
         ----------
         video_data Numpy array with shape (1, num_frames, n_channels, video_height, video_width)
+        success True if the agent was able to succesfully complete the task
 
         Returns
         -------
-        Numpy array containing the replay and steps information
+        Numpy array containing the replay with additional information
 
         """
 
         num_frames, channels, video_h, video_w = video_data.shape[1:]
-        steps_bar_h = int(video_h / 5)
+        info_bar_h = int(video_h / 5)
 
-        steps_bar = np.zeros((1, num_frames, channels, steps_bar_h, video_w), dtype=video_data.dtype)
-        full_video = np.concatenate((steps_bar, video_data), axis=3)
+        info_bar = np.zeros((1, num_frames, channels, info_bar_h, video_w), dtype=video_data.dtype)
+        full_video = np.concatenate((info_bar, video_data), axis=3)
 
         for i in range(num_frames):
-            transposed_steps_bar = np.transpose(steps_bar[0, i], axes=(1, 2, 0))
-            with Image.fromarray(transposed_steps_bar, mode='RGB') as steps_bar_img:
-                drawer = ImageDraw.Draw(steps_bar_img)
+            transposed_info_bar = np.transpose(info_bar[0, i], axes=(1, 2, 0))
+            with Image.fromarray(transposed_info_bar, mode='RGB') as info_bar_img:
+                drawer = ImageDraw.Draw(info_bar_img)
                 drawer.text((0, 0), f"# Steps: {i+1}/{num_frames}", font_size=50, fill='#ffffff')
-                steps_bar_data = np.transpose(np.asarray(steps_bar_img), axes=(2, 0, 1))
-                full_video[0, i, :, 0:steps_bar_h, :] = steps_bar_data
+                drawer.text((0, 50), f"Success: {'Yes' if success else 'No'}", font_size=32, fill='#ffffff')
+                info_bar_data = np.transpose(np.asarray(info_bar_img), axes=(2, 0, 1))
+                full_video[0, i, :, 0:info_bar_h, :] = info_bar_data
 
         return full_video
 
