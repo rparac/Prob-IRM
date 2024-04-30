@@ -21,8 +21,8 @@ from rm_marl.algo.dqrn.model import DQRN
 from rm_marl.trainer import Trainer
 
 run_config = {
-    'training': True, 'total_episodes': 5000, 'log_freq': 1, 'log_dir': 'logs', 'testing_freq': 400,
-    'greedy': True, 'synchronize': False, 'counterfactual_update': False, 'recording_freq': 400,
+    'training': True, 'total_episodes': 10000, 'log_freq': 1, 'log_dir': 'logs', 'testing_freq': 1000,
+    'greedy': True, 'synchronize': False, 'counterfactual_update': False, 'recording_freq': 1000,
     'no_display': True, 'seed': 123, 'name': 'test_dqrn', 'extra_debug_information': True,
     'num_envs': 10, 'checkpoint_freq': 1000, 'restart_from_checkpoint': False, 'use_rs': True,
     'rm_learner_kws': {'edge_cost': 2, 'n_phi_cost': 1, 'ex_penalty_multiplier': 2, 'min_penalty': 2,
@@ -54,7 +54,7 @@ def _get_base_env():
 
 @hydra.main(version_base=None, config_path="new_conf", config_name="dqrn")
 def run(cfg: DictConfig):
-    run_config["name"] = f"{run_config['name']}_{uuid1()}"
+    # run_config["name"] = f"{run_config['name']}/{uuid1()}"
 
     print(cfg)
     env = _get_base_env()

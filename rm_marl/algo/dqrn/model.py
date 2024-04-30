@@ -6,7 +6,8 @@ import gym
 import numpy as np
 import torch
 from torch.nn.utils.rnn import pad_sequence
-from torch.optim import Optimizer, AdamW, RMSprop
+from torch.optim import Optimizer, AdamW, RMSprop, Adadelta
+from torch.optim.lr_scheduler import ExponentialLR
 
 from rm_marl.algo import Algo
 from rm_marl.algo.dqrn.buffer import EpisodeExperienceBuffer
@@ -23,7 +24,8 @@ class DQRN(Algo):
     DQRNStatePolicy = namedtuple("DQRNStatePolicy", [
         'policy_network',
         'policy_optimizer',
-        'target_network'
+        'lr_scheduler',
+        'target_network',
     ])
 
     def __init__(self,
@@ -35,10 +37,10 @@ class DQRN(Algo):
                  policy_train_freq: int = 1,  # 16,
                  target_update_freq: int = 1500,
                  er_start_size: int = 1,  # size of experience replay before experiences can be sampled
-                 er_sequence_length: int = 4,  # 128,  # Sequence length for an experience sampled from replay buffer
+                 er_sequence_length: int = 4, # 4,  # 128,  # Sequence length for an experience sampled from replay buffer
                  er_batch_size: int = 1,  # batch size for the experience replay
                  gamma: float = 0.99,
-                 optimizer_cls: Type[Optimizer] = RMSprop,
+                 optimizer_cls: Type[Optimizer] = Adadelta, # Chosen
                  optimizer_kws: dict = None,
                  lstm_hidden_state=8,
                  embedding_num_layers=2,
@@ -48,7 +50,7 @@ class DQRN(Algo):
                  exploration_rate_annealing_timescale: EpsilonAnnealingTimescale = EpsilonAnnealingTimescale.EPISODES,
                  exploration_rate_init=1.0,
                  exploration_rate_final=0.1,
-                 exploration_rate_annealing_duration: int = 5000,  # 300000,
+                 exploration_rate_annealing_duration: int = 2000, # 5000,  # 300000,
                  ):
 
         self.obs_space = obs_space
@@ -79,8 +81,9 @@ class DQRN(Algo):
         self._gamma = gamma
 
         # Optimizer
+        self._lr_scheduler = None
         self._optimizer_cls = optimizer_cls
-        self._optimizer_kws = optimizer_kws or {"lr": 5e-4}
+        self._optimizer_kws = optimizer_kws or {"lr": 0.1, "rho": 0.95}  # {"lr": 5e-4}
 
         # Network parameters
         self._embedding_num_layers = embedding_num_layers
@@ -136,6 +139,8 @@ class DQRN(Algo):
             **self._optimizer_kws
         )
 
+        lr_scheduler = ExponentialLR(policy_optimizer, gamma=1)# 0.995)
+
         # Synch the weights from the policy network to the target network
         policy_state = policy_network.state_dict()
         target_network.load_state_dict(policy_state)
@@ -144,7 +149,7 @@ class DQRN(Algo):
         # are not trained but copied periodically from the policy network
         target_network.requires_grad_(False)
 
-        return DQRN.DQRNStatePolicy(policy_network, policy_optimizer, target_network)
+        return DQRN.DQRNStatePolicy(policy_network, policy_optimizer, lr_scheduler, target_network)
 
     def _init_q_network(self):
         # TODO: fix obs_space being a dict
@@ -212,7 +217,7 @@ class DQRN(Algo):
         """
         Update the of weights each target network by copying the weights of their associated policy networks.
         """
-        q_net, _, t_net = self._q_networks
+        q_net, _, _, t_net = self._q_networks
         t_net.load_state_dict(q_net.state_dict())
 
     def _update_policy_network(self, experience_batch: DQRNStep):
@@ -276,6 +281,9 @@ class DQRN(Algo):
 
         _optimizer.zero_grad()
         loss.backward()
+        # Introduced because the original paper
+        # torch.nn.utils.clip_grad_value_(_net.parameters(), clip_value=10)
+
         _optimizer.step()
         return loss.item()
 
@@ -294,6 +302,9 @@ class DQRN(Algo):
         raise RuntimeError(f"Error: Unknown timescale for exploration '{self._exploration_rate_annealing_timescale}'.")
 
     def on_env_reset(self):
+        if self._curr_episode_num > max(self._er_batch_size, self._er_start_size) + 1:
+            self._q_networks.lr_scheduler.step()
+
         self._last_hidden_state = self._q_networks.policy_network.get_zero_hidden_state(batch_size=1,
                                                                                         device=self.device)
         self._last_labels = None
@@ -352,7 +363,7 @@ class DQRN(Algo):
 
         # Manually store only the policy network parameters as they can be used
         # to also restore the target networks as well
-        q_net, _, _ = self._q_networks
+        q_net, _, _, _ = self._q_networks
         file = os.path.join(self._save_path, f'policy_network.pth')
         torch.save(q_net.state_dict(), file)
 

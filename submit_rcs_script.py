@@ -14,34 +14,51 @@ from typing import List
 script_directory = "outputs"
 
 
-# pbs_script_gpu = """#!/bin/bash
-# #PBS -l walltime=48:00:00
-# #PBS -l select=1:ncpus=4:mem=200Gb:ngpus=1:gpu_type=A100
-#
-# eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
-#
-# export PATH=$PATH:/gpfs/home/rp218/bin
-#
-# module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
-#
-# cd ${HOME}/rm-marl
-# conda activate rm_marl
-# """
+pbs_script_gpu = """#!/bin/bash
+#PBS -l walltime=48:00:00
+#PBS -l select=1:ncpus=4:mem=200Gb:ngpus=1:gpu_type=A100
+
+eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
+
+export PATH=$PATH:/gpfs/home/rp218/bin
+
+module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
+
+cd ${HOME}/rm-marl
+conda activate rm_marl
+"""
+
+pbs_script_gpu2 = f"""#!/bin/bash
+#PBS -l walltime=24:00:00
+#PBS -l select=1:ncpus=4:mem=100Gb:ngpus=1
+
+eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
+
+export PATH=$PATH:/gpfs/home/rp218/bin
+
+module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
+
+cd $HOME/rm-marl
+conda activate rm_marl
+"""
+
 
 def get_pbs_script_base(experiment_directory: str):
-    return f"""#!/bin/bash
-    #PBS -l walltime=24:00:00
-    #PBS -l select=1:ncpus=4:mem=200Gb
-
-    eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
-
-    export PATH=$PATH:/gpfs/home/rp218/bin
-
-    module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
-
-    cd $HOME/rm-marl
-    conda activate rm_marl
-    """
+    return pbs_script_gpu2
+    #
+    # return f"""#!/bin/bash
+    # #PBS -l walltime=24:00:00
+    # #PBS -l select=1:ncpus=4:mem=200Gb
+    #
+    # eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
+    #
+    # export PATH=$PATH:/gpfs/home/rp218/bin
+    #
+    # module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
+    #
+    # cd $HOME/rm-marl
+    # conda activate rm_marl
+    # """
 
 
 def run_pbs(args, name, experiment_directory):

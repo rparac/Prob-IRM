@@ -8,7 +8,8 @@ er_sequence_length: 128
 er_batch_size: 1
 gamma: 0.99
 optimizer_kws:
-  lr: 5e-4
+  lr: 1e-1
+  rho: 0.95
 lstm_hidden_state: 8
 embedding_num_layers: 2
 embedding_layer_size: 16
