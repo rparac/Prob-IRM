@@ -37,20 +37,22 @@ class DQRN(Algo):
                  policy_train_freq: int = 1,  # 16,
                  target_update_freq: int = 1500,
                  er_start_size: int = 1,  # size of experience replay before experiences can be sampled
-                 er_sequence_length: int = 4, # 4,  # 128,  # Sequence length for an experience sampled from replay buffer
+                 er_sequence_length: int = 4,
+                 # 4,  # 128,  # Sequence length for an experience sampled from replay buffer
                  er_batch_size: int = 1,  # batch size for the experience replay
                  gamma: float = 0.99,
-                 optimizer_cls: Type[Optimizer] = Adadelta, # Chosen
+                 optimizer_cls: Type[Optimizer] = Adadelta,  # Chosen
                  optimizer_kws: dict = None,
                  lstm_hidden_state=8,
                  embedding_num_layers=2,
                  embedding_layer_size=16,
                  embedding_output_size=8,
                  use_double_dqn=True,
+                 use_gradient_clipping=False,
                  exploration_rate_annealing_timescale: EpsilonAnnealingTimescale = EpsilonAnnealingTimescale.EPISODES,
                  exploration_rate_init=1.0,
                  exploration_rate_final=0.1,
-                 exploration_rate_annealing_duration: int = 2000, # 5000,  # 300000,
+                 exploration_rate_annealing_duration: int = 2000,  # 5000,  # 300000,
                  ):
 
         self.obs_space = obs_space
@@ -78,6 +80,7 @@ class DQRN(Algo):
         self._lstm_method = "obs"  # "state+obs"
         self._lstm_hidden_size = lstm_hidden_state
         self._use_double_dqn = use_double_dqn
+        self._use_gradient_clipping = use_gradient_clipping
         self._gamma = gamma
 
         # Optimizer
@@ -139,7 +142,7 @@ class DQRN(Algo):
             **self._optimizer_kws
         )
 
-        lr_scheduler = ExponentialLR(policy_optimizer, gamma=1)# 0.995)
+        lr_scheduler = ExponentialLR(policy_optimizer, gamma=1)  # 0.995)
 
         # Synch the weights from the policy network to the target network
         policy_state = policy_network.state_dict()
@@ -281,8 +284,9 @@ class DQRN(Algo):
 
         _optimizer.zero_grad()
         loss.backward()
-        # Introduced because the original paper
-        # torch.nn.utils.clip_grad_value_(_net.parameters(), clip_value=10)
+        # The original DRQN paper used gradient clipping
+        if self._use_gradient_clipping:
+            torch.nn.utils.clip_grad_value_(_net.parameters(), clip_value=10)
 
         _optimizer.step()
         return loss.item()
