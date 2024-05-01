@@ -183,7 +183,7 @@ class ISAILASPExample:
 
 
 class ISAExampleContainer:
-    def __init__(self, ilasp_filter_threshold=2):
+    def __init__(self, ilasp_filter_threshold=None):
         self.storage: Dict[ISAILASPExample, float] = {}
 
         self._ilasp_filter_threshold = ilasp_filter_threshold
@@ -231,7 +231,8 @@ class ISAExampleContainer:
 
 
 class MultiISAExampleContainer:
-    def __init__(self, ilasp_filter_threshold=2):
+    def __init__(self, ilasp_filter_threshold):
+        self._ilasp_filter_threshold = ilasp_filter_threshold
         self._goal_examples = ISAExampleContainer(ilasp_filter_threshold)
         self._dend_examples = ISAExampleContainer(ilasp_filter_threshold)
         self._inc_examples = ISAExampleContainer(ilasp_filter_threshold)
@@ -254,7 +255,7 @@ class MultiISAExampleContainer:
         return list(sorted(out))
 
     def generate_incomplete_examples(self):
-        out = ISAExampleContainer()
+        out = ISAExampleContainer(self._ilasp_filter_threshold)
         for ex_container in [self._goal_examples, self._dend_examples, self._inc_examples]:
             ex_container.fix_penalties()
             for base_ex in ex_container.storage.keys():
@@ -270,6 +271,7 @@ class MultiISAExampleContainer:
 
         gl = self._goal_examples.as_list_reweighted(total_ex_sum)
         de = self._dend_examples.as_list_reweighted(total_ex_sum)
+        # inc = new_inc.as_list_reweighted(10 * total_ex_sum)
         inc = new_inc.as_list_reweighted(total_ex_sum)
         return gl, de, inc
 
