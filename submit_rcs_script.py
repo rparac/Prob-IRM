@@ -76,8 +76,6 @@ def run_pbs(args, name, experiment_directory):
         f.write(python_run)
 
     result = subprocess.run(['qsub', '-q', 'hx', pbs_out], stdout=subprocess.PIPE, text=True)
-    # Add a delay so that files get a different name
-    time.sleep(1)
     print(result.stdout)
     print("Successfully ran all the scripts")
 
