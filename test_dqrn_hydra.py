@@ -54,7 +54,7 @@ def _get_base_env():
 
 @hydra.main(version_base=None, config_path="new_conf", config_name="dqrn")
 def run(cfg: DictConfig):
-    # run_config["name"] = f"{run_config['name']}/{uuid1()}"
+    run_config["name"] = f"{run_config['name']}/{uuid1()}"
 
     print(cfg)
     # Quick fix to log the hyperparameters
