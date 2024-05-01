@@ -11,31 +11,29 @@ import runpy
 # embedding_layer_size = [8, 16]
 # embedding_output_size = [4]# [4, 8, 16]
 # exploration_rate_annealing_duration = [70000]
-buffer_sizes = [500, 1000, 2000, 4000, 10000]
-use_gradient_clipping = [True, False]
-rho = [0.8, 0.9, 0.95, 0.99]
-er_batch_size = [1, 16, 32]
-er_start_size = [1, 100, 1000]
+# buffer_sizes = [2000]
+# use_gradient_clipping = [False]
+# rho = [0.8]
+# er_batch_size = [16]
+# er_start_size = [1000]
+
+seeds = [123, 233, 333, 433, 533]
 
 random.seed(123)
 
 num_experiments = 1  # 20
 
-for i in range(num_experiments):
-    buffer_size = random.choice(buffer_sizes)
-    u_gradient_clipping = random.choice(use_gradient_clipping)
-    r = random.choice(rho)
-    e_start_size = random.choice(er_start_size)
-    e_batch_size = random.choice(er_batch_size)
-
+# for i in range(num_experiments):
+    # buffer_size = random.choice(buffer_sizes)
+    # u_gradient_clipping = random.choice(use_gradient_clipping)
+    # r = random.choice(rho)
+    # e_start_size = random.choice(er_start_size)
+    # e_batch_size = random.choice(er_batch_size)
+for i, seed in enumerate(seeds):
     directory = "test_dqrm"
     name = f"{directory}_run_{i}"
     parameters = [
-        f"buffer_size={buffer_size}",
-        f"use_gradient_clipping={u_gradient_clipping}",
-        f"optimizer_kws.rho={r}",
-        f"er_start_size={e_start_size}",
-        f"er_batch_size={e_batch_size}",
+        f"seed={seed}",
     ]
 
     subprocess.run(["python", "submit_rcs_script.py", directory, name, "test_dqrn_hydra.py", *parameters])
