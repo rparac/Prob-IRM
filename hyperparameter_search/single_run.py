@@ -53,8 +53,8 @@ def objective(trial):
     optimizer_cls = Adadelta
     exploration_rate_annealing_timescale = EpsilonAnnealingTimescale.EPISODES
 
-    lr = trial.suggest_int("lr")
-    rho = trial.suggest_int("rho")
+    lr = trial.suggest_float("lr", 0.0001, 0.1)
+    rho = trial.suggest_float("rho", 0.8, 0.999)
 
     optimizer_kws = {"lr": lr, "rho": rho}
     buffer_size = trial.suggest_int("buffer_size", 500, 10000)
