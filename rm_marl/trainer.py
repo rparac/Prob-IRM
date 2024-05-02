@@ -10,6 +10,7 @@ from typing import Dict, List, Union, DefaultDict, Any
 import joblib
 # import joblib
 import numpy as np
+import optuna
 from omegaconf import DictConfig, OmegaConf
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
@@ -43,7 +44,10 @@ class Trainer:
         #  Dict[env_id -> List[episode_when_relearned]]
         self.rm_relearned_episodes: Dict[str, List[int]] = {}
 
-    def run(self, run_config: Union[dict, DictConfig]):
+        # The results are aggregated based on the last num_episodes_for_aggregation
+        self.num_episodes_for_aggregation = 100
+
+    def run(self, run_config: Union[dict, DictConfig], trial=None):
         base_dir = os.path.join(
             run_config["log_dir"],
             run_config["name"],
@@ -75,15 +79,15 @@ class Trainer:
                 json.dump(dict(self.env_config), f, indent=4)
 
         try:
-            result = self._run(self.envs, run_config, logger, checkpointed_train_state)
+            result = self._run(self.envs, run_config, logger, checkpointed_train_state, trial)
         except KeyboardInterrupt:
             result = None
 
         if run_config["extra_debug_information"]:
-        #     create_rm_state_logs(log_dir, logger, run_config["total_episodes"], self.test_episode,
-        #                          run_config["testing_freq"], self.last_timestep_train_info,
-        #                          self.last_timestep_test_info,
-        #                          self.all_recorded_rm_states, self.rm_relearned_episodes)
+            #     create_rm_state_logs(log_dir, logger, run_config["total_episodes"], self.test_episode,
+            #                          run_config["testing_freq"], self.last_timestep_train_info,
+            #                          self.last_timestep_test_info,
+            #                          self.all_recorded_rm_states, self.rm_relearned_episodes)
             create_learnt_rm_logs(log_dir, logger)
 
         _ = [e.close() for e in self.envs.values()]
@@ -94,7 +98,7 @@ class Trainer:
         return result
 
     def _run(self, envs: dict, run_config: dict, logger: SummaryWriter,
-             train_state=None):
+             train_state=None, trial=None):
 
         train_state = train_state or defaultdict(None)
 
@@ -390,6 +394,12 @@ class Trainer:
                         episode if run_config["training"] else self.test_episode
                     )
 
+            # Report metric to optuna for early stopping
+            if trial and run_config["training"] and episode > self.num_episodes_for_aggregation:
+                trial.report(self._compute_score(steps), episode)
+                if trial.should_prune():
+                    raise optuna.TrialPruned()
+
             if episode % run_config["checkpoint_freq"] == 0:
                 train_state = TrainState(episode, steps, cumulative_steps, losses, rewards, shaping_rewards,
                                          successes, failures, timeouts)
@@ -408,15 +418,18 @@ class Trainer:
                     "checkpoint_freq": run_config["checkpoint_freq"],
                 }, logger)
 
-        # TODO: make cleaner
         # Sums the rewards of the last 100 episodes
+        return self._compute_score(steps)
+        # return sum(rewards[list(self.testing_envs.keys())[0]][run_config["total_episodes"] - 100:])
+
+    # Computes the sum of a given metric for the last num_episodes
+    def _compute_score(self, metric):
         total = 0
         for _env in self.testing_envs.keys():
             # Number of steps
-            total += sum(steps[_env][run_config["total_episodes"] - 100:])
+            total += sum(metric[_env][-self.num_episodes_for_aggregation:])
 
         return total / len(self.testing_envs)
-        # return sum(rewards[list(self.testing_envs.keys())[0]][run_config["total_episodes"] - 100:])
 
     @staticmethod
     def _add_steps_to_replay(video_data):
