@@ -57,32 +57,32 @@ def objective(trial):
     lr = trial.suggest_float("lr", 0.0001, 0.1)
     rho = trial.suggest_float("rho", 0.8, 0.999)
 
-    optimizer_kws = {"lr": lr, "rho": rho}
-    buffer_size = trial.suggest_int("buffer_size", 500, 10000)
-    policy_train_freq = trial.suggest_int("policy_train_freq", 1, 32, log=True)
-    target_update_freq = trial.suggest_int("target_update_freq", 500, 10000, log=True)
-    er_start_size = trial.suggest_int("er_start_size", 1, 1000, log=True)
-    er_sequence_length = trial.suggest_int("er_sequence_length", 128, 128)
-    er_batch_size = trial.suggest_int("er_batch_size", 1, 32, log=True)
-    gamma = trial.suggest_float("gamma", 0.9, 0.999)
-    lstm_hidden_state = trial.suggest_int("lstm_hidden_state", 4, 32)
-    embedding_num_layers = trial.suggest_int("embedding_num_layers", 1, 4)
-    embedding_layer_size = trial.suggest_int("embedding_layer_size", 4, 32, log=True)
-    embedding_output_size = trial.suggest_int("embedding_output_size", 2, 32, log=True)
-    use_double_dqn = trial.suggest_categorical("use_double_dqn", [True, False])
-    use_gradient_clipping = trial.suggest_categorical("use_gradient_clipping", [True, False])
-    exploration_rate_init = 1  # trial.suggest_int("exploration_rate_init", 1)
-    exploration_rate_final = 0.1  # trial.suggest_int("exploration_rate_final", 0.1, 0.3)
-    exploration_rate_annealing_duration = trial.suggest_int("exploration_rate_annealing_duration", 5000, 500000,
-                                                            log=True)
+    dqrn_config = {}
+    dqrn_config["optimizer_kws"] = {"lr": lr, "rho": rho}
+    dqrn_config["buffer_size"] = trial.suggest_int("buffer_size", 500, 10000)
+    dqrn_config["policy_train_freq"] = trial.suggest_int("policy_train_freq", 1, 32, log=True)
+    dqrn_config["target_update_freq"] = trial.suggest_int("target_update_freq", 500, 10000, log=True)
+    dqrn_config["er_start_size"] = trial.suggest_int("er_start_size", 1, 1000, log=True)
+    dqrn_config["er_sequence_length"] = trial.suggest_int("er_sequence_length", 128, 128)
+    dqrn_config["er_batch_size"] = trial.suggest_int("er_batch_size", 1, 32, log=True)
+    dqrn_config["gamma"] = trial.suggest_float("gamma", 0.9, 0.999)
+    dqrn_config["lstm_hidden_state"] = trial.suggest_int("lstm_hidden_state", 4, 32)
+    dqrn_config["embedding_num_layers"] = trial.suggest_int("embedding_num_layers", 1, 4)
+    dqrn_config["embedding_layer_size"] = trial.suggest_int("embedding_layer_size", 4, 32, log=True)
+    dqrn_config["embedding_output_size"] = trial.suggest_int("embedding_output_size", 2, 32, log=True)
+    dqrn_config["use_double_dqn"] = trial.suggest_categorical("use_double_dqn", [True, False])
+    dqrn_config["use_gradient_clipping"] = trial.suggest_categorical("use_gradient_clipping", [True, False])
+    dqrn_config["exploration_rate_init"] = 1  # trial.suggest_int("exploration_rate_init", 1)
+    dqrn_config["exploration_rate_final"] = 0.1  # trial.suggest_int("exploration_rate_final", 0.1, 0.3)
+    dqrn_config["exploration_rate_annealing_duration"] = trial.suggest_int("exploration_rate_annealing_duration", 5000,
+                                                                           500000,
+                                                                           log=True)
+
+    run_config.update(dqrn_config)
 
     env = _get_base_env()
 
-    algo = DQRN(env.observation_space, env.action_space, num_observables, seed, buffer_size, policy_train_freq,
-                target_update_freq, er_start_size, er_sequence_length, er_batch_size, gamma, optimizer_cls,
-                optimizer_kws, lstm_hidden_state, embedding_num_layers, embedding_layer_size, embedding_output_size,
-                use_double_dqn, use_gradient_clipping, exploration_rate_annealing_timescale,
-                exploration_rate_init, exploration_rate_final, exploration_rate_annealing_duration)
+    algo = DQRN(env.observation_space, env.action_space, num_observables, seed, **dqrn_config)
 
     agent = NoRMAgent(agent_id="A1", algo=algo)
     agent_dict = {agent.agent_id: agent}
