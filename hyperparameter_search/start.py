@@ -1,9 +1,7 @@
 """
-Important - should be run from a main directory (python optuna/create_hyperparameter_tuning.py)
+Important - should be run from a main directory (python hyperparameter_search/start.py)
 """
 
-
-import os
 import subprocess
 
 import optuna
@@ -17,5 +15,4 @@ num_experiments = 10
 for i in range(num_experiments):
     directory = "test_dqrm"
     name = f"{directory}_run_{i}"
-    subprocess.run(["python", "submit_rcs_script.py", directory, name, "optuna/single_run.py", name, db_path])
-
+    subprocess.run(["python", "submit_rcs_script.py", directory, name, "hyperparameter_search.single_run.py", name, db_path])
