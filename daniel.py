@@ -7,7 +7,8 @@ from rm_marl.envs.gym_subgoal_automata_wrapper import GymSubgoalAutomataAdapter,
 from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer
 
 env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
-               params={"generation": "custom", "environment_seed": 0, "hide_state_variables": True})
+               params={"generation": "random", "environment_seed": 0, "hide_state_variables": True})
+               # params={"generation": "custom", "environment_seed": 0, "hide_state_variables": True})
 # env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
 #                params={"generation": "random", "environment_seed": 0, "hide_state_variables": True})
 env = GymSubgoalAutomataAdapter(env, render_mode="human", agent_id="A1")  # type: ignore

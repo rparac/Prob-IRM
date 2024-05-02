@@ -10,8 +10,8 @@ from torch.optim import Adadelta
 from rm_marl.agent import NoRMAgent
 from rm_marl.algo.dqrn.definitions import EpsilonAnnealingTimescale
 from rm_marl.algo.dqrn.model import DQRN
-from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelingFunctionWrapper, \
-    OfficeWorldCoffeeLabelingFunctionWrapper
+from rm_marl.envs.gym_subgoal_automata_wrapper import GymSubgoalAutomataAdapter, \
+    OfficeWorldOfficeLabelingFunctionWrapper, OfficeWorldCoffeeLabelingFunctionWrapper
 from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer
 from rm_marl.trainer import Trainer
 

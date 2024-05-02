@@ -137,7 +137,7 @@ class OfficeWorldAbstractLabelingFunctionWrapper(LabelingFunctionWrapper, abc.AB
             coffee_predicted = bool(self.rng.binomial(1, self.sensor_true_confidence))
         else:
             coffee_predicted = bool(1 - self.rng.binomial(1, self.sensor_false_confidence))
-        labels = {self.get_label(): self.get_label_confidence(coffee_predicted, value_true_prior=2 / (12 * 9))}
+        labels = {self.get_label(): self.get_label_confidence(coffee_predicted, value_true_prior=1 / (12 * 9))}
         return labels
 
     @abc.abstractmethod

@@ -254,9 +254,11 @@ class MultiISAExampleContainer:
         # Sorting is important for reproducibility (sets are not)
         return list(sorted(out))
 
-    def generate_incomplete_examples(self):
+    def generate_incomplete_examples(self, only_positive=False):
+        _examples = [self._goal_examples] if only_positive else [self._dend_examples,
+                                                                 self._inc_examples]
         out = ISAExampleContainer(self._ilasp_filter_threshold)
-        for ex_container in [self._goal_examples, self._dend_examples, self._inc_examples]:
+        for ex_container in _examples:
             ex_container.fix_penalties()
             for base_ex in ex_container.storage.keys():
                 for ex in base_ex.generate_incomplete_examples():
@@ -265,15 +267,19 @@ class MultiISAExampleContainer:
 
     def generate_goal_dend_inc(self, total_ex_sum: int) -> \
             (List[ISAILASPExample], List[ISAILASPExample], List[ISAILASPExample]):
-        new_inc = self.generate_incomplete_examples()
-        new_inc.merge(self._inc_examples)
+        new_inc_pos = self.generate_incomplete_examples(only_positive=True)
+        new_inc_rest = self.generate_incomplete_examples(only_positive=False)
+
+        # new_inc = self.generate_incomplete_examples()
+        new_inc_rest.merge(self._inc_examples)
         # self.merge(new_inc, ISAILASPExample.ExType.INCOMPLETE)
 
         gl = self._goal_examples.as_list_reweighted(total_ex_sum)
         de = self._dend_examples.as_list_reweighted(total_ex_sum)
         # inc = new_inc.as_list_reweighted(10 * total_ex_sum)
-        inc = new_inc.as_list_reweighted(total_ex_sum)
-        return gl, de, inc
+        inc = new_inc_rest.as_list_reweighted(total_ex_sum)
+        pos_inc = new_inc_pos.as_list_reweighted(total_ex_sum)
+        return gl, de, inc + pos_inc
 
 
 # Lifts the example representation from Daniel's work to ISAILASPExample
