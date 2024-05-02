@@ -3,6 +3,7 @@ from uuid import uuid1
 
 import gym
 import optuna
+from gym.wrappers import RecordEpisodeStatistics
 from optuna.pruners import MedianPruner
 from optuna.samplers import RandomSampler
 from torch.optim import Adadelta
