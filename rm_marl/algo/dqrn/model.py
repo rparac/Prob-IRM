@@ -273,7 +273,9 @@ class DQRN(Algo):
                         next_states_v[:, timestep, :], next_labels_v[:, timestep, :], hidden_state
                     )[0].gather(1, next_actions.unsqueeze(-1)).squeeze(-1)
                 else:
-                    next_q_values = _tgt_net(next_states_v, next_labels_v, hidden_state).max(1)[0]
+                    next_q_values = _tgt_net(
+                        next_states_v[:, timestep, :], next_labels_v[:, timestep, :], hidden_state
+                    ).max(1)[0]
                 next_q_values[is_terminal_v[:, timestep]] = 0.0
 
             expected_q_values = rewards_v[:, timestep] + self._gamma * next_q_values
