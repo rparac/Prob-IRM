@@ -1,3 +1,8 @@
+"""
+Important - should be run from a main directory (python optuna/create_hyperparameter_tuning.py)
+"""
+
+
 import os
 import subprocess
 
@@ -7,9 +12,6 @@ import optuna
 study_name = "optuna_study_1"
 db_path = f"sqlite:///outputs/{study_name}.db"
 study = optuna.create_study(study_name=study_name, storage=db_path, direction="minimize")
-
-# cd ..
-os.chdir(os.pardir)
 
 num_experiments = 10
 for i in range(num_experiments):
