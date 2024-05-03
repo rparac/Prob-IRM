@@ -62,7 +62,7 @@ class RewardMachineLearningAgent(Agent):
 
     def reset(self, seed: Optional[int] = None, agent_id: str = None):
         self.traces[agent_id].reset()
-        self.rm_agents[agent_id].reset()
+        self.rm_agents[agent_id].reset(seed)
 
     def action(self, state, greedy: bool = False, agent_id=None, **algo_args):
         rm_agent = self.rm_agents[agent_id]

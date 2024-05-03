@@ -183,8 +183,10 @@ class ISAILASPExample:
 
 
 class ISAExampleContainer:
-    def __init__(self):
+    def __init__(self, ilasp_filter_threshold=None):
         self.storage: Dict[ISAILASPExample, float] = {}
+
+        self._ilasp_filter_threshold = ilasp_filter_threshold
 
     def add(self, ex):
         self.storage[ex] = self.storage.get(ex, 0) + ex.penalty
@@ -208,11 +210,20 @@ class ISAExampleContainer:
     def as_list_reweighted(self, total_sum: Union[int, float]) -> List[ISAILASPExample]:
         self.fix_penalties()
         ex_pen_sum = sum(self.storage.values())
+
+        # Filter examples that would have a penalty > _ilasp_penalty_threshold after
+        # reweighting
+        threshold = self._ilasp_filter_threshold * ex_pen_sum / total_sum
+
+        # Need to compute the new penalty sum so the final values sum to a desired number (e.g 100)
+        new_ex_penalty_sum = sum(x for x in self.storage.values() if x >= threshold)
+
         ret = []
         for ex, ex_val in self.storage.items():
             new_ex = copy.deepcopy(ex)
-            new_ex.penalty = (ex_val / ex_pen_sum) * total_sum
-            ret.append(new_ex)
+            if new_ex.penalty >= threshold:
+                new_ex.penalty = (ex_val / new_ex_penalty_sum) * total_sum
+                ret.append(new_ex)
         return ret
 
     def __len__(self):
@@ -220,10 +231,11 @@ class ISAExampleContainer:
 
 
 class MultiISAExampleContainer:
-    def __init__(self):
-        self._goal_examples = ISAExampleContainer()
-        self._dend_examples = ISAExampleContainer()
-        self._inc_examples = ISAExampleContainer()
+    def __init__(self, ilasp_filter_threshold):
+        self._ilasp_filter_threshold = ilasp_filter_threshold
+        self._goal_examples = ISAExampleContainer(ilasp_filter_threshold)
+        self._dend_examples = ISAExampleContainer(ilasp_filter_threshold)
+        self._inc_examples = ISAExampleContainer(ilasp_filter_threshold)
 
     def merge(self, ex_container: ISAExampleContainer, ex_type: ISAILASPExample.ExType):
         if ex_type == ISAILASPExample.ExType.GOAL:
@@ -242,9 +254,11 @@ class MultiISAExampleContainer:
         # Sorting is important for reproducibility (sets are not)
         return list(sorted(out))
 
-    def generate_incomplete_examples(self):
-        out = ISAExampleContainer()
-        for ex_container in [self._goal_examples, self._dend_examples, self._inc_examples]:
+    def generate_incomplete_examples(self, only_positive=False):
+        _examples = [self._goal_examples] if only_positive else [self._dend_examples,
+                                                                 self._inc_examples]
+        out = ISAExampleContainer(self._ilasp_filter_threshold)
+        for ex_container in _examples:
             ex_container.fix_penalties()
             for base_ex in ex_container.storage.keys():
                 for ex in base_ex.generate_incomplete_examples():
@@ -253,14 +267,19 @@ class MultiISAExampleContainer:
 
     def generate_goal_dend_inc(self, total_ex_sum: int) -> \
             (List[ISAILASPExample], List[ISAILASPExample], List[ISAILASPExample]):
-        new_inc = self.generate_incomplete_examples()
-        new_inc.merge(self._inc_examples)
+        new_inc_pos = self.generate_incomplete_examples(only_positive=True)
+        new_inc_rest = self.generate_incomplete_examples(only_positive=False)
+
+        # new_inc = self.generate_incomplete_examples()
+        new_inc_rest.merge(self._inc_examples)
         # self.merge(new_inc, ISAILASPExample.ExType.INCOMPLETE)
 
         gl = self._goal_examples.as_list_reweighted(total_ex_sum)
         de = self._dend_examples.as_list_reweighted(total_ex_sum)
-        inc = new_inc.as_list_reweighted(total_ex_sum)
-        return gl, de, inc
+        # inc = new_inc.as_list_reweighted(10 * total_ex_sum)
+        inc = new_inc_rest.as_list_reweighted(total_ex_sum)
+        pos_inc = new_inc_pos.as_list_reweighted(total_ex_sum)
+        return gl, de, inc + pos_inc
 
 
 # Lifts the example representation from Daniel's work to ISAILASPExample

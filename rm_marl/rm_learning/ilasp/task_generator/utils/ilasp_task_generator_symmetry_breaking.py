@@ -34,6 +34,7 @@ def _generate_bfs_symmetry_breaking(num_states, accepting_state, rejecting_state
     stmt = _generate_injected_state_statements(num_states, accepting_state, rejecting_state)
     stmt += _generate_injected_state_priority_statements(num_states, accepting_state, rejecting_state)
     stmt += _generate_injected_observable_statements(observables)
+    stmt += _generate_injected_used_state_id_statements()
     if symmetry_breaking_method == "bfs":
         stmt += _generate_bfs_symmetry_breaking_rules(num_states, rejecting_state, max_disj_size)
     elif symmetry_breaking_method == "bfs-alternative":
@@ -56,6 +57,13 @@ def _generate_injected_observable_statements(observables):
     stmts = ["injected_obs_id(%s, %d)." % (obs_list[i], i + 1) for i in range(len(obs_list))]
     stmts.append("injected_num_obs(%d)." % len(observables))
     stmts.append("injected_valid_label(1..%d)." % (2 * len(observables)))
+    return generate_injected_block(stmts) + '\n'
+
+
+def _generate_injected_used_state_id_statements():
+    # A state id is used if it is there is an edge to it
+    stmts = ["injected_used_state_id(U, I) :- injected_state_id(U, I), injected_ed(U, _, _).",
+             "injected_used_state_id(U, I) :- injected_state_id(U, I), injected_ed(_, U, _)."]
     return generate_injected_block(stmts) + '\n'
 
 
@@ -149,8 +157,8 @@ def _generate_bfs_symmetry_breaking_rules_helper():
 
 def _generate_bfs_symmetry_breaking_rules_alternative(max_disj_size):
     # helper methods for comparing state ids
-    stmts = ["injected_state_leq(X, Y) :- injected_state_id(X, XID), injected_state_id(Y, YID), XID<=YID.",
-             "injected_state_lt(X, Y) :- injected_state_id(X, XID), injected_state_id(Y, YID), XID<YID."]
+    stmts = ["injected_state_leq(X, Y) :- injected_used_state_id(X, XID), injected_used_state_id(Y, YID), XID<=YID.",
+             "injected_state_lt(X, Y) :- injected_used_state_id(X, XID), injected_used_state_id(Y, YID), XID<YID."]
 
     # edge ids
     stmts.append("injected_edge_id(1..%d)." % max_disj_size)
@@ -168,12 +176,12 @@ def _generate_bfs_symmetry_breaking_rules_alternative(max_disj_size):
     # parenting relationship
     # 1. define edges only for those states with ids (accepting and rejecting states are excluded)
     # 2. the parent is the node with lowest id with an edge to Y
-    # 3. all nodes have a parent
+    # 3. all used nodes have a parent
     # 4. BFS ordering
-    stmts.append("injected_ed_sb(X, Y, E) :- injected_ed(X, Y, E), injected_state_id(Y, _).")
+    stmts.append("injected_ed_sb(X, Y, E) :- injected_ed(X, Y, E), injected_used_state_id(Y, _).")
     stmts.append("injected_pa(X, Y) :- injected_ed_sb(X, Y, _), injected_state_lt(X, Y), "
                  "#false : injected_ed_sb(Z, Y, _), injected_state_lt(Z, X).")
-    stmts.append("% :- injected_state_id(Y, YID), YID > 0, not injected_pa(_, Y).")
+    stmts.append(":- injected_used_state_id(Y, YID), YID > 0, not injected_pa(_, Y).")
     stmts.append(":- injected_pa(X, Y), injected_ed_sb(XP, YP, _), injected_state_lt(XP, X), injected_state_leq(Y, YP).")
 
     # if X is the parent of Y, there is a smallest edge from X to Y (there is no destination YP such that Y<YP, but

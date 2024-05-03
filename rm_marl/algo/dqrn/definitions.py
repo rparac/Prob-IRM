@@ -2,7 +2,7 @@ from collections import namedtuple
 from enum import Enum
 
 # labels - labeling function output
-DQRNExperience = namedtuple('DQRNExperience', [
+DQRNStep = namedtuple('DQRNStep', [
     'state',
     'labels',
     'action',

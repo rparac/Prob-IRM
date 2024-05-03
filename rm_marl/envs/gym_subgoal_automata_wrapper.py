@@ -123,12 +123,13 @@ class GymSubgoalAutomataAdapter(gym.Wrapper):
 class OfficeWorldAbstractLabelingFunctionWrapper(LabelingFunctionWrapper, abc.ABC):
     def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
                  sensor_false_confidence: float,
-                 seed: int = 0):
+                 seed: int = 0, value_true_prior=2 / (12 * 9)):
         super().__init__(env, noisy=True, sensor_true_confidence=sensor_true_confidence,
                          sensor_false_confidence=sensor_false_confidence)
         self.env = env
         self.rng = np.random.default_rng(seed)
         self.num_steps = 0
+        self.value_true_prior = value_true_prior
 
     def get_labels(self, info: dict):
         self.num_steps += 1
@@ -137,7 +138,7 @@ class OfficeWorldAbstractLabelingFunctionWrapper(LabelingFunctionWrapper, abc.AB
             coffee_predicted = bool(self.rng.binomial(1, self.sensor_true_confidence))
         else:
             coffee_predicted = bool(1 - self.rng.binomial(1, self.sensor_false_confidence))
-        labels = {self.get_label(): self.get_label_confidence(coffee_predicted, value_true_prior=2 / (12 * 9))}
+        labels = {self.get_label(): self.get_label_confidence(coffee_predicted, value_true_prior=self.value_true_prior)}
         return labels
 
     @abc.abstractmethod
@@ -169,20 +170,36 @@ class OfficeWorldMailLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunction
 
 
 class OfficeWorldALabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+                 sensor_false_confidence: float, seed: int = 0):
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+
     def get_label(self):
         return "a"
 
 
 class OfficeWorldBLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+                 sensor_false_confidence: float, seed: int = 0):
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+
     def get_label(self):
         return "b"
 
 
 class OfficeWorldCLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+                 sensor_false_confidence: float, seed: int = 0):
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+
     def get_label(self):
         return "c"
 
 
 class OfficeWorldDLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+                 sensor_false_confidence: float, seed: int = 0):
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+
     def get_label(self):
         return "d"

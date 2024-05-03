@@ -12,7 +12,7 @@ class ExperienceBuffer:
     Minh et al. in their seminal paper "Playing Atari with Deep Reinforcement Learning" from 2015.
     """
 
-    def __init__(self, size, seed):
+    def __init__(self, size, seed, minimum_size: int = None):
         """
         Initialize the replay memory, given its maximum capacity
 
@@ -22,11 +22,14 @@ class ExperienceBuffer:
         ----------
         experience : collections.namedtuple containing the memory contents
         size The maximum capacity of the replay memory, in number of experience samples
+        min_size The minimum size of the replay memory for which experience can be sampled
 
         """
 
         self._size = size
         self._buffer = deque(maxlen=self._size)
+
+        self.minimum_size = minimum_size
 
         self._rng = random.Random(seed)
 
@@ -61,7 +64,8 @@ class ExperienceBuffer:
 
         """
 
-        if len(self._buffer) < batch_size:
+        # Use minimum size if it exists. Otherwise use batch_size
+        if len(self._buffer) < self.minimum_size or batch_size:
             raise NotEnoughExperiencesError(requested=batch_size, available=len(self._buffer))
 
         return self._rng.sample(self._buffer, batch_size)
