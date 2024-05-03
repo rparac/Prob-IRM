@@ -9,8 +9,8 @@ for seed in "${seeds[@]}"; do
   for noise_level in "${noise_levels[@]}"; do
     name="${directory}_${seed}_${noise_level}"
     # run noise on all three
-    python with_automata.py ${directory} ${name} \
-      dqrm_coffee_world.py env/office-world@env=visit_abcd run=visit_abcd \
+    python submit_rcs_script.py ${directory} ${name} \
+      with_automata.py env/office-world@env=visit_abcd run=visit_abcd \
         +experiment=vanilla_all_symmetric_error x=${noise_level} \
         run.name=${directory}/${name} run.seed=${seed} \
         run.checkpoint_freq=1000
