@@ -10,7 +10,7 @@ for seed in "${seeds[@]}"; do
     name="${directory}_${seed}_${noise_level}"
     # run noise on all three
     python submit_rcs_script.py ${directory} ${name} \
-      dqrm_coffee_world.py env/office-world@env=delier_coffee_mail run=dqrm_coffee_world \
+      dqrm_coffee_world.py env/office-world@env=deliver_coffee_mail run=dqrm_coffee_world \
         +experiment=vanilla_coffee_symmetric_error x=${noise_level} \
         run.name=${directory}/${name} run.seed=${seed}
   done
