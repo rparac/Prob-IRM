@@ -2,6 +2,8 @@
 run:
   no_display: True
   name: "visit_abcd"
+  # Avoid checkpointing because I don't have enough storage
+  checkpoint_freq: 1000000
 
 
 # Hydra optuna plugin doesn't support $ interpolation.
