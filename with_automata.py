@@ -22,7 +22,7 @@ from rm_marl.rm_learning.ilasp.noisy_learner.ProbFFNSLLearner import ProbFFNSLLe
 from rm_marl.rm_transition.prob_rm_transitioner import ProbRMTransitioner
 from rm_marl.trainer import Trainer
 
-automata = "/home/rp218/projects/rm-marl/data/office-world/rm_agent_1.txt"
+automata = "data/office-world/rm_agent_1.txt"
 
 
 def _get_base_env(env_name, seed, agent_id, label_factories, render_mode, max_episode_length, use_rs, rm_transitioner,
