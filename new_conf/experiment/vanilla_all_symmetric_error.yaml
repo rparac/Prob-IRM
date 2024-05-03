@@ -25,8 +25,8 @@ manual_overrides:
   - env.c_label_factory.sensor_false_confidence
   - env.d_label_factory.sensor_true_confidence
   - env.d_label_factory.sensor_false_confidence
-#  - env.mail_label_factory.sensor_true_confidence
-#  - env.mail_label_factory.sensor_false_confidence
+  - env.mail_label_factory.sensor_true_confidence
+  - env.mail_label_factory.sensor_false_confidence
 
 
 # Doesn't use optuna to run experiments

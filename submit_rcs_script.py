@@ -49,21 +49,21 @@ pip install -r to_install.txt
 
 
 def get_pbs_script_base(experiment_directory: str):
-    return pbs_script_gpu2
-    #
-    # return f"""#!/bin/bash
-    # #PBS -l walltime=24:00:00
-    # #PBS -l select=1:ncpus=4:mem=200Gb
-    #
-    # eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
-    #
-    # export PATH=$PATH:/gpfs/home/rp218/bin
-    #
-    # module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
-    #
-    # cd $HOME/rm-marl
-    # conda activate rm_marl
-    # """
+    # return pbs_script_gpu2
+
+    return f"""#!/bin/bash
+    #PBS -l walltime=24:00:00
+    #PBS -l select=1:ncpus=4:mem=200Gb
+
+    eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
+
+    export PATH=$PATH:/gpfs/home/rp218/bin
+
+    module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
+
+    cd $HOME/rm-marl
+    conda activate new
+    """
 
 
 def run_pbs(args, name, experiment_directory):
