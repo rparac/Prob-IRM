@@ -36,11 +36,15 @@ pbs_script_gpu2 = f"""#!/bin/bash
 eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
 
 export PATH=$PATH:/gpfs/home/rp218/bin
+export PYTHONPATH=$PYTHONPATH:/gpfs/home/rp218/rm-marl
 
 module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 
+
 cd $HOME/rm-marl
-conda activate rm_marl
+conda activate new
+conda install -c git
+pip install -r to_install.txt
 """
 
 
