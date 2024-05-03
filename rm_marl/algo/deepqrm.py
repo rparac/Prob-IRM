@@ -225,10 +225,12 @@ class DeepQRM(Algo):
 
                 with torch.no_grad():
 
-                    for param in q_net.parameters():
+                    for param in q_net.network.parameters():
                         std_dev, mean = torch.std_mean(param)
                         gaussian_noise = ((0.015 * std_dev) ** 0.5) * torch.randn_like(param)
                         param.add_(gaussian_noise)
+
+                    self._update_target_networks()
 
         elif method == 'random_init':
 

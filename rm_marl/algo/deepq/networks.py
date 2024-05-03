@@ -16,7 +16,7 @@ class OfficeQNetwork(nn.Module):
         hidden_layer_3 = nn.Linear(2 * base_layer_size, base_layer_size)
 
         if not dropout:
-            self._network = nn.Sequential(
+            self.network = nn.Sequential(
                 hidden_layer_1,
                 nn.ReLU(),
                 hidden_layer_2,
@@ -26,7 +26,7 @@ class OfficeQNetwork(nn.Module):
                 nn.Linear(base_layer_size, num_actions)
             )
         else:
-            self._network = nn.Sequential(
+            self.network = nn.Sequential(
                 hidden_layer_1,
                 nn.ReLU(),
                 nn.Dropout(0.2),
@@ -55,7 +55,7 @@ class OfficeQNetwork(nn.Module):
         rm_state_belief = 2 * rm_state_belief - 1
 
         network_input = torch.cat((obs_embeddings, rm_state_belief), dim=-1)
-        return self._network(network_input)
+        return self.network(network_input)
 
 
 class DeepQNetwork(nn.Module):
