@@ -51,7 +51,7 @@ class DeepQRM(Algo):
     ])
 
     def __init__(
-            self,
+            self, *
             obs_space: "gym.spaces.Space",
             action_space: "gym.spaces.Discrete",
             num_policy_layers: int = 5,
