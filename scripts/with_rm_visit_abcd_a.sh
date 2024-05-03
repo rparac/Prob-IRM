@@ -12,7 +12,7 @@ for seed in "${seeds[@]}"; do
     python with_automata.py ${directory} ${name} \
       dqrm_coffee_world.py env/office-world@env=visit_abcd run=visit_abcd \
         +experiment=vanilla_a_symmetric_error x=${noise_level} \
-        run.name=${directory}/${name} run.seed=${seed}
+        run.name=${directory}/${name} run.seed=${seed} \
         run.checkpoint_freq=1000
   done
 done
