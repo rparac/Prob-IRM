@@ -16,7 +16,6 @@ class RewardMachineAgent(Agent):
         self.rm_transitioner = rm_transitioner
 
         self.algo = algo
-        self.algo.on_rm_reset(rm=self.rm)
         self.reset()
 
     @classmethod

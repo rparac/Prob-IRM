@@ -27,7 +27,7 @@ import os
 import os.path
 
 from ._base import Algo
-from .deepq.networks import DeepQNetwork, CRMNetwork
+from .deepq.networks import DeepQNetwork, OfficeQNetwork, SimpleQNetwork
 from ..reward_machine import RewardMachine
 from ..utils.memory import ExperienceBuffer
 
@@ -51,7 +51,7 @@ class DeepQRM(Algo):
     ])
 
     def __init__(
-            self,
+            self, *
             obs_space: "gym.spaces.Space",
             action_space: "gym.spaces.Discrete",
             num_policy_layers: int = 5,
@@ -67,9 +67,13 @@ class DeepQRM(Algo):
             temperature: float = 50.0,
             optimizer_cls: Type[Optimizer] = AdamW,
             optimizer_kws: dict = None,
+            policy_reset_method: str = 'default',
             seed: int = 0,
+            use_simpleqnet: bool = False,
             use_crm: bool = False,
+            use_dropout: bool = False,
             num_rm_states: int = 1,
+            max_rm_states: int = 15,
     ):
 
         super().__init__()
@@ -81,6 +85,7 @@ class DeepQRM(Algo):
         self._layers_size = policy_layer_size
         self._num_actions = action_space.n
         self._num_rm_states = num_rm_states
+        self._max_rm_states = max_rm_states
 
         # PRNGs
         self._curr_seed = seed
@@ -93,7 +98,11 @@ class DeepQRM(Algo):
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+        # Q-Network related configuration
+        self._use_simpleqnet = use_simpleqnet
         self._use_crm = use_crm
+        self._use_dropout = use_dropout
+
         # Mappings from RM states to RMStatePolicy instances
         self._init_q_networks()
 
@@ -114,6 +123,7 @@ class DeepQRM(Algo):
         self._epsilon_start = epsilon_start
         self._epsilon_end = epsilon_end
         self._epsilon_decay = epsilon_decay
+        self._policy_reset_method = policy_reset_method
 
         # Statistics
         self._policy_age = 0
@@ -141,14 +151,30 @@ class DeepQRM(Algo):
         -------
         A newly created DeepQNetwork instance
         """
+
         if self._use_crm:
-            return CRMNetwork(
+            return OfficeQNetwork(
                 self._dim_obs,
-                self._num_rm_states,
-                self._num_policy_layers,
-                self._layers_size,
+                self._max_rm_states,
                 self._num_actions,
+                self._use_dropout
             ).to(self.device)
+
+            # return CRMNetwork(
+            #     self._dim_obs,
+            #     self._max_rm_states,  # Max number of allowed RM states is used due to padding
+            #     self._num_policy_layers,
+            #     self._layers_size,
+            #     self._num_actions,
+            # ).to(self.device)
+
+        if self._use_simpleqnet:
+            return SimpleQNetwork(
+                self._dim_obs,
+                self._max_rm_states,
+                num_actions=4,
+                learn_biases=False
+            )
 
         return DeepQNetwork(
             self._dim_obs,
@@ -159,10 +185,10 @@ class DeepQRM(Algo):
 
     def _init_q_network_pair(self):
         """
-        Initialize a pair of Q-network
+        Initialize a pair of Q-networks
 
         Specifically, this method returns a pair of two Q-networks, where the first can be used as a policy
-        network for any given RM state, while the second can be used as its associated target network.
+        network for any given RM state, while the second can be used as its associated target network (DDQN).
 
         Returns
         -------
@@ -188,6 +214,30 @@ class DeepQRM(Algo):
         target_network.requires_grad_(False)
 
         return DeepQRM.RMStatePolicy(policy_network, policy_optimizer, target_network)
+
+    def _reset_q_networks(self, *, method):
+
+        assert method in ['sum_gaussian', 'random_init'], f'Unrecognized reset method: "{method}"'
+
+        if method == 'sum_gaussian':
+
+            for q_net, _, t_net in self._q_networks.values():
+
+                with torch.no_grad():
+
+                    for param in q_net.network.parameters():
+                        std_dev, mean = torch.std_mean(param)
+                        gaussian_noise = ((0.015 * std_dev) ** 0.5) * torch.randn_like(param)
+                        param.add_(gaussian_noise)
+
+                    self._update_target_networks()
+
+        elif method == 'random_init':
+
+            self._init_q_networks()
+
+        else:
+            assert False, f'Unrecognized method: "{method}"'
 
     def _update_target_networks(self):
         """
@@ -219,7 +269,7 @@ class DeepQRM(Algo):
 
         # Add experience to the replay buffer
         experience = DeepQExperience(u, flat_state, action, reward, done, flat_next_state, next_u)
-        if self._use_crm:
+        if self._use_crm or self._use_simpleqnet:
             self._replay_memory[None].push(experience)
         else:
             self._replay_memory[u].push(experience)
@@ -301,7 +351,6 @@ class DeepQRM(Algo):
             t = t_net(s, u)[best_act].unsqueeze(0)
             t_old = t_net(s, u).max().unsqueeze(0)
             target_values.append(t)
-        target_values = torch.stack(target_values)
 
         #
         # target_values = torch.stack([
@@ -313,11 +362,18 @@ class DeepQRM(Algo):
         # Compute the value estimates V(s') = max_{a'} Q(s', a') for next states according to the target network
         # By definition, V(s) = 0 for a terminal state s
         next_states_values = torch.zeros((self._batch_size, 1), device=self.device)
-        next_states_values[non_terminal_mask] = target_values
+
+        if target_values:
+            target_values = torch.stack(target_values)
+            next_states_values[non_terminal_mask] = target_values
 
         # Compute the Q-values we expected to produce with our policy network
         expected_q_estimates = (self._gamma * next_states_values) + rewards
-        loss = nn.MSELoss()(q_estimates, expected_q_estimates)
+
+        if self._use_crm:
+            loss = nn.HuberLoss()(q_estimates, expected_q_estimates)
+        else:
+            loss = nn.MSELoss()(q_estimates, expected_q_estimates)
 
         # Reset gradients to zero to avoid being influenced by previous batches
         optimizer.zero_grad()
@@ -326,6 +382,7 @@ class DeepQRM(Algo):
 
         return loss.item()
 
+    @torch.no_grad()
     def action(self, state, u, greedy: bool = True, testing: bool = False, **kwargs):
         """
         Compute an action to be taken based on the state of the policy
@@ -346,7 +403,7 @@ class DeepQRM(Algo):
 
         """
 
-        if self._np_random.random() < self._epsilon:
+        if not testing and self._np_random.random() < self._epsilon:
             return self._np_random.choice(range(self._num_actions))
 
         # A non-random action is to be taken, prepare the flat env state and feed it to the Q-network
@@ -355,7 +412,7 @@ class DeepQRM(Algo):
             dtype=torch.float,
             device=self.device
         )
-        if self._use_crm:
+        if self._use_crm or self._use_simpleqnet:
             # TODO: need to deal with string case
             rm_state = self._vectorize(u)
             action_values = self._q_networks[None].policy_network(flat_state, rm_state)
@@ -389,12 +446,33 @@ class DeepQRM(Algo):
             return self._np_random.choice(best_actions)
 
     def _vectorize(self, u):
+        """
+        Return a vector representation of the given RM state
+
+        If the RM state is represented as a simple integer, its one-hot encoding its returned.
+        Otherwise, if the RM is already a vector, it is simply converted to a PyTorch tensor.
+
+        In any case, the returned representation is padded to the maximum number of allowed RM states, as specified
+        when the DeepQRM instance was initialized.
+
+        Parameters
+        ----------
+        u The RM state representation that needs to be vectorized
+
+        Returns
+        -------
+        A torch.Tensor instance containing the vector representation of the given RM state
+
+        """
+        padded_rm_state = torch.zeros(self._max_rm_states, device=self.device, dtype=torch.float32)
+
         if isinstance(u, int):
-            rm_state = torch.zeros(self._num_rm_states, device=self.device, dtype=torch.float32)
-            rm_state[u] = 1
+            padded_rm_state[u] = 1
         else:
             rm_state = torch.tensor(u, device=self.device, dtype=torch.float32)
-        return rm_state
+            padded_rm_state[:len(rm_state)] = rm_state
+
+        return padded_rm_state
 
     def on_env_reset(self, *args, **kwargs):
         # Nothing to do
@@ -409,9 +487,18 @@ class DeepQRM(Algo):
 
         """
 
+        assert len(rm.states) < self._max_rm_states, f'New RM contains to many states: {len(rm.states)} > {self._max_rm_states}'
+
         # Clear the sub-policies
         self._num_rm_states = len(rm.states)
-        self._init_q_networks()
+
+        if self._policy_reset_method != 'default':
+            self._reset_q_networks(method=self._policy_reset_method)
+        else:
+            if self._use_crm or self._use_simpleqnet:
+                self._reset_q_networks(method='sum_gaussian')
+            else:
+                self._reset_q_networks(method='random_init')
 
         # Clear replay memory
         self._init_replay_memory()
