@@ -17,13 +17,16 @@ file_pattern = r"(.*)_(?P<seed>\d+)_(?P<sensor_confidence>[\d.]+)"
 def to_dataframe(log_dirs, extraction_pattern):
     dfs = []
     for logdir in log_dirs:
-        reader = SummaryReader(logdir)
-        df = reader.scalars
-        match = re.match(extraction_pattern, logdir)
-        df['logdir'] = logdir
-        df['seed'] = int(match.group("seed"))
-        df['sensor_confidence'] = float(match.group("sensor_confidence"))
-        dfs.append(df)
+        try:
+            reader = SummaryReader(logdir)
+            df = reader.scalars
+            match = re.match(extraction_pattern, logdir)
+            df['logdir'] = logdir
+            df['seed'] = int(match.group("seed"))
+            df['sensor_confidence'] = float(match.group("sensor_confidence"))
+            dfs.append(df)
+        except ValueError:
+            print(f"Skipping {logdir}, the results are not good enough yet")
     return pd.concat(dfs)
 
 
