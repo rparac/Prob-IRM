@@ -14,26 +14,23 @@ from typing import List
 script_directory = "outputs"
 
 pbs_script_base = """#!/bin/bash
-#PBS -l select=1:ncpus=4:mem=100Gb:ngpus=1:gpu_type=RTX6000
-#PBS -l walltime=12:00:00
+#PBS -l walltime=24:00:00
+#PBS -l select=1:ncpus=4:mem=100Gb
 
-module load tools/prod
-module load anaconda3/personal
-
+cd $HOME/rm-marl
 export PATH=$PATH:/rds/general/user/rp218/home/bin
-
-source activate rm_marl
-cd ${HOME}/rm-marl/
+conda activate new
 """
 
 
-
-
-def run_pbs(args, name):
+def run_pbs(args, name, experiment_directory):
     python_run = f"python {' '.join(args)}"
 
     # generate scripts
-    pbs_out = f"{script_directory}/{name}.pbs"
+    pbs_out = f"{script_directory}/{experiment_directory}/{name}.pbs"
+    if not os.path.exists(f"{script_directory}/{experiment_directory}"):
+        os.makedirs(f"{script_directory}/{experiment_directory}")
+
     with open(pbs_out, 'w') as f:
         f.write(pbs_script_base)
         f.write('\n')
@@ -46,9 +43,9 @@ def run_pbs(args, name):
 
 if __name__ == "__main__":
     arguments = sys.argv
-    name = arguments[1]
-    args = arguments[2:]
+    directory = arguments[1]
+    name = arguments[2]
+    args = arguments[3:]
 
     os.makedirs(script_directory, exist_ok=True)
-    run_pbs(args, name)
-
+    run_pbs(args, name, directory)
