@@ -19,7 +19,7 @@ pbs_script_base = """#!/bin/bash
 
 cd $HOME/rm-marl
 export PATH=$PATH:/rds/general/user/rp218/home/bin
-conda activate new
+source activate new
 """
 
 

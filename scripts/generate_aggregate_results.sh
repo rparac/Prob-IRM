@@ -8,6 +8,7 @@ base_dirs=("$base_dir/coffee_mail")
 directory="generate_summaries"
 for base_dir in "${base_dirs[@]}"; do
   name="generate_summaries"
+  output="summary"
   python submit_rcs_old_script.py ${name} ${directory} \
-    script/generate_summaries.py ${base_dir}
+    scripts/generate_summaries.py ${base_dir} ${output}
 done
