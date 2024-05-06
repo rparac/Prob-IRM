@@ -14,19 +14,19 @@ from torch.utils.tensorboard import SummaryWriter
 file_pattern = r"(.*)_(?P<seed>\d+)_(?P<sensor_confidence>[\d.]+)"
 
 
-def to_dataframe(log_dirs, extraction_pattern):
+def to_dataframe(base_dir, log_dirs, extraction_pattern):
     dfs = []
     for logdir in log_dirs:
-        try:
-            reader = SummaryReader(logdir)
-            df = reader.scalars
-            match = re.match(extraction_pattern, logdir)
-            df['logdir'] = logdir
-            df['seed'] = int(match.group("seed"))
-            df['sensor_confidence'] = float(match.group("sensor_confidence"))
-            dfs.append(df)
-        except ValueError:
-            print(f"Skipping {logdir}, the results are not good enough yet")
+        # inside the directory with timings. Take the most recent one
+        # dir_under_consideration = max(os.listdir(logdir))
+
+        reader = SummaryReader(f"{base_dir}/{logdir}")
+        df = reader.scalars
+        match = re.match(extraction_pattern, logdir)
+        df['logdir'] = logdir
+        df['seed'] = int(match.group("seed"))
+        df['sensor_confidence'] = float(match.group("sensor_confidence"))
+        dfs.append(df)
     return pd.concat(dfs)
 
 
@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     log_dirs = os.listdir(args.basedir)
 
-    all_df = to_dataframe(log_dirs, file_pattern)
+    all_df = to_dataframe(args.basedir, log_dirs, file_pattern)
     print("Generated pandas dataframe")
     grouped_result = aggregate_by_tag(all_df)
     write_tagged_results(grouped_result, tag_column_name="tag", output_dir=f"{args.basedir}/{args.output}")
