@@ -310,7 +310,7 @@ class ProbFFNSLLearner(RMLearner):
         pred_vec[incomplete_idx] = 1 - curr_rm.accepting_state_prob(curr_state) - curr_rm.rejecting_state_prob(
             curr_state)
 
-        self._rm_cross_entropy_sum += log_loss(pred_vec, true_vec)
+        self._rm_cross_entropy_sum += log_loss(true_vec, pred_vec)
 
     def _update_trace_counters(self, curr_rm, curr_state, trace):
         self._rm_cnt_since_restart += 1
