@@ -1,7 +1,7 @@
 """
 Quick script to run hydra with condor launcher
 Run the file as
-python submit_script.py <DIRECTORY> <NAME> ../dqrm_coffee_world.py <ARGS>
+python submit_script.py <DIRECTORY> <NAME> dqrm_coffee_world.py <ARGS>
 
 """
 import os
