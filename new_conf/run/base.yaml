@@ -26,5 +26,5 @@ rm_learner_kws:
   n_phi_cost: 1
   ex_penalty_multiplier: 2
   min_penalty: 2
-  cross_entropy_threshold: 0.8
+  cross_entropy_threshold: 0.4
   use_cross_entropy: True
