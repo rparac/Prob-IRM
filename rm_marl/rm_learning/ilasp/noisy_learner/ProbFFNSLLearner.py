@@ -4,13 +4,11 @@ import os
 from typing import List
 
 import numpy as np
-import torch
-import torch.nn.functional as F
+from sklearn.metrics import log_loss
 
 from rm_marl.reward_machine import RewardMachine
 from rm_marl.rm_learning import RMLearner
-from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample, ISAExampleContainer, \
-    MultiISAExampleContainer
+from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample, MultiISAExampleContainer
 from rm_marl.rm_learning.ilasp.noisy_learner.example_generator import NoisyILASPExampleGenerator
 from rm_marl.rm_learning.ilasp.task_generator import generate_ilasp_task
 from rm_marl.rm_learning.ilasp.task_improvement_validator import get_ilasp_solution_penalty
@@ -305,16 +303,14 @@ class ProbFFNSLLearner(RMLearner):
                 true_vec[rejecting_idx] = 1
         else:
             true_vec[incomplete_idx] = 1
-        true_vec = torch.Tensor(true_vec)
 
         pred_vec = [0, 0, 0]
         pred_vec[accepting_idx] = curr_rm.accepting_state_prob(curr_state)
         pred_vec[rejecting_idx] = curr_rm.rejecting_state_prob(curr_state)
         pred_vec[incomplete_idx] = 1 - curr_rm.accepting_state_prob(curr_state) - curr_rm.rejecting_state_prob(
             curr_state)
-        pred_vec = torch.Tensor(pred_vec)
 
-        self._rm_cross_entropy_sum += F.cross_entropy(pred_vec, true_vec)
+        self._rm_cross_entropy_sum += log_loss(pred_vec, true_vec)
 
     def _update_trace_counters(self, curr_rm, curr_state, trace):
         self._rm_cnt_since_restart += 1
