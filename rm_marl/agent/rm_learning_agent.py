@@ -123,3 +123,6 @@ class RewardMachineLearningAgent(Agent):
         if isinstance(labels, list):
             return tuple(labels)
         return labels
+
+    def get_statistics(self):
+        return self.rm_learner.get_statistics()

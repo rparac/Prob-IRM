@@ -61,3 +61,6 @@ class Agent(abc.ABC):
     @abc.abstractmethod
     def project_labels(self, labels):
         raise NotImplementedError('project_labels')
+
+    def get_statistics(self):
+        return {}

@@ -261,12 +261,10 @@ class ProbFFNSLLearner(RMLearner):
     #     return list(ret.keys())
 
     def _new_should_relearn_rm(self) -> bool:
-        num_seen_traces = len(self._seen_positive_traces) + len(self._seen_incomplete_traces) + len(
-            self._seen_negative_traces)
-        if num_seen_traces < self.last_relearning_trace_num + self.min_rm_num_episodes:
+        if self._num_seen_traces < self.last_relearning_trace_num + self.min_rm_num_episodes:
             return False
 
-        return self._rm_cross_entropy_sum / num_seen_traces > self.cross_entropy_threshold
+        return self._rm_cross_entropy_sum / self._num_seen_traces > self.cross_entropy_threshold
 
     def _should_relearn_rm(self) -> bool:
         num_seen_traces = len(self._seen_positive_traces) + len(self._seen_incomplete_traces) + len(
@@ -356,3 +354,11 @@ class ProbFFNSLLearner(RMLearner):
         # if self._should_relearn_rm():
         #     raise ValueError("The relarned RM would be immediately be relearned."
         #                      "Check if the threshold is too large or there is a bigger issue.")
+
+    @property
+    def _num_seen_traces(self):
+        return len(self._seen_positive_traces) + len(self._seen_incomplete_traces) + len(self._seen_negative_traces)
+
+    def get_statistics(self):
+        avg_cross_entropy = self._rm_cross_entropy_sum / self._num_seen_traces if self._num_seen_traces > 0 else 0
+        return {"ProbFFNSL/cross_entropy": avg_cross_entropy}

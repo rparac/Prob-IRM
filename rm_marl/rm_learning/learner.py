@@ -36,3 +36,6 @@ class RMLearner(metaclass=abc.ABCMeta):
 
     def process_examples(self, examples):
         return examples
+
+    def get_statistics(self):
+        return {}

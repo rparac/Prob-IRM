@@ -78,3 +78,6 @@ class RewardMachineAgent(Agent):
     @rm.setter
     def rm(self, new_value):
         self.rm_transitioner.rm = new_value
+
+    def get_statistics(self):
+        return {}

@@ -126,8 +126,12 @@ class Trainer:
                         algo_stats = a.rm_agents[aid].algo.get_statistics()
                     else:
                         algo_stats = a.algo.get_statistics()
+                    # Using rm_learner stats
+                    agent_stats = a.get_statistics()
                     logger.add_scalar(f'algo/{aid}/policy_age', algo_stats["policy_age"], episode)
                     logger.add_scalar(f'algo/{aid}/epsilon', algo_stats["epsilon"], episode)
+                    for stat_key, stat_value in agent_stats.items():
+                        logger.add_scalar(f'agent/{stat_key}', stat_value, episode)
 
             if not run_config["training"]:
                 self.test_episode += 1
@@ -476,7 +480,7 @@ class Trainer:
             transposed_info_bar = np.transpose(info_bar[0, i], axes=(1, 2, 0))
             with Image.fromarray(transposed_info_bar, mode='RGB') as info_bar_img:
                 drawer = ImageDraw.Draw(info_bar_img)
-                drawer.text((0, 0), f"# Steps: {i+1}/{num_frames}", font_size=50, fill='#ffffff')
+                drawer.text((0, 0), f"# Steps: {i + 1}/{num_frames}", font_size=50, fill='#ffffff')
                 drawer.text((0, 50), f"Success: {'Yes' if success else 'No'}", font_size=32, fill='#ffffff')
                 info_bar_data = np.transpose(np.asarray(info_bar_img), axes=(2, 0, 1))
                 full_video[0, i, :, 0:info_bar_h, :] = info_bar_data
