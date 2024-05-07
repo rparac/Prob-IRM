@@ -171,3 +171,7 @@ To obtain parameters that can be modified, run:
 A particularly interesting one may be 
 `run.rm_learner_kws.cross_entropy_threshold=$VALUE`
 because of the recent bug
+
+# Debugging
+
+The `submit_slurm_script.py` is commented. Please look into it if there are any mistakes that I have made.
