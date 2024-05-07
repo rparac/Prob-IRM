@@ -110,36 +110,12 @@ class QRM(Algo):
         random_act_selection = self._np_random.random() < self.epsilon
         if random_act_selection and not testing:
             action = self._np_random.choice(range(self.action_space.n))
-        elif testing or (greedy and not random_act_selection):
+        else:
             best_actions = np.where(
                 self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)]
                 == np.max(self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)])
             )[0]
             action = self._np_random.choice(best_actions)
-        else:
-            pr_sum = np.sum(
-                np.exp(self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)] * self.temperature)
-            )
-            pr = (
-                    np.exp(self.q[self._to_hashable_rm_state(u)][self._to_hashable_state_(state)] * self.temperature)
-                    / pr_sum
-            )
-
-            # If any q-values are so large that the softmax function returns infinity,
-            # make the corresponding actions equally likely
-            if any(np.isnan(pr)):
-                print("BOLTZMANN CONSTANT TOO LARGE IN ACTION-SELECTION SOFTMAX.")
-                temp = np.array(np.isnan(pr), dtype=float)
-                pr = temp / np.sum(temp)
-
-            cdf = np.insert(np.cumsum(pr), 0, 0)
-
-            randn = self._np_random.random()
-            action = 0
-            for a in range(self.action_space.n):
-                if randn >= cdf[a] and randn <= cdf[a + 1]:
-                    action = a
-                    break
 
         return action
 
