@@ -336,7 +336,7 @@ class ProbFFNSLLearner(RMLearner):
         self._rm_incomplete_trace_success = 0
         self._rm_dend_trace_success = 0
 
-        self._rm_goal_trace_success = 0
+        self._rm_cross_entropy_sum = 0
 
         transitioner = ProbRMTransitioner(candidate_rm)
         for trace in itertools.chain(self._seen_positive_traces, self._seen_negative_traces,
