@@ -308,7 +308,13 @@ class ProbFFNSLLearner(RMLearner):
         pred_vec[incomplete_idx] = 1 - curr_rm.accepting_state_prob(curr_state) - curr_rm.rejecting_state_prob(
             curr_state)
 
-        self._rm_cross_entropy_sum += log_loss(true_vec, pred_vec)
+        # Check if cross entropy should be infinity.
+        # We make the loss extremely large to always trigger relearning
+        if np.isclose(pred_vec[np.argmax(true_vec)], 0):
+            loss_val = 1000000000000000000000
+        else:
+            loss_val = log_loss(true_vec, pred_vec)
+        self._rm_cross_entropy_sum += loss_val
 
     def _update_trace_counters(self, curr_rm, curr_state, trace):
         self._rm_cnt_since_restart += 1
@@ -361,4 +367,7 @@ class ProbFFNSLLearner(RMLearner):
 
     def get_statistics(self):
         avg_cross_entropy = self._rm_cross_entropy_sum / self._num_seen_traces if self._num_seen_traces > 0 else 0
-        return {"ProbFFNSL/cross_entropy": avg_cross_entropy}
+        return {
+            "ProbFFNSL/cross_entropy": avg_cross_entropy,
+            "ProbFFNSL/last_relearning_trace_num": self.last_relearning_trace_num,
+        }
