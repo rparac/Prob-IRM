@@ -76,6 +76,8 @@ class ProbFFNSLLearner(RMLearner):
         self._rm_dend_trace_success = 0
 
         self._rm_cross_entropy_sum = 0
+        # variable to track if infinity cross entropy is recorded
+        self._inf_cross_entropy_recorded = False
 
         # TODO: We might want to make this more efficient (if there are repeated traces)
         # self._seen_traces: List[TraceTracker] = []
@@ -113,7 +115,6 @@ class ProbFFNSLLearner(RMLearner):
             self._update_examples(trace)
         elif curr_rm.is_state_terminal(curr_state):
             self._update_examples(trace)
-
 
         # if not self._should_relearn_rm() and not self.overriden_with_debugger:
         should_relearn = self._new_should_relearn_rm() if self.use_cross_entropy else self._should_relearn_rm()
@@ -241,7 +242,7 @@ class ProbFFNSLLearner(RMLearner):
             use_compressed_traces=True,
             avoid_learning_only_negative=True,
             prioritize_optimal_solutions=False,
-            use_state_id_restrictions=False, # True,  # states used need to be used in order
+            use_state_id_restrictions=False,  # True,  # states used need to be used in order
             binary_folder_name=None,
             n_phi_cost=self.n_phi_cost,
             edge_cost=self.edge_cost,
@@ -264,7 +265,8 @@ class ProbFFNSLLearner(RMLearner):
         if self._num_seen_traces < self.last_relearning_trace_num + self.min_rm_num_episodes:
             return False
 
-        return self._rm_cross_entropy_sum / self._num_seen_traces > self.cross_entropy_threshold
+        return (self._inf_cross_entropy_recorded or
+                self._rm_cross_entropy_sum / self._num_seen_traces > self.cross_entropy_threshold)
 
     def _should_relearn_rm(self) -> bool:
         num_seen_traces = len(self._seen_positive_traces) + len(self._seen_incomplete_traces) + len(
@@ -311,9 +313,8 @@ class ProbFFNSLLearner(RMLearner):
         # Check if cross entropy should be infinity.
         # We make the loss extremely large to always trigger relearning
         if np.isclose(pred_vec[np.argmax(true_vec)], 0):
-            loss_val = 1000000000000000000000
-        else:
-            loss_val = log_loss(true_vec, pred_vec)
+            self._inf_cross_entropy_recorded = True
+        loss_val = log_loss(true_vec, pred_vec)
         self._rm_cross_entropy_sum += loss_val
 
     def _update_trace_counters(self, curr_rm, curr_state, trace):
@@ -343,6 +344,7 @@ class ProbFFNSLLearner(RMLearner):
         self._rm_dend_trace_success = 0
 
         self._rm_cross_entropy_sum = 0
+        self._inf_cross_entropy_recorded = False
 
         transitioner = ProbRMTransitioner(candidate_rm)
         for trace in itertools.chain(self._seen_positive_traces, self._seen_negative_traces,
