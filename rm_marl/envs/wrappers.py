@@ -89,6 +89,44 @@ class ProbabilisticRewardShaping(gym.Wrapper):
         self._rm_state_belief = None
 
 
+class LabelThresholding(gym.Wrapper):
+
+    def __init__(self, env: gym.Env, threshold: float = 0.5):
+
+        assert 0 <= threshold <= 1, f"Threshold value \"{threshold}\" is outside of valid range [0, 1]"
+
+        super().__init__(env)
+        self._threshold = threshold
+
+    def _apply_thresholding(self, labels):
+
+        thresholded_labels = {}
+        for label, confidence in labels.items():
+            thresholded_labels[label] = 1 if confidence >= self._threshold else 0
+
+        return thresholded_labels
+
+    def step(self, action):
+
+        obs, reward, terminated, truncated, info = super().step(action)
+        assert "labels" in info, f"Info dictionary does not contain \"labels\" key"
+
+        labels = info["labels"]
+        info["labels"] = self._apply_thresholding(labels)
+
+        return obs, reward, terminated, truncated, info
+
+    def reset(self, **kwargs):
+
+        obs, info = super().reset(**kwargs)
+        assert "labels" in info, f"Info dictionary does not contain \"labels\" key"
+
+        labels = info["labels"]
+        info["labels"] = self._apply_thresholding(labels)
+
+        return obs, info
+
+
 class LabelingFunctionWrapper(gym.Wrapper):
     def __init__(self, env: gym.Env, noisy: bool = False, seed: int = 0, sensor_true_confidence: float = 1,
                  sensor_false_confidence: float = 1):
