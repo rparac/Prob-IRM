@@ -17,9 +17,10 @@ pbs_script_base = """#!/bin/bash
 #PBS -l walltime=24:00:00
 #PBS -l select=1:ncpus=4:mem=100Gb
 
-cd $HOME/rm-marl
+cd $EPHEMERAL/rm-marl
 export PATH=$PATH:/rds/general/user/rp218/home/bin
-source activate new
+eval "$(~/miniconda3/bin/conda shell.bash hook)"
+conda activate new
 """
 
 
