@@ -123,7 +123,7 @@ def run(cfg: DictConfig) -> int:
             **cfg["algo"],
         })
 
-        rm_agent = RewardMachineAgent(env.agent_id, rm_transitioner, algo)
+        rm_agent = RewardMachineAgent(env.agent_id, env.rm_transitioner, algo)
         rm_agents.append(rm_agent)
 
     agent_dict = {ag.agent_id: ag for ag in rm_agents}
