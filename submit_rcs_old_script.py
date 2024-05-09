@@ -13,9 +13,11 @@ from typing import List
 
 script_directory = "outputs"
 
-pbs_script_base = """#!/bin/bash
+
+def pbs_script_base(ram):
+    return f"""#!/bin/bash
 #PBS -l walltime=24:00:00
-#PBS -l select=1:ncpus=4:mem=100Gb
+#PBS -l select=1:ncpus=4:mem={ram_usage}Gb
 
 cd $EPHEMERAL/rm-marl
 export PATH=$PATH:/rds/general/user/rp218/home/bin
@@ -24,7 +26,7 @@ conda activate new
 """
 
 
-def run_pbs(args, name, experiment_directory):
+def run_pbs(args, name, experiment_directory, ram):
     python_run = f"python {' '.join(args)}"
 
     # generate scripts
@@ -33,7 +35,7 @@ def run_pbs(args, name, experiment_directory):
         os.makedirs(f"{script_directory}/{experiment_directory}")
 
     with open(pbs_out, 'w') as f:
-        f.write(pbs_script_base)
+        f.write(pbs_script_base(ram))
         f.write('\n')
         f.write(python_run)
 
@@ -44,9 +46,10 @@ def run_pbs(args, name, experiment_directory):
 
 if __name__ == "__main__":
     arguments = sys.argv
-    directory = arguments[1]
-    name = arguments[2]
-    args = arguments[3:]
+    ram_usage = arguments[1]
+    directory = arguments[2]
+    name = arguments[3]
+    args = arguments[4:]
 
     os.makedirs(script_directory, exist_ok=True)
-    run_pbs(args, name, directory)
+    run_pbs(args, name, directory, ram_usage)
