@@ -120,7 +120,7 @@ class Trainer:
                             initial=episodes_completed + 1,
                             total=run_config["total_episodes"]):
 
-            if run_config["training"] and run_config["extra_debug_information"]:
+            if run_config["training"] and run_config["extra_debug_information"] and not run_config["only_log_base_metrics"]:
                 for aid, a in self.agents.items():
                     if hasattr(a, 'rm_agents'):
                         algo_stats = a.rm_agents[aid].algo.get_statistics()
@@ -325,6 +325,22 @@ class Trainer:
 
                 if episode % run_config["log_freq"] == 0:
 
+                    # Episode reward
+                    logger.add_scalar(
+                        f"{prefix}/reward/{env_id}", rewards[env_id][-1],
+                        episode if run_config["training"] else self.test_episode
+                    )
+
+                    # Number of steps taken by the agent in each episode
+                    logger.add_scalar(
+                        f"{prefix}/num_steps/{env_id}", steps[env_id][-1],
+                        episode if run_config["training"] else self.test_episode
+                    )
+
+                    # Skip over the rest of the logging if the user requested only basic metrics
+                    if run_config["only_log_base_metrics"]:
+                        continue
+
                     # Loss information
                     if losses[env_id]:
                         logger.add_scalar(
@@ -352,12 +368,6 @@ class Trainer:
                             episode if run_config["training"] else self.test_episode
                         )
 
-                    # Number of steps taken by the agent in each episode
-                    logger.add_scalar(
-                        f"{prefix}/num_steps/{env_id}", steps[env_id][-1],
-                        episode if run_config["training"] else self.test_episode
-                    )
-
                     # Cumulative number of steps so far, among all episodes
                     # Only logged during training, as in evaluation we only care about the steps taken in each episode
                     if run_config["training"]:
@@ -365,12 +375,6 @@ class Trainer:
                             f"{prefix}/tot_steps/{env_id}", cumulative_steps[env_id][-1],
                             episode
                         )
-
-                    # Episode reward
-                    logger.add_scalar(
-                        f"{prefix}/reward/{env_id}", rewards[env_id][-1],
-                        episode if run_config["training"] else self.test_episode
-                    )
 
                     # Success/Failure/Timeouts rate
                     # At test time, they are either 0/1 while at training they are the rate of
@@ -432,6 +436,7 @@ class Trainer:
                     "seed": run_config["seed"],
                     "synchronize": run_config["synchronize"],
                     "checkpoint_freq": run_config["checkpoint_freq"],
+                    "only_log_base_metrics": run_config["only_log_base_metrics"]
                 }, logger)
 
         # TODO: make cleaner
