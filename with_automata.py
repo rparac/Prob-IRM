@@ -22,10 +22,8 @@ from rm_marl.rm_learning.ilasp.noisy_learner.ProbFFNSLLearner import ProbFFNSLLe
 from rm_marl.rm_transition.prob_rm_transitioner import ProbRMTransitioner
 from rm_marl.trainer import Trainer
 
-automata = "data/office-world/rm_agent_1.txt"
 
-
-def _get_base_env(env_name, seed, agent_id, label_factories, render_mode, max_episode_length, use_rs, rm_transitioner,
+def _get_base_env(env_name, seed, agent_id, label_factories, render_mode, max_episode_length, use_rs,
                   use_restricted_observables):
     # env=gym.make(
     env = gym.make(env_name,
@@ -33,6 +31,10 @@ def _get_base_env(env_name, seed, agent_id, label_factories, render_mode, max_ep
     env = GymSubgoalAutomataAdapter(env, agent_id, render_mode=render_mode,  # type: ignore
                                     max_episode_length=max_episode_length,
                                     use_restricted_observables=use_restricted_observables)
+
+    rm = env.get_perfect_rm()
+    rm_transitioner = ProbRMTransitioner(rm=rm)
+
     labeling_funs = []
     for label_factory in label_factories:
         labeling_funs.append(label_factory(env))
@@ -91,8 +93,8 @@ def run(cfg: DictConfig) -> int:
                                  env_config["noise_label_factories"]]
         label_factories.extend(noisy_label_factories)
 
-    rm = RewardMachine.load_from_file(automata)
-    rm_transitioner = ProbRMTransitioner(rm=rm)
+    # rm = RewardMachine.load_from_file(automata)
+    # rm_transitioner = ProbRMTransitioner(rm=rm)
 
     print(env_config)
     envs = []
@@ -101,7 +103,7 @@ def run(cfg: DictConfig) -> int:
         agent_id = f"A{i + 1}"
         env = _get_base_env(env_config["name"], run_config["seed"] + i, agent_id, label_factories,
                             env_config["render_mode"], env_config["max_episode_length"], run_config["use_rs"],
-                            rm_transitioner, env_config["use_restricted_observables"])
+                            env_config["use_restricted_observables"])
         envs.append(env)
         # algo = DeepQRM(
         #     action_space=env.action_space,
