@@ -34,13 +34,3 @@ class TraceTracker:
     @property
     def no_dups_labels_sequence(self):
         return tuple(i[0] for i in groupby(self.labels_sequence or tuple()))
-
-    # TODO: can this be deleted?
-    @property
-    def flatten_labels_sequence(self):
-        return tuple(e for es in self.trace for e in es)
-
-    # TODO: can this be deleted?
-    @property
-    def no_dups_flatten_labels_sequence(self):
-        return tuple(i[0] for i in groupby(self.flatten_labels_sequence or tuple()))
