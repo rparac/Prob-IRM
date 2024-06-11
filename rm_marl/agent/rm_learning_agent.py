@@ -96,7 +96,7 @@ class RewardMachineLearningAgent(Agent):
         )
 
         if learning:
-            self.traces[agent_id].update(labels, next_state, is_positive_trace, terminated)
+            self.traces[agent_id].update(labels, next_state, is_positive_trace)
 
             # TODO: we may need to rethink is_state_terminal
             if terminated or truncated or self.rm.is_state_terminal(rm_agent.u):
