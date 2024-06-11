@@ -268,17 +268,6 @@ class Trainer:
                                 break
 
                             agent_loss.append(loss)
-                            if run_config["counterfactual_update"] and not interrupt_episode:
-                                self._counterfactual_update(
-                                    env,
-                                    a,
-                                    self._project_obs(obs[env_id], a, aid),
-                                    current_u,
-                                    actions[aid],
-                                    done,
-                                    self._project_obs(next_obs, a, aid),
-                                    aid,
-                                )
 
                     obs[env_id] = next_obs
                     infos[env_id] = info

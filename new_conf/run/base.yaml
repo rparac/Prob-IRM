@@ -5,7 +5,6 @@ log_dir: logs
 testing_freq: 250
 greedy: True
 synchronize: False
-counterfactual_update: False
 recording_freq: 250
 no_display: False
 seed: 123
