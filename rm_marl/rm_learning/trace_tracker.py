@@ -15,7 +15,7 @@ class TraceTracker:
         self.is_positive = False
         self.is_complete = False
 
-    def update(self, labels, obs, is_positive_trace, is_complete_trace):
+    def update(self, labels, is_positive_trace, is_complete_trace):
         self.is_positive = self.is_positive or is_positive_trace
         self.is_complete = self.is_complete or is_complete_trace
         self.trace.append(self._process_label(labels))
