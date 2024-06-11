@@ -33,21 +33,15 @@ class ProbFFNSLLearner(RMLearner):
                  cross_entropy_threshold=0.5):
         super().__init__(agent_id)
 
-        # self.goal_examples = ISAExampleContainer()
-        # self.dend_examples = ISAExampleContainer()
-        # self.inc_examples = ISAExampleContainer()
         self.examples = MultiISAExampleContainer(min_penalty)
 
         self.ex_generator = NoisyILASPExampleGenerator()
 
         # Minimum is 3 states (accepting, rejecting, u0)
-        # self.rm_num_states = 4
-        self.rm_num_states = 8  # 5
+        self.rm_num_states = 8
 
-        # Minimum number of new traces before we validate if the
-        # reward machine is the correct one
-        # TODO: current choice is to double this number every time the same RM is learned. Need to think this through
-        self._initial_min_rm_num_episodes = 100  # 10
+        # Minimum number of new traces before we validate if the reward machine is the correct one
+        self._initial_min_rm_num_episodes = 100
         self.min_rm_num_episodes = self._initial_min_rm_num_episodes
 
         # the number of traces when the automata was relearned
@@ -55,7 +49,7 @@ class ProbFFNSLLearner(RMLearner):
 
         # The percentage of traces that need to conform to the reward
         # machine to avoid relearning
-        self.rm_recognize_threshold = 0.4  # 0.6  # 0.35
+        self.rm_recognize_threshold = 0.4
         self.cross_entropy_threshold = cross_entropy_threshold
 
         # Debug tracking
@@ -63,47 +57,27 @@ class ProbFFNSLLearner(RMLearner):
         self.num_neg_ex = 0
         self.overriden_with_debugger = False
 
-        self._rm_cnt_since_restart = 0
-
-        # TODO: delete after debugging is finished
-        self._debug_ratio = []
-
-        # TODO: delete if cross entropy performs better
-        self._rm_goal_trace_success = 0
-        self._rm_incomplete_trace_success = 0
-        self._rm_dend_trace_success = 0
-
         self._rm_cross_entropy_sum = 0
         # variable to track if infinity cross entropy is recorded
         self._inf_cross_entropy_recorded = False
-
-        # TODO: We might want to make this more efficient (if there are repeated traces)
-        # self._seen_traces: List[TraceTracker] = []
 
         self._seen_positive_traces: List[TraceTracker] = []
         self._seen_negative_traces: List[TraceTracker] = []
         self._seen_incomplete_traces: List[TraceTracker] = []
 
+        # Filename of the currently used ILASP solution
         self._curr_ilasp_solution_filename = None
 
         self.edge_cost = edge_cost
         self.n_phi_cost = n_phi_cost
         self.ex_penalty_multipler = ex_penalty_multiplier
-        # self.min_penalty = min_penalty
 
     # We assume this function be called when a trace is fully generated
     def learn(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated,
               is_positive_trace):
         assert isinstance(curr_state, np.ndarray)
 
-        if trace.is_complete:
-            if trace.is_positive:
-                self._seen_positive_traces.append(copy.deepcopy(trace))
-            else:
-                self._seen_negative_traces.append(copy.deepcopy(trace))
-        else:
-            self._seen_incomplete_traces.append(copy.deepcopy(trace))
-
+        self._store_trace(trace)
         self._update_trace_counters(curr_rm, curr_state, trace)
 
         if terminated or truncated:
@@ -111,7 +85,6 @@ class ProbFFNSLLearner(RMLearner):
         elif curr_rm.is_state_terminal(curr_state):
             self._update_examples(trace)
 
-        # if not self._should_relearn_rm() and not self.overriden_with_debugger:
         should_relearn = self._should_relearn_rm()
         if not should_relearn and not self.overriden_with_debugger:
             return None
@@ -120,6 +93,15 @@ class ProbFFNSLLearner(RMLearner):
         if candidate_rm:
             self._initialize_trace_counters(candidate_rm)
         return candidate_rm
+
+    def _store_trace(self, trace):
+        if trace.is_complete:
+            if trace.is_positive:
+                self._seen_positive_traces.append(copy.deepcopy(trace))
+            else:
+                self._seen_negative_traces.append(copy.deepcopy(trace))
+        else:
+            self._seen_incomplete_traces.append(copy.deepcopy(trace))
 
     def _update_examples(self, trace: TraceTracker):
         if not trace:
@@ -291,10 +273,6 @@ class ProbFFNSLLearner(RMLearner):
 
     # Replays old traces to the success rate
     def _initialize_trace_counters(self, candidate_rm):
-        self._rm_goal_trace_success = 0
-        self._rm_incomplete_trace_success = 0
-        self._rm_dend_trace_success = 0
-
         self._rm_cross_entropy_sum = 0
         self._inf_cross_entropy_recorded = False
 
