@@ -85,8 +85,7 @@ class ProbFFNSLLearner(RMLearner):
         elif curr_rm.is_state_terminal(curr_state):
             self._update_examples(trace)
 
-        should_relearn = self._should_relearn_rm()
-        if not should_relearn and not self.overriden_with_debugger:
+        if not self._should_relearn_rm() and not self.overriden_with_debugger:
             return None
 
         candidate_rm = self._update_reward_machine(curr_rm)
@@ -114,21 +113,6 @@ class ProbFFNSLLearner(RMLearner):
 
         examples, ex_type = self.ex_generator.create_examples_from(trace)
         self.examples.merge(examples, ex_type)
-
-        # for ex in examples:
-        #     # ex.compact_observations()
-        #     # Imporant to do before the .add function as it may change the example penalty
-        #     #  Using deepcopy in the .add function results in a significant
-        #     #  increase in runtime (+50%)
-        #     incomplete_examples = ex.generate_incomplete_examples()
-        #     if ex.example_type == ISAILASPExample.ExType.GOAL:
-        #         self.goal_examples.add(ex)
-        #     elif ex.example_type == ISAILASPExample.ExType.DEND:
-        #         self.dend_examples.add(ex)
-        #     else:
-        #         self.inc_examples.add(ex)
-        #     for inc_ex in incomplete_examples:
-        #         self.inc_examples.add(inc_ex)
 
     def _update_reward_machine(self, curr_rm):
         self.rm_learning_counter += 1
