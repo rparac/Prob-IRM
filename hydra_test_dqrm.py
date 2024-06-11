@@ -76,7 +76,7 @@ def run(cfg: DictConfig) -> None:
 
     agent_dict = {"A1": ag}
     env_dict = {"E": env}
-    trainer = Trainer(env_dict, env_dict, agent_dict)
+    trainer = Trainer(env_dict, agent_dict)
     return trainer.run(run_config)
 
 

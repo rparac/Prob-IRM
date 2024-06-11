@@ -10,6 +10,7 @@ from typing import Dict, List, Union, DefaultDict, Any
 import joblib
 # import joblib
 import numpy as np
+import optuna
 from omegaconf import DictConfig, OmegaConf
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
@@ -20,9 +21,9 @@ from rm_marl.utils.trainer_utils import TrainState
 
 
 class Trainer:
-    def __init__(self, local_envs: dict, shared_envs: dict, agents: dict, env_config: DictConfig = None):
-        self.envs = local_envs or shared_envs
-        self.testing_envs = shared_envs
+    def __init__(self, envs: dict, agents: dict, env_config: DictConfig = None):
+        self.envs = envs
+        self.testing_envs = envs
         self.agents = agents
 
         # Stores configuration used to run this experiment
@@ -49,7 +50,7 @@ class Trainer:
         # The results are aggregated based on the last num_episodes_for_aggregation
         self.num_episodes_for_aggregation = 100
 
-    def run(self, run_config: Union[dict, DictConfig], trial=None):
+    def get_log_dir(self, run_config: Union[dict, DictConfig]) -> str:
         base_dir = os.path.join(
             run_config["log_dir"],
             run_config["name"],
@@ -61,13 +62,18 @@ class Trainer:
                 base_dir,
                 max(os.listdir(base_dir)),
             )
-            checkpointed_train_state = self.load_checkpoint(log_dir)
         else:
             log_dir = os.path.join(
                 base_dir,
                 dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
             )
+        return str(log_dir)
+
+    def run(self, run_config: Union[dict, DictConfig], trial=None):
+        log_dir = self.get_log_dir(run_config)
         logger = SummaryWriter(log_dir)
+
+        checkpointed_train_state = self.load_checkpoint(log_dir)
 
         config_path = os.path.join(log_dir, "run_config.json")
         with open(config_path, 'w') as f:
@@ -86,10 +92,6 @@ class Trainer:
             result = None
 
         if run_config["extra_debug_information"]:
-            #     create_rm_state_logs(log_dir, logger, run_config["total_episodes"], self.test_episode,
-            #                          run_config["testing_freq"], self.last_timestep_train_info,
-            #                          self.last_timestep_test_info,
-            #                          self.all_recorded_rm_states, self.rm_relearned_episodes)
             create_learnt_rm_logs(log_dir, logger)
 
         _ = [e.close() for e in self.envs.values()]
@@ -120,7 +122,8 @@ class Trainer:
                             initial=episodes_completed + 1,
                             total=run_config["total_episodes"]):
 
-            if run_config["training"] and run_config["extra_debug_information"] and not run_config["only_log_base_metrics"]:
+            if (run_config["training"] and run_config["extra_debug_information"] and
+                    not run_config["only_log_base_metrics"]):
                 for aid, a in self.agents.items():
                     if hasattr(a, 'rm_agents'):
                         algo_stats = a.rm_agents[aid].algo.get_statistics()

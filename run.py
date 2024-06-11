@@ -27,7 +27,7 @@ def run(cfg: DictConfig) -> None:
     
     shared_envs = _instantiate(cfg.env)["shared"]
     
-    trainer = Trainer(local_envs, shared_envs, agents)
+    trainer = Trainer(local_envs, agents)
     trainer.run(cfg.run)
 
 if __name__ == "__main__":
