@@ -28,4 +28,3 @@ rm_learner_kws:
   ex_penalty_multiplier: 2
   min_penalty: 2
   cross_entropy_threshold: 0.6
-  use_cross_entropy: True
