@@ -154,7 +154,7 @@ class Trainer:
 
             _ = [a.reset(agent_id=aid) for aid, a in self.agents.items()]
 
-            obs, infos, env_agents, shared_events = {}, {}, {}, {}
+            obs, infos, env_agents = {}, {}, {}
             for env_id, env in envs.items():
                 o, i = env.reset()
                 obs[env_id] = o
@@ -163,7 +163,6 @@ class Trainer:
                 env_agents[env_id] = {
                     aid: a for aid, a in self.agents.items() if aid in obs[env_id]
                 }
-                shared_events[env_id] = self._get_shared_events(env_agents[env_id])
                 last_timestep_in_u[env_id] = {}
 
             steps_count = 0
@@ -203,13 +202,6 @@ class Trainer:
                     _ = [agent_labels.update(self._project_labels(labels, a, aid)) for aid, a in
                          env_agents[env_id].items()]
 
-                    if run_config["synchronize"]:
-                        synchronized_labels = self._synchronize(shared_events[env_id], agent_labels)
-                        assert all(agent_labels[aid] == synchronized_labels[aid] for aid in env_agents[
-                            env_id].keys()), f"Not synchronized!! {agent_labels}, {synchronized_labels}"
-                    else:
-                        synchronized_labels = agent_labels
-
                     # track state metric for logging
                     if "rm_state" in info:
                         most_likely_state = info["rm_state"]
@@ -236,7 +228,7 @@ class Trainer:
                             truncated,
                             info.get("is_positive_trace", True),
                             self._project_obs(next_obs, a, aid),
-                            labels=synchronized_labels[aid],
+                            labels=agent_labels[aid],
                             learning=run_config["training"],
                             agent_id=aid,
                         )
@@ -426,7 +418,6 @@ class Trainer:
                     "total_episodes": 1,
                     "greedy": run_config.get("greedy", True),
                     "seed": run_config["seed"],
-                    "synchronize": run_config["synchronize"],
                     "checkpoint_freq": run_config["checkpoint_freq"],
                     "only_log_base_metrics": run_config["only_log_base_metrics"]
                 }, logger)
@@ -513,18 +504,6 @@ class Trainer:
                 intersection = set(agent1.rm.get_valid_events()).intersection(agent2.rm.get_valid_events())
                 shared_events[tuple(sorted([aid1, aid2]))] = intersection
         return shared_events
-
-    @staticmethod
-    def _synchronize(shared_events, agent_labels):
-        agent_labels = copy.deepcopy(agent_labels)
-
-        for (aid1, aid2), events in shared_events.items():
-            for e in events:
-                if not all(e in agent_labels[aid] for aid in (aid1, aid2)):
-                    agent_labels[aid1] = tuple(l for l in agent_labels[aid1] if l != e)
-                    agent_labels[aid2] = tuple(l for l in agent_labels[aid2] if l != e)
-
-        return agent_labels
 
     @staticmethod
     def _counterfactual_update(env, agent, state, current_u, action, done, next_state, aid):
