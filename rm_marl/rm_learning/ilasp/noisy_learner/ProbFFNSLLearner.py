@@ -73,7 +73,7 @@ class ProbFFNSLLearner(RMLearner):
         self.ex_penalty_multipler = ex_penalty_multiplier
 
     # We assume this function be called when a trace is fully generated
-    def learn(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated,
+    def update_rm(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated,
               is_positive_trace):
         assert isinstance(curr_state, np.ndarray)
 
