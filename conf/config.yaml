@@ -1,3 +1,0 @@
-defaults:
-  - run@run: rm
-  - env: buttons

@@ -1,5 +1,0 @@
-defaults:
-  - base
-
-synchronize: False
-counterfactual_update: False

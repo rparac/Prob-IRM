@@ -1,18 +1,19 @@
 #!/bin/bash
 cd ..
 
-seeds=(123 233 333 433 533)
-noise_levels=(1 0.99 0.95 0.9)
+seeds=(0 100 200 300 400)
+noise_levels=(1 0.9989626407623291 0.997668981552124 0.9907407760620117)
 
-directory="coffee_error"
+directory="with_rm_deliver_coffee"
 for seed in "${seeds[@]}"; do
   for noise_level in "${noise_levels[@]}"; do
     name="${directory}_${seed}_${noise_level}"
     # run noise on all three
     python submit_rcs_script.py ${directory} ${name} \
-      dqrm_coffee_world.py env/office-world@env=deliver_coffee run=dqrm_coffee_world \
+      with_automata.py env/office-world@env=deliver_coffee_mail run=dqrm_coffee_world \
         +experiment=vanilla_coffee_symmetric_error x=${noise_level} \
         run.name=${directory}/${name} run.seed=${seed}
   done
 done
 
+# Running on login.hx1.hpc.ic.ac.uk

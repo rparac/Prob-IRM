@@ -1,4 +1,0 @@
-0 # initial state 
-(0, 1, 'r')
-(1, 2, 'g1')
-(2, 2, 'True') # Final

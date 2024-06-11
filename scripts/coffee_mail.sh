@@ -1,5 +1,9 @@
 #!/bin/bash
+
+# Runs the coffee mail task for 5 seeds and noise levels with the noise on the coffee sensor
+
 cd ..
+
 
 seeds=(0 100 200 300 400)
 noise_levels=(1 0.9979081153869629 0.995305061340332 0.9814815521240234)
