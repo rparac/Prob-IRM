@@ -121,7 +121,7 @@ def run(cfg: DictConfig) -> int:
     learning_ag = RewardMachineLearningAgent(
         rm_agent=rm_agents,
         rm_learner_cls=ProbFFNSLLearner,
-        rm_learner_kws=run_config["rm_learner_kws"],
+        rm_learner_kws=cfg["rm_learner"]["rm_learner_kws"],
     )
 
     agent_dict = {ag.agent_id: learning_ag for ag in rm_agents}
