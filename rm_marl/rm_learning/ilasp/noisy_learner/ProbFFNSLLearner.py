@@ -140,11 +140,8 @@ class ProbFFNSLLearner(RMLearner):
             # TODO: remove duplication here with ILASPLearner
             if candidate_rm.states:
                 candidate_rm.set_u0("u0")
-                # TODO now: delete these log lines if all is well
-                # if len(self.goal_examples) > 0 and "u_acc" in candidate_rm.states:
                 if "u_acc" in candidate_rm.states:
                     candidate_rm.set_uacc("u_acc")
-                # if len(self.dend_examples) > 0 and "u_rej" in candidate_rm.states:
                 if "u_rej" in candidate_rm.states:
                     candidate_rm.set_urej("u_rej")
 
@@ -261,11 +258,6 @@ class ProbFFNSLLearner(RMLearner):
                 curr_state = transitioner.get_next_state(curr_state, event)
 
             self._update_trace_counters(candidate_rm, curr_state, trace)
-
-        # TODO: return after hacky test
-        # if self._should_relearn_rm():
-        #     raise ValueError("The relarned RM would be immediately be relearned."
-        #                      "Check if the threshold is too large or there is a bigger issue.")
 
     @property
     def _num_seen_traces(self):
