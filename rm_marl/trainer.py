@@ -485,17 +485,6 @@ class Trainer:
             i: o for i, o in obs.items() if i == aid
         }
 
-    @staticmethod
-    def _get_shared_events(env_agents):
-        shared_events = {}
-        for aid1, agent1 in env_agents.items():
-            for aid2, agent2 in env_agents.items():
-                if aid1 >= aid2:
-                    continue
-                intersection = set(agent1.rm.get_valid_events()).intersection(agent2.rm.get_valid_events())
-                shared_events[tuple(sorted([aid1, aid2]))] = intersection
-        return shared_events
-
     def save_checkpoint(self, path, train_state: TrainState):
         checkpoint_data = {
             "trainer": self,

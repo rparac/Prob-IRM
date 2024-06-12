@@ -24,7 +24,6 @@ class RewardMachineAgent(Agent):
         rm_transitioner.rm = rm
         return cls(agent_id, rm_transitioner, algo)
 
-    # TODO: Maybe we should move this elsewhere; Useful for wrapping a no-RM agent as well
     @staticmethod
     def default_rm():
         rm = RewardMachine()
