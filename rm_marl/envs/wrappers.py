@@ -172,19 +172,6 @@ class LabelingFunctionWrapper(gym.Wrapper):
         info["labels"] = self.get_labels(info)
         return obs, info
 
-    """
-    Used in the counterfactual update.
-    RewardMachineWrapper/AutomataWrapper should be used if there is any filtering involved.
-    However, this implementation is included here if Learning agent is used (so it doesn't 
-    seem like it is using a ground truth RM.
-    """
-
-    # TODO: check if I want to keep this or revert to AutomataWrapper
-    #  THe AutomataWrapper with terminationMode.ENV and labelmode.ALL has the same behaviour
-    #  However, the issue is that it uses a reward machine
-    def filter_labels(self, labels, u):
-        return labels
-
 
 class NoisyLabelingFunctionComposer(LabelingFunctionWrapper):
     def __init__(self, label_funs: List[LabelingFunctionWrapper]):
@@ -204,72 +191,6 @@ class NoisyLabelingFunctionComposer(LabelingFunctionWrapper):
         for label_fun in self.label_funs:
             ret.extend(label_fun.get_all_labels())
         return ret
-
-
-@dataclass
-class RandomLabelingConfig:
-    proba: float
-    condition: callable
-    env_update: callable
-
-
-class RandomLabelingFunctionWrapper(gym.Wrapper):
-
-    def __init__(self, env: gym.Env, random_events: dict):
-        """
-        random_event: {event: (probability, function(env))}
-        """
-        self.random_events = random_events or {}
-        self.trace = []
-        super().__init__(env)
-
-    @property
-    def flatten_trace(self):
-        return tuple(e for es in self.trace for e in es)
-
-    def get_labels(self, _obs, _prev_obs):
-        # Generate one random event at a time
-        valid_events = [e for e, c in self.random_events.items() if c.condition(self)]
-        if not valid_events:
-            return []
-
-        event = self.np_random.choice(valid_events)
-        config = self.random_events[event]
-        if self.np_random.random() <= config.proba:
-            return [event]
-
-        return []
-
-        # Generate multiple random event at a time
-        # valid_events = [
-        #     e
-        #     for e, c in self.random_events.items()
-        #     if c.condition(self) and self.np_random.random() <= c.proba
-        # ]
-        # return valid_events
-
-    def step(self, action):
-        observation, reward, terminated, truncated, info = super().step(action)
-        labels, simulated_env_updates = info.get("labels", []), {}
-        self.trace.append(labels or [])
-
-        random_labels = self.get_labels(observation, self.prev_obs)
-        for l in random_labels:
-            simulated_env_updates[l] = self.random_events[l].env_update
-            labels.append(l)
-            self.trace[-1].append(l)
-
-        info["labels"] = self.trace[-1]
-        info["env_simulated_updates"] = simulated_env_updates
-        return observation, reward, terminated, truncated, info
-
-    def reset(self, **kwargs):
-        self.trace.clear()
-        return super().reset(**kwargs)
-
-    @staticmethod
-    def condition_true(e):
-        return True
 
 
 class AutomataWrapper(gym.Wrapper):
@@ -395,32 +316,3 @@ class RewardMachineWrapper(AutomataWrapper):
 
     def _get_reward(self, reward, u_next):
         return self.reward_function(self.rm_transitioner.rm, self.u, u_next, reward)
-
-
-class SingleAgentEnvWrapper(gym.Wrapper):
-    def __init__(self, env: gym.Env, agent_id: str):
-        self.agent_id = agent_id
-
-        super().__init__(env)
-
-        self.observation_space = gym.spaces.Dict({
-            aid: obs_space
-            for aid, obs_space in self.observation_space.spaces.items()
-            if aid == self.agent_id
-        })
-
-    def reset(self, **kwargs):
-        obs, info = super().reset(**kwargs)
-        obs = {aid: apos for aid, apos in obs.items() if aid == self.agent_id}
-        return obs, info
-
-    def step(self, action):
-        action = {aid: a for aid, a in action.items() if aid == self.agent_id}
-
-        observation, reward, terminated, truncated, info = super().step(action)
-
-        observation = {
-            aid: apos for aid, apos in observation.items() if aid == self.agent_id
-        }
-
-        return observation, reward, terminated, truncated, info

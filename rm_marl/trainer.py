@@ -496,23 +496,6 @@ class Trainer:
                 shared_events[tuple(sorted([aid1, aid2]))] = intersection
         return shared_events
 
-    @staticmethod
-    def _counterfactual_update(env, agent, state, current_u, action, done, next_state, aid):
-        labels = env.get_labels(next_state, state)
-
-        if isinstance(labels, dict):
-            labels = [lbl for lbl, prob in labels.items() if prob > 0.5]
-            raise NotImplementedError("Need to implement Counterfactual reasoning")
-
-        for u in agent.rm.states:
-            if u != current_u and not agent.rm.is_state_terminal(u):
-                l = env.filter_labels(labels, u)
-
-                next_u = agent.rm.get_next_state(u, l)
-                r = agent.rm.get_reward(u, next_u)
-
-                agent.learn(state, u, action, r, done, next_state, next_u, agent_id=aid)
-
     def save_checkpoint(self, path, train_state: TrainState):
         checkpoint_data = {
             "trainer": self,
