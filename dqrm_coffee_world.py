@@ -24,14 +24,15 @@ from rm_marl.trainer import Trainer
 
 def _get_base_env(env_name, seed, agent_id, label_factories, render_mode, max_episode_length, use_rs,
                   use_restricted_observables):
-    rm_transitioner = ProbRMTransitioner(rm=RewardMachineAgent.default_rm())
-
     # env=gym.make(
     env = gym.make(env_name,
                    params={"generation": "random", "environment_seed": seed, "hide_state_variables": True})
     env = GymSubgoalAutomataAdapter(env, agent_id, render_mode=render_mode,  # type: ignore
                                     max_episode_length=max_episode_length,
                                     use_restricted_observables=use_restricted_observables)
+
+    rm_transitioner = ProbRMTransitioner(rm=RewardMachineAgent.default_rm())
+
     labeling_funs = []
     for label_factory in label_factories:
         labeling_funs.append(label_factory(env))

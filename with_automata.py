@@ -25,7 +25,6 @@ from rm_marl.trainer import Trainer
 
 def _get_base_env(env_name, seed, agent_id, label_factories, render_mode, max_episode_length, use_rs,
                   use_restricted_observables):
-    # env=gym.make(
     env = gym.make(env_name,
                    params={"generation": "random", "environment_seed": seed, "hide_state_variables": True})
     env = GymSubgoalAutomataAdapter(env, agent_id, render_mode=render_mode,  # type: ignore
