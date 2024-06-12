@@ -215,19 +215,6 @@ class ProbFFNSLLearner(RMLearner):
             edge_cost=self.edge_cost,
         )
 
-    # TODO: move logic inside a container if this is too slow
-    # @property
-    # def _observables(self):
-    #     # Using dict for reproducibility - converting set into a list does not preserve the ordering
-    #     # (only changing the number of episodes changed the list)
-    #     ret = dict()
-    #     # ret = set()
-    #     for ex in itertools.chain(self.goal_examples.as_list(), self.dend_examples.as_list(),
-    #                               self.inc_examples.as_list()):
-    #         for obs in ex.observable_context:
-    #             ret[obs.label] = None
-    #     return list(ret.keys())
-
     def _should_relearn_rm(self) -> bool:
         if self._num_seen_traces < self.last_relearning_trace_num + self.min_rm_num_episodes:
             return False
