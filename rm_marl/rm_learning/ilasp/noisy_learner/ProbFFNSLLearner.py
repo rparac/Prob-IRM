@@ -1,15 +1,16 @@
 import copy
 import itertools
 import os
-from typing import List
+import random
+from typing import List, Dict
 
 import numpy as np
 from sklearn.metrics import log_loss
 
 from rm_marl.reward_machine import RewardMachine
 from rm_marl.rm_learning import RMLearner
-from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample, MultiISAExampleContainer
-from rm_marl.rm_learning.ilasp.noisy_learner.example_generator import NoisyILASPExampleGenerator
+from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample, MultiISAExampleContainer, \
+    ISAExampleContainer, LastPredicate, ObservablePredicate
 from rm_marl.rm_learning.ilasp.task_generator import generate_ilasp_task
 from rm_marl.rm_learning.ilasp.task_improvement_validator import get_ilasp_solution_penalty
 from rm_marl.rm_learning.ilasp.task_parser import parse_ilasp_solutions
@@ -34,8 +35,6 @@ class ProbFFNSLLearner(RMLearner):
         super().__init__(agent_id)
 
         self.examples = MultiISAExampleContainer(min_penalty)
-
-        self.ex_generator = NoisyILASPExampleGenerator()
 
         # Minimum is 3 states (accepting, rejecting, u0)
         self.rm_num_states = 8
@@ -71,6 +70,13 @@ class ProbFFNSLLearner(RMLearner):
         self.edge_cost = edge_cost
         self.n_phi_cost = n_phi_cost
         self.ex_penalty_multipler = ex_penalty_multiplier
+
+        # Number of ILASP examples
+        self.I = 100
+        # ILASP example counter
+        self.ex_counter = 0
+
+        random.seed(0)
 
     # We assume this function be called when a trace is fully generated
     def update_rm(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated,
@@ -111,7 +117,7 @@ class ProbFFNSLLearner(RMLearner):
         if trace.is_complete and not trace.is_positive:
             self.num_neg_ex += 1
 
-        examples, ex_type = self.ex_generator.create_examples_from(trace)
+        examples, ex_type = self.create_examples_from(trace)
         self.examples.merge(examples, ex_type)
 
     def _update_reward_machine(self, curr_rm):
@@ -284,3 +290,46 @@ class ProbFFNSLLearner(RMLearner):
             "ProbFFNSL/cross_entropy": avg_cross_entropy,
             "ProbFFNSL/last_relearning_trace_num": self.last_relearning_trace_num,
         }
+
+    def create_examples_from(self, trace: TraceTracker) -> (ISAExampleContainer, ISAILASPExample.ExType):
+        if trace.is_complete:
+            if trace.is_positive:
+                ex_type = ISAILASPExample.ExType.GOAL
+            else:
+                ex_type = ISAILASPExample.ExType.DEND
+        else:
+            ex_type = ISAILASPExample.ExType.INCOMPLETE
+
+        sol = ISAExampleContainer()
+        for i in range(self.I):
+            ex_id = f"ex_{self.ex_counter}"
+            context = self.create_example_context(trace)
+            penalty = 1
+            last_predicate = LastPredicate(len(trace.trace) - 1)
+            ex = ISAILASPExample(ex_id, penalty, ex_type, context, last_predicate)
+            # penalty_threshold=self.ilasp_penalty_threshold)
+            ex.compact_observations()
+            sol.add(ex)
+            self.ex_counter += 1
+        return sol, ex_type
+        # return sol.as_list()
+
+    # TODO: this method is called often so it might need to be sped up
+    def create_example_context(self, trace: TraceTracker) -> List[ObservablePredicate]:
+        # Create context
+        sol = []
+        for time_step, labels in enumerate(trace.trace):
+            true_labels = self._sample_dict(labels)
+            predicates = [ObservablePredicate(label, time_step) for label in true_labels]
+            sol.extend(predicates)
+        return sol
+
+    # TODO: this method is called often so it might need to be sped up
+    # labels - dictionary of labels paired with their probability
+    # returns: keys which are considered as true
+    def _sample_dict(self, labels: Dict[str, float]) -> List[str]:
+        true_elems = []
+        for label, prob in labels.items():
+            if random.random() <= prob:
+                true_elems.append(label)
+        return true_elems
