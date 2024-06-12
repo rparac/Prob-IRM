@@ -112,19 +112,7 @@ class Trainer:
                             initial=train_state.episodes_completed + 1,
                             total=run_config["total_episodes"]):
 
-            if (run_config["training"] and run_config["extra_debug_information"] and
-                    not run_config["only_log_base_metrics"]):
-                for aid, a in self.agents.items():
-                    if hasattr(a, 'rm_agents'):
-                        algo_stats = a.rm_agents[aid].algo.get_statistics()
-                    else:
-                        algo_stats = a.algo.get_statistics()
-                    # Using rm_learner stats
-                    agent_stats = a.get_statistics()
-                    logger.add_scalar(f'algo/{aid}/policy_age', algo_stats["policy_age"], episode)
-                    logger.add_scalar(f'algo/{aid}/epsilon', algo_stats["epsilon"], episode)
-                    for stat_key, stat_value in agent_stats.items():
-                        logger.add_scalar(f'agent/{stat_key}', stat_value, episode)
+            self._track_algo_metrics(episode, logger, run_config)
 
             if not run_config["training"]:
                 self.test_episode += 1
@@ -164,7 +152,7 @@ class Trainer:
                     if dones[env_id]:
                         continue
 
-                    # env.render with pygame does not work in a headless mode
+                    # Render a frame if there is a display
                     if episode % run_config["recording_freq"] == 0 and not run_config["no_display"]:
                         episode_frames[env_id].append(env.render())
 
@@ -182,18 +170,15 @@ class Trainer:
                     }
                     next_obs, reward, terminated, truncated, info = env.step(actions)
 
-                    done = terminated or truncated
-
                     labels = info["labels"]
                     agent_labels = {}
-                    _ = [agent_labels.update(self._project_labels(labels, a, aid)) for aid, a in
-                         env_agents[env_id].items()]
+                    for aid, a in env_agents[env_id].items():
+                        agent_labels.update(self._project_labels(labels, a, aid))
 
                     # track state metric for logging
                     if "rm_state" in info:
                         most_likely_state = info["rm_state"]
                         if isinstance(most_likely_state, np.ndarray):
-                            # TODO: not working with multi agent case
                             most_likely_state_idx = np.argmax(most_likely_state)
                             curr_a = list(env_agents[env_id].values())[0]
                             most_likely_state = curr_a.rm.states[most_likely_state_idx]
@@ -206,7 +191,6 @@ class Trainer:
                     agent_loss = []
                     interrupt_episode = terminated or truncated
                     for aid, a in env_agents[env_id].items():
-                        current_u = a.get_current_state(agent_id=aid)
                         loss, agents_to_interrupt, updated_rm = a.update_agent(
                             self._project_obs(obs[env_id], a, aid),
                             actions[aid],
@@ -271,11 +255,13 @@ class Trainer:
                 if trial.should_prune():
                     raise optuna.TrialPruned()
 
+            # Store a checkpoint
             if episode % run_config["checkpoint_freq"] == 0:
                 new_state = copy.deepcopy(train_state)
                 new_state.episode = episode
                 self.save_checkpoint(logger.log_dir, train_state)
 
+            # Run test
             if run_config["training"] and episode % run_config["testing_freq"] == 0:
                 self._run(self.testing_envs, {
                     "training": False,
@@ -290,6 +276,21 @@ class Trainer:
                 }, logger)
 
         return self._compute_score(train_state.steps)
+
+    def _track_algo_metrics(self, episode, logger, run_config):
+        if (run_config["training"] and run_config["extra_debug_information"] and
+                not run_config["only_log_base_metrics"]):
+            for aid, a in self.agents.items():
+                if hasattr(a, 'rm_agents'):
+                    algo_stats = a.rm_agents[aid].algo.get_statistics()
+                else:
+                    algo_stats = a.algo.get_statistics()
+                # Using rm_learner stats
+                agent_stats = a.get_statistics()
+                logger.add_scalar(f'algo/{aid}/policy_age', algo_stats["policy_age"], episode)
+                logger.add_scalar(f'algo/{aid}/epsilon', algo_stats["epsilon"], episode)
+                for stat_key, stat_value in agent_stats.items():
+                    logger.add_scalar(f'agent/{stat_key}', stat_value, episode)
 
     def _track_metrics(self, envs, train_state, episode, episode_frames, episode_losses, episode_shaping_rewards,
                        logger, infos, last_timestep_in_u, run_config):
