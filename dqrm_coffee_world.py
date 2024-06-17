@@ -24,14 +24,15 @@ from rm_marl.trainer import Trainer
 
 def _get_base_env(env_name, seed, agent_id, label_factories, render_mode, max_episode_length, use_rs,
                   use_restricted_observables):
-    rm_transitioner = ProbRMTransitioner(rm=RewardMachineAgent.default_rm())
-
     # env=gym.make(
     env = gym.make(env_name,
                    params={"generation": "random", "environment_seed": seed, "hide_state_variables": True})
     env = GymSubgoalAutomataAdapter(env, agent_id, render_mode=render_mode,  # type: ignore
                                     max_episode_length=max_episode_length,
                                     use_restricted_observables=use_restricted_observables)
+
+    rm_transitioner = ProbRMTransitioner(rm=RewardMachineAgent.default_rm())
+
     labeling_funs = []
     for label_factory in label_factories:
         labeling_funs.append(label_factory(env))
@@ -121,13 +122,13 @@ def run(cfg: DictConfig) -> int:
     learning_ag = RewardMachineLearningAgent(
         rm_agent=rm_agents,
         rm_learner_cls=ProbFFNSLLearner,
-        rm_learner_kws=run_config["rm_learner_kws"],
+        rm_learner_kws=cfg["rm_learner"]["rm_learner_kws"],
     )
 
     agent_dict = {ag.agent_id: learning_ag for ag in rm_agents}
     env_dict = {f"E{i}": env for i, env in enumerate(envs)}
 
-    trainer = Trainer(env_dict, env_dict, agent_dict, env_config)
+    trainer = Trainer(env_dict, agent_dict, env_config)
     result = trainer.run(run_config)
     print(f"Result for this session was {result}")
     return result

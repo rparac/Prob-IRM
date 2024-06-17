@@ -1,5 +1,0 @@
-config:
-  env_id: rm-marl/RendezVous-v0
-  env_render_mode: rgb_array
-  env_file: data/rendezvous/env.txt
-  label_mode: RM

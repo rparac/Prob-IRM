@@ -10,6 +10,7 @@ from typing import Dict, List, Union, DefaultDict, Any
 import joblib
 # import joblib
 import numpy as np
+import optuna
 from omegaconf import DictConfig, OmegaConf
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
@@ -20,9 +21,9 @@ from rm_marl.utils.trainer_utils import TrainState
 
 
 class Trainer:
-    def __init__(self, local_envs: dict, shared_envs: dict, agents: dict, env_config: DictConfig = None):
-        self.envs = local_envs or shared_envs
-        self.testing_envs = shared_envs
+    def __init__(self, envs: dict, agents: dict, env_config: DictConfig = None):
+        self.envs = envs
+        self.testing_envs = envs
         self.agents = agents
 
         # Stores configuration used to run this experiment
@@ -49,7 +50,7 @@ class Trainer:
         # The results are aggregated based on the last num_episodes_for_aggregation
         self.num_episodes_for_aggregation = 100
 
-    def run(self, run_config: Union[dict, DictConfig], trial=None):
+    def get_log_dir(self, run_config: Union[dict, DictConfig]) -> str:
         base_dir = os.path.join(
             run_config["log_dir"],
             run_config["name"],
@@ -61,13 +62,18 @@ class Trainer:
                 base_dir,
                 max(os.listdir(base_dir)),
             )
-            checkpointed_train_state = self.load_checkpoint(log_dir)
         else:
             log_dir = os.path.join(
                 base_dir,
                 dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
             )
+        return str(log_dir)
+
+    def run(self, run_config: Union[dict, DictConfig], trial=None):
+        log_dir = self.get_log_dir(run_config)
         logger = SummaryWriter(log_dir)
+
+        checkpointed_train_state = self.load_checkpoint(log_dir)
 
         config_path = os.path.join(log_dir, "run_config.json")
         with open(config_path, 'w') as f:
@@ -86,10 +92,6 @@ class Trainer:
             result = None
 
         if run_config["extra_debug_information"]:
-            #     create_rm_state_logs(log_dir, logger, run_config["total_episodes"], self.test_episode,
-            #                          run_config["testing_freq"], self.last_timestep_train_info,
-            #                          self.last_timestep_test_info,
-            #                          self.all_recorded_rm_states, self.rm_relearned_episodes)
             create_learnt_rm_logs(log_dir, logger)
 
         _ = [e.close() for e in self.envs.values()]
@@ -102,36 +104,15 @@ class Trainer:
     def _run(self, envs: dict, run_config: dict, logger: SummaryWriter,
              train_state=None, trial=None):
 
-        train_state = train_state or defaultdict(None)
-
-        episodes_completed = train_state.get("episodes_completed") or 0
-        steps = train_state.get("steps") or defaultdict(list)
-        timeouts = train_state.get("timeouts") or defaultdict(int)
-        failures = train_state.get("failures") or defaultdict(int)
-        successes = train_state.get("successes") or defaultdict(int)
-        shaping_rewards = train_state.get("shaping_rewards") or defaultdict(list)
-        rewards = train_state.get("rewards") or defaultdict(list)
-        losses = train_state.get("losses") or defaultdict(list)
-        cumulative_steps = train_state.get("cumulative_steps") or defaultdict(list)
+        train_state = train_state or TrainState()
 
         _ = [a.set_log_folder(os.path.join(logger.log_dir, aid)) for aid, a in self.agents.items()]
 
-        for episode in tqdm(range(episodes_completed + 1, 1 + run_config["total_episodes"]),
-                            initial=episodes_completed + 1,
+        for episode in tqdm(range(train_state.episodes_completed + 1, 1 + run_config["total_episodes"]),
+                            initial=train_state.episodes_completed + 1,
                             total=run_config["total_episodes"]):
 
-            if run_config["training"] and run_config["extra_debug_information"] and not run_config["only_log_base_metrics"]:
-                for aid, a in self.agents.items():
-                    if hasattr(a, 'rm_agents'):
-                        algo_stats = a.rm_agents[aid].algo.get_statistics()
-                    else:
-                        algo_stats = a.algo.get_statistics()
-                    # Using rm_learner stats
-                    agent_stats = a.get_statistics()
-                    logger.add_scalar(f'algo/{aid}/policy_age', algo_stats["policy_age"], episode)
-                    logger.add_scalar(f'algo/{aid}/epsilon', algo_stats["epsilon"], episode)
-                    for stat_key, stat_value in agent_stats.items():
-                        logger.add_scalar(f'agent/{stat_key}', stat_value, episode)
+            self._track_algo_metrics(episode, logger, run_config)
 
             if not run_config["training"]:
                 self.test_episode += 1
@@ -143,15 +124,12 @@ class Trainer:
             # seperate for each env_id
             last_timestep_in_u = {}
 
-            seed = run_config["seed"] + episode - 1
-
             # reset and initial setup
             dones = {env_id: False for env_id in envs.keys()}
-            env_agents = {}
 
             _ = [a.reset(agent_id=aid) for aid, a in self.agents.items()]
 
-            obs, infos, env_agents, shared_events = {}, {}, {}, {}
+            obs, infos, env_agents = {}, {}, {}
             for env_id, env in envs.items():
                 o, i = env.reset()
                 obs[env_id] = o
@@ -160,7 +138,6 @@ class Trainer:
                 env_agents[env_id] = {
                     aid: a for aid, a in self.agents.items() if aid in obs[env_id]
                 }
-                shared_events[env_id] = self._get_shared_events(env_agents[env_id])
                 last_timestep_in_u[env_id] = {}
 
             steps_count = 0
@@ -175,7 +152,7 @@ class Trainer:
                     if dones[env_id]:
                         continue
 
-                    # env.render with pygame does not work in a headless mode
+                    # Render a frame if there is a display
                     if episode % run_config["recording_freq"] == 0 and not run_config["no_display"]:
                         episode_frames[env_id].append(env.render())
 
@@ -193,25 +170,15 @@ class Trainer:
                     }
                     next_obs, reward, terminated, truncated, info = env.step(actions)
 
-                    done = terminated or truncated
-
                     labels = info["labels"]
                     agent_labels = {}
-                    _ = [agent_labels.update(self._project_labels(labels, a, aid)) for aid, a in
-                         env_agents[env_id].items()]
-
-                    if run_config["synchronize"]:
-                        synchronized_labels = self._synchronize(shared_events[env_id], agent_labels)
-                        assert all(agent_labels[aid] == synchronized_labels[aid] for aid in env_agents[
-                            env_id].keys()), f"Not synchronized!! {agent_labels}, {synchronized_labels}"
-                    else:
-                        synchronized_labels = agent_labels
+                    for aid, a in env_agents[env_id].items():
+                        agent_labels.update(self._project_labels(labels, a, aid))
 
                     # track state metric for logging
                     if "rm_state" in info:
                         most_likely_state = info["rm_state"]
                         if isinstance(most_likely_state, np.ndarray):
-                            # TODO: not working with multi agent case
                             most_likely_state_idx = np.argmax(most_likely_state)
                             curr_a = list(env_agents[env_id].values())[0]
                             most_likely_state = curr_a.rm.states[most_likely_state_idx]
@@ -224,7 +191,6 @@ class Trainer:
                     agent_loss = []
                     interrupt_episode = terminated or truncated
                     for aid, a in env_agents[env_id].items():
-                        current_u = a.get_current_state(agent_id=aid)
                         loss, agents_to_interrupt, updated_rm = a.update_agent(
                             self._project_obs(obs[env_id], a, aid),
                             actions[aid],
@@ -233,7 +199,7 @@ class Trainer:
                             truncated,
                             info.get("is_positive_trace", True),
                             self._project_obs(next_obs, a, aid),
-                            labels=synchronized_labels[aid],
+                            labels=agent_labels[aid],
                             learning=run_config["training"],
                             agent_id=aid,
                         )
@@ -268,17 +234,6 @@ class Trainer:
                                 break
 
                             agent_loss.append(loss)
-                            if run_config["counterfactual_update"] and not interrupt_episode:
-                                self._counterfactual_update(
-                                    env,
-                                    a,
-                                    self._project_obs(obs[env_id], a, aid),
-                                    current_u,
-                                    actions[aid],
-                                    done,
-                                    self._project_obs(next_obs, a, aid),
-                                    aid,
-                                )
 
                     obs[env_id] = next_obs
                     infos[env_id] = info
@@ -291,140 +246,22 @@ class Trainer:
                         if not np.isnan(mean_loss):
                             episode_losses[env_id].append(mean_loss)
 
-            # print('yes')
-            # track metrics and log them in TB
-            for env_id in envs.keys():
-                prefix = "training" if run_config["training"] else "eval"
-
-                episode_reward = infos[env_id]["episode"]["r"]
-                episode_length = infos[env_id]["episode"]["l"]
-
-                steps[env_id].append(episode_length)
-                rewards[env_id].append(episode_reward)
-
-                if len(cumulative_steps[env_id]) > 0:
-                    total_steps_so_far = episode_length + cumulative_steps[env_id][-1]
-                else:
-                    total_steps_so_far = episode_length
-                cumulative_steps[env_id].append(total_steps_so_far)
-
-                if episode_reward == 1:
-                    successes[env_id] += 1
-                elif episode_reward == -1:
-                    failures[env_id] += 1
-                else:
-                    timeouts[env_id] += 1
-
-                assert successes[env_id] + failures[env_id] + timeouts[env_id] == episode, "Something is wrong"
-
-                if episode_losses[env_id]:
-                    losses[env_id].append(np.mean(episode_losses[env_id]))
-
-                if episode_shaping_rewards[env_id]:
-                    shaping_rewards[env_id] = episode_shaping_rewards[env_id]
-
-                if episode % run_config["log_freq"] == 0:
-
-                    # Episode reward
-                    logger.add_scalar(
-                        f"{prefix}/reward/{env_id}", rewards[env_id][-1],
-                        episode if run_config["training"] else self.test_episode
-                    )
-
-                    # Number of steps taken by the agent in each episode
-                    logger.add_scalar(
-                        f"{prefix}/num_steps/{env_id}", steps[env_id][-1],
-                        episode if run_config["training"] else self.test_episode
-                    )
-
-                    # Skip over the rest of the logging if the user requested only basic metrics
-                    if run_config["only_log_base_metrics"]:
-                        continue
-
-                    # Loss information
-                    if losses[env_id]:
-                        logger.add_scalar(
-                            f"{prefix}/loss/{env_id}", np.mean(losses[env_id]), self.total_steps
-                        )
-
-                    # Reward shaping information
-                    if shaping_rewards[env_id]:
-                        np_data = np.array(shaping_rewards[env_id])
-                        unique, counts = np.unique(np_data, return_counts=True)
-                        freq_strings = [f"{value}: #{freq} | " for value, freq in zip(unique, counts)]
-                        logged_text = "  \n".join(freq_strings)
-                        logger.add_text(
-                            f"{prefix}/reward_shaping/frequencies/{env_id}", str(logged_text),
-                            episode if run_config["training"] else self.test_episode
-                        )
-
-                        logged_text = "  \n".join([f"{i}: {value}" for i, value in enumerate(shaping_rewards[env_id])])
-                        logger.add_text(
-                            f"{prefix}/reward_shaping/history/{env_id}", logged_text,
-                            episode if run_config["training"] else self.test_episode
-                        )
-                        logger.add_histogram(
-                            f"{prefix}/reward_shaping/{env_id}", np_data,
-                            episode if run_config["training"] else self.test_episode
-                        )
-
-                    # Cumulative number of steps so far, among all episodes
-                    # Only logged during training, as in evaluation we only care about the steps taken in each episode
-                    if run_config["training"]:
-                        logger.add_scalar(
-                            f"{prefix}/tot_steps/{env_id}", cumulative_steps[env_id][-1],
-                            episode
-                        )
-
-                    # Success/Failure/Timeouts rate
-                    # At test time, they are either 0/1 while at training they are the rate of
-                    # success up until a specific episode number
-                    logger.add_scalar(
-                        f"{prefix}/success_rate/{env_id}", successes[env_id] / episode,
-                        episode if run_config["training"] else self.test_episode
-                    )
-                    logger.add_scalar(
-                        f"{prefix}/failure_rate/{env_id}", failures[env_id] / episode,
-                        episode if run_config["training"] else self.test_episode
-                    )
-                    logger.add_scalar(
-                        f"{prefix}/timeout_rate/{env_id}", timeouts[env_id] / episode,
-                        episode if run_config["training"] else self.test_episode
-                    )
-
-                    self.all_recorded_rm_states[env_id] = self.all_recorded_rm_states[env_id].union(
-                        last_timestep_in_u[env_id].keys())
-
-                    if run_config["training"]:
-                        timestep_train_info = self.last_timestep_train_info.get(env_id, [])
-                        timestep_train_info.append(last_timestep_in_u[env_id])
-                        self.last_timestep_train_info[env_id] = timestep_train_info
-                    else:
-                        timestep_test_info = self.last_timestep_test_info.get(env_id, [])
-                        timestep_test_info.append(last_timestep_in_u[env_id])
-                        self.last_timestep_test_info[env_id] = timestep_test_info
-
-                if episode_frames[env_id]:
-                    video = np.array(episode_frames[env_id]).transpose(0, 3, 1, 2)[
-                            np.newaxis, :
-                            ]
-                    video = self._improve_replay(video, success=episode_reward == 1)
-                    logger.add_video(
-                        f"{prefix}/replay/{env_id}", video,
-                        episode if run_config["training"] else self.test_episode
-                    )
+            self._track_metrics(envs, train_state, episode, episode_frames, episode_losses, episode_shaping_rewards,
+                                logger, infos, last_timestep_in_u, run_config)
 
             # Report metric to optuna for early stopping
             if trial and run_config["training"] and episode > self.num_episodes_for_aggregation:
-                trial.report(self._compute_score(steps), episode)
+                trial.report(self._compute_score(train_state.steps), episode)
                 if trial.should_prune():
                     raise optuna.TrialPruned()
 
+            # Store a checkpoint
             if episode % run_config["checkpoint_freq"] == 0:
-                train_state = TrainState(episode, steps, cumulative_steps, losses, rewards, shaping_rewards,
-                                         successes, failures, timeouts)
+                new_state = copy.deepcopy(train_state)
+                new_state.episode = episode
                 self.save_checkpoint(logger.log_dir, train_state)
 
+            # Run test
             if run_config["training"] and episode % run_config["testing_freq"] == 0:
                 self._run(self.testing_envs, {
                     "training": False,
@@ -434,15 +271,152 @@ class Trainer:
                     "total_episodes": 1,
                     "greedy": run_config.get("greedy", True),
                     "seed": run_config["seed"],
-                    "synchronize": run_config["synchronize"],
                     "checkpoint_freq": run_config["checkpoint_freq"],
                     "only_log_base_metrics": run_config["only_log_base_metrics"]
                 }, logger)
 
-        # TODO: make cleaner
-        # Sums the rewards of the last 100 episodes
-        return self._compute_score(steps)
-        # return sum(rewards[list(self.testing_envs.keys())[0]][run_config["total_episodes"] - 100:])
+        return self._compute_score(train_state.steps)
+
+    def _track_algo_metrics(self, episode, logger, run_config):
+        if (run_config["training"] and run_config["extra_debug_information"] and
+                not run_config["only_log_base_metrics"]):
+            for aid, a in self.agents.items():
+                if hasattr(a, 'rm_agents'):
+                    algo_stats = a.rm_agents[aid].algo.get_statistics()
+                else:
+                    algo_stats = a.algo.get_statistics()
+                # Using rm_learner stats
+                agent_stats = a.get_statistics()
+                logger.add_scalar(f'algo/{aid}/policy_age', algo_stats["policy_age"], episode)
+                logger.add_scalar(f'algo/{aid}/epsilon', algo_stats["epsilon"], episode)
+                for stat_key, stat_value in agent_stats.items():
+                    logger.add_scalar(f'agent/{stat_key}', stat_value, episode)
+
+    def _track_metrics(self, envs, train_state, episode, episode_frames, episode_losses, episode_shaping_rewards,
+                       logger, infos, last_timestep_in_u, run_config):
+        # track metrics and log them in TB
+        for env_id in envs.keys():
+            prefix = "training" if run_config["training"] else "eval"
+
+            episode_reward = infos[env_id]["episode"]["r"]
+            episode_length = infos[env_id]["episode"]["l"]
+
+            train_state.steps[env_id].append(episode_length)
+            train_state.rewards[env_id].append(episode_reward)
+
+            if len(train_state.cumulative_steps[env_id]) > 0:
+                total_steps_so_far = episode_length + train_state.cumulative_steps[env_id][-1]
+            else:
+                total_steps_so_far = episode_length
+            train_state.cumulative_steps[env_id].append(total_steps_so_far)
+
+            if episode_reward == 1:
+                train_state.successes[env_id] += 1
+            elif episode_reward == -1:
+                train_state.failures[env_id] += 1
+            else:
+                train_state.timeouts[env_id] += 1
+
+            assert train_state.successes[env_id] + train_state.failures[env_id] + train_state.timeouts[
+                env_id] == episode, "Something is wrong"
+
+            if episode_losses[env_id]:
+                train_state.losses[env_id].append(np.mean(episode_losses[env_id]))
+
+            if episode_shaping_rewards[env_id]:
+                train_state.shaping_rewards[env_id] = episode_shaping_rewards[env_id]
+
+            if episode % run_config["log_freq"] == 0:
+
+                # Episode reward
+                logger.add_scalar(
+                    f"{prefix}/reward/{env_id}", train_state.rewards[env_id][-1],
+                    episode if run_config["training"] else self.test_episode
+                )
+
+                # Number of steps taken by the agent in each episode
+                logger.add_scalar(
+                    f"{prefix}/num_steps/{env_id}", train_state.steps[env_id][-1],
+                    episode if run_config["training"] else self.test_episode
+                )
+
+                # Skip over the rest of the logging if the user requested only basic metrics
+                if run_config["only_log_base_metrics"]:
+                    continue
+
+                # Loss information
+                if train_state.losses[env_id]:
+                    logger.add_scalar(
+                        f"{prefix}/loss/{env_id}", np.mean(train_state.losses[env_id]), self.total_steps
+                    )
+
+                # Reward shaping information
+                if train_state.shaping_rewards[env_id]:
+                    np_data = np.array(train_state.shaping_rewards[env_id])
+                    unique, counts = np.unique(np_data, return_counts=True)
+                    freq_strings = [f"{value}: #{freq} | " for value, freq in zip(unique, counts)]
+                    logged_text = "  \n".join(freq_strings)
+                    logger.add_text(
+                        f"{prefix}/reward_shaping/frequencies/{env_id}", str(logged_text),
+                        episode if run_config["training"] else self.test_episode
+                    )
+
+                    logged_text = "  \n".join(
+                        [f"{i}: {value}" for i, value in enumerate(train_state.shaping_rewards[env_id])])
+                    logger.add_text(
+                        f"{prefix}/reward_shaping/history/{env_id}", logged_text,
+                        episode if run_config["training"] else self.test_episode
+                    )
+                    logger.add_histogram(
+                        f"{prefix}/reward_shaping/{env_id}", np_data,
+                        episode if run_config["training"] else self.test_episode
+                    )
+
+                # Cumulative number of steps so far, among all episodes
+                # Only logged during training, as in evaluation we only care about the steps taken in each episode
+                if run_config["training"]:
+                    logger.add_scalar(
+                        f"{prefix}/tot_steps/{env_id}", train_state.cumulative_steps[env_id][-1],
+                        episode
+                    )
+
+                # Success/Failure/Timeouts rate
+                # At test time, they are either 0/1 while at training they are the rate of
+                # success up until a specific episode number
+                logger.add_scalar(
+                    f"{prefix}/success_rate/{env_id}", train_state.successes[env_id] / episode,
+                    episode if run_config["training"] else self.test_episode
+                )
+                logger.add_scalar(
+                    f"{prefix}/failure_rate/{env_id}", train_state.failures[env_id] / episode,
+                    episode if run_config["training"] else self.test_episode
+                )
+                logger.add_scalar(
+                    f"{prefix}/timeout_rate/{env_id}", train_state.timeouts[env_id] / episode,
+                    episode if run_config["training"] else self.test_episode
+                )
+
+                self.all_recorded_rm_states[env_id] = self.all_recorded_rm_states[env_id].union(
+                    last_timestep_in_u[env_id].keys())
+
+                if run_config["training"]:
+                    timestep_train_info = self.last_timestep_train_info.get(env_id, [])
+                    timestep_train_info.append(last_timestep_in_u[env_id])
+                    self.last_timestep_train_info[env_id] = timestep_train_info
+                else:
+                    timestep_test_info = self.last_timestep_test_info.get(env_id, [])
+                    timestep_test_info.append(last_timestep_in_u[env_id])
+                    self.last_timestep_test_info[env_id] = timestep_test_info
+
+            if episode_frames[env_id]:
+                video = np.array(episode_frames[env_id]).transpose(0, 3, 1, 2)[
+                        np.newaxis, :
+                        ]
+                video = self._improve_replay(video, success=episode_reward == 1)
+                logger.add_video(
+                    f"{prefix}/replay/{env_id}", video,
+                    episode if run_config["training"] else self.test_episode
+                )
 
     # Computes the sum of a given metric for the last num_episodes
     def _compute_score(self, metric):
@@ -510,46 +484,6 @@ class Trainer:
         return {
             i: o for i, o in obs.items() if i == aid
         }
-
-    @staticmethod
-    def _get_shared_events(env_agents):
-        shared_events = {}
-        for aid1, agent1 in env_agents.items():
-            for aid2, agent2 in env_agents.items():
-                if aid1 >= aid2:
-                    continue
-                intersection = set(agent1.rm.get_valid_events()).intersection(agent2.rm.get_valid_events())
-                shared_events[tuple(sorted([aid1, aid2]))] = intersection
-        return shared_events
-
-    @staticmethod
-    def _synchronize(shared_events, agent_labels):
-        agent_labels = copy.deepcopy(agent_labels)
-
-        for (aid1, aid2), events in shared_events.items():
-            for e in events:
-                if not all(e in agent_labels[aid] for aid in (aid1, aid2)):
-                    agent_labels[aid1] = tuple(l for l in agent_labels[aid1] if l != e)
-                    agent_labels[aid2] = tuple(l for l in agent_labels[aid2] if l != e)
-
-        return agent_labels
-
-    @staticmethod
-    def _counterfactual_update(env, agent, state, current_u, action, done, next_state, aid):
-        labels = env.get_labels(next_state, state)
-
-        if isinstance(labels, dict):
-            labels = [lbl for lbl, prob in labels.items() if prob > 0.5]
-            raise NotImplementedError("Need to implement Counterfactual reasoning")
-
-        for u in agent.rm.states:
-            if u != current_u and not agent.rm.is_state_terminal(u):
-                l = env.filter_labels(labels, u)
-
-                next_u = agent.rm.get_next_state(u, l)
-                r = agent.rm.get_reward(u, next_u)
-
-                agent.learn(state, u, action, r, done, next_state, next_u, agent_id=aid)
 
     def save_checkpoint(self, path, train_state: TrainState):
         checkpoint_data = {

@@ -4,8 +4,6 @@ log_freq: 1
 log_dir: logs
 testing_freq: 250
 greedy: True
-synchronize: False
-counterfactual_update: False
 recording_freq: 250
 no_display: False
 seed: 123
@@ -20,12 +18,3 @@ restart_from_checkpoint: False
 
 use_rs : True
 
-# TODO: Discuss where this should be placed
-#  This seems like the best place at the moment as we may want to couple this to particular runs
-rm_learner_kws:
-  edge_cost: 2
-  n_phi_cost: 1
-  ex_penalty_multiplier: 2
-  min_penalty: 2
-  cross_entropy_threshold: 0.6
-  use_cross_entropy: True

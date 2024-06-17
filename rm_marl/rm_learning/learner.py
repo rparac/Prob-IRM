@@ -1,6 +1,8 @@
 import abc
 import os
 
+from .trace_tracker import TraceTracker
+from ..reward_machine import RewardMachine
 from ..utils.logging import getLogger
 
 LOGGER = getLogger(__name__)
@@ -25,14 +27,10 @@ class RMLearner(metaclass=abc.ABCMeta):
             os.mkdir(folder)
         self._log_folder = folder
 
-    # TODO: change the method name to update_rm
     @abc.abstractmethod
-    def learn(self, observables, rm, positive_examples, negative_examples, incomplete_examples):
+    def update_rm(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated,
+              is_positive_trace):
         raise NotImplementedError("learn")
-
-    # @abc.abstractmethod
-    # def update_rm(self):
-    #     raise NotImplementedError("update_rm")
 
     def process_examples(self, examples):
         return examples

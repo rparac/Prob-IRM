@@ -32,7 +32,7 @@ class ILASPLearner(RMLearner):
 
     # Called either when rm or the environment is in terminal state
     # TODO: move is_positive_trace to trace tracker
-    def learn(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated,
+    def update_rm(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated,
               is_positive_trace):
         examples_updated = False
         seq = trace.no_dups_labels_sequence

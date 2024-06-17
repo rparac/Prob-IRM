@@ -1,4 +1,7 @@
 #!/bin/bash
+
+# Runs the deliver coffee task for 5 seeds and noise levels with the noise on the coffee sensor
+
 cd ..
 
 seeds=(0 100 200 300 400)

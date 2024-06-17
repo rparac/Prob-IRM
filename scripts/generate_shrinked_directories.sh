@@ -5,5 +5,5 @@ directory="processing"
 for log_dir in "${log_dirs[@]}"; do
   name="${directory}_${log_dir}"
   python submit_rcs_old_script.py 128 ${directory} ${name} \
-    lorenzo_processing_script.py ${log_dir}
+    generate_small_tensorboard_logs.py ${log_dir}
 done

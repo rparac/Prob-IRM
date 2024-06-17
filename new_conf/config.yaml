@@ -5,3 +5,4 @@ defaults:
   - env/office-world@env: deliver_coffee
   - run: debugging_coffee_mail
   - algo: qrm
+  - rm_learner: default

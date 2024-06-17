@@ -1,9 +1,0 @@
-_target_: rm_marl.agent.RewardMachineLearningAgent
-agent_id: ${..config.agent_id}
-algo_kws:
-  action_space: 
-    _target_: builtins.getattr
-    _args_:
-      - ${.....env}
-      - action_space
-  seed: ${.....run.seed}
