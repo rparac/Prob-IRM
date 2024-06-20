@@ -76,12 +76,13 @@ class Args:
 
 
 def hyperparams_opt(
-        num_iterations=400,
-        seed=123,
-        points_to_evaluate=None,
-        num_samples=50,
-        max_concurrent_trials=None,
+    num_iterations=400,
+    seed=0,
+    points_to_evaluate=None,
+    num_samples=50,
+    max_concurrent_trials=None,
 ):
+
     from ray.tune.schedulers import (
         AsyncHyperBandScheduler,
         PopulationBasedTraining,
@@ -97,14 +98,24 @@ def hyperparams_opt(
         "entropy_coeff": (0.0, 0.1),
         "kl_target": (0.0, 0.2),
     }
-    hyperparam_mutations = {k: FloatDistribution(*v) for k, v in hyperparam_bounds.items()}
+
+    hyperparam_mutations = {k: tune.uniform(*v) for k, v in hyperparam_bounds.items()}
 
     scheduler_name = "asynchyperband"
+    # scheduler_name = "medianstopping"
+    # scheduler_name = "hyperband"
+
     scheduler = create_scheduler(
         scheduler_name,
         time_attr="training_iteration",
-        max_t=num_iterations,  # max time units per trial
-        grace_period=int(num_iterations / 10 * 2),  # for early stopping
+        perturbation_interval=50,
+        resample_probability=0.1,
+        # Specifies the mutations of these hyperparams
+        hyperparam_bounds=hyperparam_bounds,
+        hyperparam_mutations=hyperparam_mutations,
+        max_t=num_iterations,
+        grace_period=int(num_iterations / 10 * 2),
+        # hard_stop=False
     )
 
     if points_to_evaluate:
@@ -113,21 +124,27 @@ def hyperparams_opt(
             for d in points_to_evaluate
         ]
 
-    search_alg = OptunaSearch(space=hyperparam_mutations,
-                              metric=[f"episode_return_mean", f"episode_return_min", f"episode_return_max", ],
-                              mode=["max", "max", "max"], seed=seed, points_to_evaluate=points_to_evaluate, )
-    tune_config = tune.TuneConfig(
-        metric=f"episode_return_mean",
-        mode="max",
-        scheduler=scheduler,
-        num_samples=num_samples,
-        max_concurrent_trials=max_concurrent_trials,
-        reuse_actors=False,
-        # search_alg=BasicVariantGenerator(random_state=seed),
-        search_alg=search_alg,
-    )
     return dict(
-        tune_config=tune_config
+        tune_config=tune.TuneConfig(
+            metric=f"{ENV_RUNNER_RESULTS}/episode_return_mean",
+            mode="max",
+            scheduler=scheduler,
+            num_samples=num_samples,
+            max_concurrent_trials=max_concurrent_trials,
+            reuse_actors=False,
+            # search_alg=BasicVariantGenerator(random_state=seed),
+            search_alg=OptunaSearch(
+                space=hyperparam_mutations,
+                metric=[
+                    f"{ENV_RUNNER_RESULTS}/episode_return_mean",
+                    f"{ENV_RUNNER_RESULTS}/episode_return_min",
+                    f"{ENV_RUNNER_RESULTS}/episode_return_max",
+                ],
+                mode=["max", "max", "max"],
+                seed=seed,
+                points_to_evaluate=points_to_evaluate,
+            ),
+        )
     )
 
 

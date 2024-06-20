@@ -1,12 +1,13 @@
-from ray import tune, train
+from ray import tune, train, air
 from ray.rllib.algorithms import PPOConfig
 from ray.rllib.algorithms.ppo.ppo_catalog import PPOCatalog
 from ray.rllib.algorithms.ppo.torch.ppo_torch_rl_module import PPOTorchRLModule
 from ray.rllib.core.rl_module.rl_module import SingleAgentRLModuleSpec
+from ray.rllib.utils.metrics import ENV_RUNNER_RESULTS
 from ray.tune import create_scheduler
 from ray.util.client import ray
 
-from rm_marl.trainer.ray.common import run_rllib_experiment, Args
+from rm_marl.trainer.ray.common import run_rllib_experiment, Args, hyperparams_opt
 from rm_marl.trainer.ray.ppo_trainable import PPOTrainable
 
 
@@ -33,10 +34,9 @@ class NewTrainer:
             .training(
                 **run_config["training_config"],
             )
-            .api_stack(
-                enable_rl_module_and_learner=True,
-                enable_env_runner_and_connector_v2=True
-            )
+            # .api_stack(
+            #     enable_rl_module_and_learner=False,
+            # )
             # .rollouts(num_rollout_workers=1)
             .env_runners(
                 # batch_mode="complete_episodes",
@@ -54,6 +54,43 @@ class NewTrainer:
             .debugging(seed=0)
         )
 
+        stop = tune.stopper.CombinedStopper(
+            tune.stopper.MaximumIterationStopper(max_iter=100),
+            # tune.stopper.TrialPlateauStopper(
+            #     metric=f"{ENV_RUNNER_RESULTS}/episode_return_mean",
+            #     mode="max",
+            #     std=0.01,
+            #     grace_period=25,
+            #     num_results=15
+            # ),
+        )
+
+        tuner = tune.Tuner(
+            config.algo_class,
+            param_space=config.to_dict(),
+            run_config=air.RunConfig(
+                storage_path=None,
+                stop=stop,
+                verbose=1,
+                checkpoint_config=train.CheckpointConfig(
+                    checkpoint_frequency=1,
+                    num_to_keep=1,
+                    checkpoint_score_order="max",
+                    checkpoint_score_attribute=f"{ENV_RUNNER_RESULTS}/episode_return_mean",
+                    checkpoint_at_end=True,
+                ),
+                failure_config=train.FailureConfig(fail_fast=False),
+                sync_config=train.SyncConfig(sync_artifacts=True),
+            ),
+            **hyperparams_opt(
+                num_iterations=100,
+                seed=0,
+                max_concurrent_trials=2,
+            ),
+        )
+
+
+
         # tune.run(
         #     config.algo_class,
         #     config={
@@ -62,38 +99,6 @@ class NewTrainer:
         #         "evaluation_duration_unit": "episodes",
         #     }
         # )
-
-        num_iterations = 100
-        scheduler_name = "asynchyperband"
-        scheduler = create_scheduler(
-            scheduler_name,
-            time_attr="training_iteration",
-            max_t=num_iterations,  # max time units per trial
-            grace_period=int(num_iterations / 10 * 2),  # for early stopping
-        )
-        tuner = tune.Tuner(
-            PPOTrainable,
-            tune_config=tune.TuneConfig(
-                metric="episode_return_mean",
-                mode="max",
-                scheduler=scheduler,
-            ),
-            param_space={
-                "env": "CartPole-v1",
-                "kl_coeff": 1.0,
-                "model": {"free_log_std": True},
-                # These params are tuned from a fixed starting value.
-                "lambda": 0.95,
-                "clip_param": 0.2,
-                "lr": 1e-4,
-                # These params start off randomly drawn from a set.
-                "num_sgd_iter": tune.choice([10, 20, 30]),
-                "sgd_minibatch_size": tune.choice([128, 512, 2048]),
-                "train_batch_size": tune.choice([100, 200, 300]),  # tune.choice([10000, 20000, 40000]),
-            },
-            run_config=train.RunConfig(),
-        )
-        results = tuner.fit()
 
         run_rllib_experiment(config, Args())
 
