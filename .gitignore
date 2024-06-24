@@ -9,6 +9,10 @@ __pycache__/
 # C extensions
 *.so
 
+# ray library - just clone v 2.24.0 from github
+ray/
+
+
 # Distribution / packaging
 .Python
 build/
