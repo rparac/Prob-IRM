@@ -92,6 +92,7 @@ class EnvRenderCallback(DefaultCallbacks):
         # data would be sent to WandB.
         self.best_episode_and_return = (None, float("-inf"))
         self.worst_episode_and_return = (None, float("inf"))
+        self.frames = []
 
     def on_episode_step(
             self,
@@ -109,12 +110,15 @@ class EnvRenderCallback(DefaultCallbacks):
         Note that this would work with MultiAgentEpisodes as well.
         """
         # If we have a vector env, only render the sub-env at index 0.
+
+        # Extract the underlying env and render it
+
+        # If we have a vector env, only render the sub-env at index 0.
         if isinstance(env.unwrapped, gym.vector.VectorEnv):
             image = env.envs[0].render()
         # Render the gym.Env.
         else:
             image = env.render()
-
 
         # Original render images for CartPole are 400x600 (hxw). We'll downsize here to
         # a very small dimension (to save space and bandwidth).
@@ -128,8 +132,8 @@ class EnvRenderCallback(DefaultCallbacks):
         # See below:
         # `on_episode_end()`: We compile the video and maybe store it).
         # `on_sample_end()` We log the best and worst video to the `MetricsLogger`.
-        episode.add_temporary_timestep_data("render_images", image)
-
+        self.frames.append(image)
+        # episode.add_temporary_timestep_data("render_images", image)
     def on_episode_end(
             self,
             *,
@@ -156,7 +160,7 @@ class EnvRenderCallback(DefaultCallbacks):
                 or episode_return < self.worst_episode_and_return[1]
         ):
             # Pull all images from the temp. data of the episode.
-            images = episode.get_temporary_timestep_data("render_images")
+            images = self.frames
             # `images` is now a list of 3D ndarrays
 
             # Create a video from the images by simply stacking them AND
@@ -175,6 +179,7 @@ class EnvRenderCallback(DefaultCallbacks):
             # `video` is worst in this cycle (iteration).
             else:
                 self.worst_episode_and_return = (video, episode_return)
+        self.frames = []
 
     def on_sample_end(
             self,
@@ -186,7 +191,6 @@ class EnvRenderCallback(DefaultCallbacks):
     ) -> None:
         """Logs the best and worst video to this EnvRunner's MetricsLogger."""
         # Best video.
-        raise RuntimeError(self.best_episode_and_return[0].shape)
         metrics_logger.log_value(
             "episode_videos_best",
             self.best_episode_and_return[0],
@@ -211,6 +215,7 @@ class EnvRenderCallback(DefaultCallbacks):
         # Reset our best/worst placeholders.
         self.best_episode_and_return = (None, float("-inf"))
         self.worst_episode_and_return = (None, float("inf"))
+        self.frames = []
 
 
 if __name__ == "__main__":
@@ -263,6 +268,10 @@ if __name__ == "__main__":
             grad_clip=100.0,
             grad_clip_by="global_norm",
         )
+        .api_stack(
+            enable_env_runner_and_connector_v2=True,
+            enable_rl_module_and_learner=True,
+        )
     )
 
     if base_config.is_atari:
@@ -276,4 +285,8 @@ if __name__ == "__main__":
             },
         )
 
-    run_rllib_example_script_experiment(base_config, args)
+    algo = base_config.build()
+    algo.train()
+    algo.evaluate()
+
+    # run_rllib_example_script_experiment(base_config, args)

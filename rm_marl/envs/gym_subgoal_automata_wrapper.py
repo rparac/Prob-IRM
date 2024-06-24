@@ -9,8 +9,9 @@ env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
 env = DanielGymAdapter(env)
 """
 import abc
+from typing import Union
 
-import gym
+import gymnasium as gym
 import numpy as np
 
 from gym_subgoal_automata.envs.base.base_env import BaseEnv
@@ -19,16 +20,14 @@ from rm_marl.reward_machine import RewardMachine
 
 
 class GymSubgoalAutomataAdapter(gym.Wrapper):
-    def __init__(self, env: BaseEnv, agent_id: int, render_mode=None, max_episode_length=None,
+    def __init__(self, env: BaseEnv, agent_id: Union[int, str], max_episode_length=None,
                  use_restricted_observables: bool = True):
         # Explicitly returns observables as a part of the observation.
         # We regenerate them in this adapter using the info output.
         env.hide_state_variables = True
         super().__init__(env)
 
-        assert render_mode in ["human", "rgb_array"]
         self.agent_id = agent_id
-        self._render_mode = render_mode
         self.env = env
         if use_restricted_observables:
             self.observables = self.env.get_restricted_observables()
@@ -38,12 +37,13 @@ class GymSubgoalAutomataAdapter(gym.Wrapper):
         self.current_step = 0
 
         self.observation_space = gym.spaces.Dict({self.agent_id: env.observation_space})
+        self.action_space = gym.spaces.Dict({self.agent_id: env.action_space})
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
         self.current_step = 0
-        if self._render_mode == "human":
-            self.env.render(self._render_mode)
+        if self.render_mode == "human":
+            self.env.render()
 
         info["is_positive_trace"] = False
         return {self.agent_id: obs}, {}
@@ -51,8 +51,8 @@ class GymSubgoalAutomataAdapter(gym.Wrapper):
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action[self.agent_id])
         self.current_step += 1
-        if self._render_mode == "human":
-            self.env.render(self._render_mode)
+        if self.render_mode == "human":
+            self.env.render()
 
         # TODO: force negative reward when a plant is reached; this may need to be done through reward shaping or the other env
         if 'n' in info['observations']:
@@ -65,8 +65,8 @@ class GymSubgoalAutomataAdapter(gym.Wrapper):
         return {self.agent_id: obs}, reward, terminated, truncated, info
 
     def render(self, **kwargs):
-        if self._render_mode == "rgb_array":
-            return self.env.render(self._render_mode)
+        if self.render_mode == "rgb_array":
+            return self.env.render()
 
     # Converts subgoal automaton to Reward Machine
     def get_perfect_rm(self):

@@ -40,8 +40,7 @@ def _get_base_env():
     use_restricted_observables = True
     env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
                    params={"generation": "custom", "environment_seed": seed, "hide_state_variables": True})
-    env = GymSubgoalAutomataAdapter(env, agent_id="A1", render_mode="rgb_array",  # type: ignore
-                                    max_episode_length=max_episode_length,
+    env = GymSubgoalAutomataAdapter(env, agent_id="A1", max_episode_length=max_episode_length,
                                     use_restricted_observables=use_restricted_observables)
     office_l = OfficeWorldOfficeLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)
     coffee_l = OfficeWorldCoffeeLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)

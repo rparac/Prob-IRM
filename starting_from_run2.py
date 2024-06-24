@@ -1,55 +1,30 @@
+import gymnasium as gym
 from dotenv import load_dotenv
 from optuna.distributions import FloatDistribution
+from ray.tune import register_env
 from ray.tune.logger import TBXLogger
 
-from rm_marl.trainer.ray.custom_ppo import PPORM
+from rllib_example_test import EnvRenderCallback
 from rm_marl.trainer.ray.run_args import Args
+from rm_marl.envs.gym_subgoal_automata_wrapper import GymSubgoalAutomataAdapter
 
 load_dotenv()
 
-import itertools
 import logging
 import os
 import random
 import sys
 import warnings
-from copy import deepcopy
-from dataclasses import dataclass
-from typing import Optional, Tuple, Type
 
-import gymnasium as gym
 import numpy as np
 import ray
 import tyro
 from ray import air, train, tune
-from ray.rllib.algorithms.algorithm import Algorithm
-from ray.rllib.algorithms.algorithm_config import AlgorithmConfig, NotProvided
-from ray.rllib.algorithms.callbacks import DefaultCallbacks
-from ray.rllib.algorithms.ppo import PPO, PPOConfig
-from ray.rllib.algorithms.ppo.ppo import LEARNER_RESULTS_KL_KEY
-from ray.rllib.algorithms.ppo.ppo_torch_policy import PPOTorchPolicy
-from ray.rllib.evaluation.rollout_worker import RolloutWorker
-from ray.rllib.execution.train_ops import multi_gpu_train_one_step, train_one_step
-from ray.rllib.models.catalog import ModelCatalog
-from ray.rllib.models.modelv2 import ModelV2
-from ray.rllib.models.torch.misc import AppendBiasLayer, SlimFC, normc_initializer
-from ray.rllib.models.torch.torch_action_dist import TorchDistributionWrapper
-from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
-from ray.rllib.policy.policy import Policy
-from ray.rllib.policy.torch_policy_v2 import TorchPolicyV2
-from ray.rllib.utils.annotations import PublicAPI, override
+from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.utils.framework import try_import_torch
 from ray.rllib.utils.metrics import (
-    ALL_MODULES,
     ENV_RUNNER_RESULTS,
-    NUM_AGENT_STEPS_SAMPLED,
-    NUM_ENV_STEPS_SAMPLED,
-    SYNCH_WORKER_WEIGHTS_TIMER,
-    TRAINING_ITERATION_TIMER,
 )
-from ray.rllib.utils.metrics.learner_info import LEARNER_STATS_KEY
-from ray.rllib.utils.typing import Dict, List, ModelConfigDict, TensorType
-from ray.util.debug import log_once
 
 torch, nn = try_import_torch()
 
@@ -58,13 +33,84 @@ warnings.filterwarnings("ignore", module="ray.rllib.policy")
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from rm_marl.reward_machine import RewardMachine
-
 logger = logging.getLogger(__name__)
 
 SEED = 123
+
+
 # ENV_NAME = "FOLMultiRoom-OneRoom-v1"
-ENV_NAME = "FOLMultiRoom-AllRoom-v3"
+
+
+def create_new_config(
+        num_workers=10,
+        seed=SEED,
+):
+    def env_creator(env_config):
+        env = gym.make('gym_subgoal_automata:OfficeWorldDeliverCoffee-v0',
+                       params={"generation": "random", "environment_seed": seed, "hide_state_variables": True},
+                       render_mode="rgb_array",
+                       )
+        env = GymSubgoalAutomataAdapter(env, agent_id="A1", max_episode_length=200, use_restricted_observables=True)
+        return env
+
+    register_env(f"my_env", env_creator)
+
+    dummy_env = env_creator({})
+
+    config = PPOConfig()
+    config = (
+        config.environment(
+            env=f"my_env",
+            env_config={
+            },
+        )
+        .env_runners(
+            num_env_runners=num_workers,
+            observation_filter="MeanStdFilter",
+            create_env_on_local_worker=True,
+            # enable_connectors=False,
+        )
+        .framework("torch")
+        .api_stack(
+            enable_env_runner_and_connector_v2=True,
+            enable_rl_module_and_learner=True,
+        )
+        # .callbacks(EnvRenderCallback)
+        .training(
+            model={
+                "fcnet_hiddens": [64, 64],
+                "fcnet_activation": "tanh",
+                "vf_share_layers": True,
+            },
+            entropy_coeff=0.02,
+            lr=2.5e-4,
+            # lr_schedule=[[0, 2.5e-4], [200000, 1e-4], [500000, 5e-5], [1000000, 1e-5]],
+            gamma=0.99,
+            vf_loss_coeff=0.5,
+            lambda_=0.95,
+            clip_param=0.2,
+            vf_clip_param=0.2,
+            grad_clip=0.5,
+            kl_target=0.0,
+            num_sgd_iter=10,
+            sgd_minibatch_size=(num_workers * (int(200) // 8)) // 4,
+            train_batch_size=num_workers * (int(200) // 8),
+            use_critic=True,
+            use_gae=True,
+        )
+        .evaluation(
+            evaluation_interval=10,  # Evaluate every 50 episodes
+            evaluation_duration=1,  # 1 episode
+            evaluation_duration_unit="episodes",
+            evaluation_config=PPOConfig.overrides(
+                entropy_coeff=0.0,
+                explore=False,
+                render_env=True,
+            ),
+        )
+        .debugging(seed=seed, log_level="WARN")
+    )
+    return config
 
 
 def create_config(
@@ -85,6 +131,7 @@ def create_config(
                 "render_mode": "rgb_array",
             },
             is_atari=False,
+            observation_space=None,
         )
         .resources(
             # num_gpus=1,
@@ -137,15 +184,14 @@ def create_config(
             evaluation_config=PPOConfig.overrides(
                 entropy_coeff=0.0,
                 explore=False,
-                render_env=True,
             ),
         )
         .debugging(seed=seed, log_level="WARN")
-        .api_stack(
-            # enable_env_runner_and_connector_v2=True,
-            # enable_rl_module_and_learner=True
-            enable_rl_module_and_learner=False,
-        )
+        # .api_stack(
+        #     # enable_env_runner_and_connector_v2=True,
+        #     # enable_rl_module_and_learner=True
+        #     enable_rl_module_and_learner=False,
+        # )
 
     )
     return config
@@ -234,10 +280,12 @@ if __name__ == "__main__":
         }
     )
 
-    config = create_config(
+    config = create_new_config(
         seed=args.seed,
         num_workers=args.num_workers,
     )
+    algo = config.build()
+    algo.evaluate()
 
     stop = tune.stopper.CombinedStopper(
         tune.stopper.MaximumIterationStopper(max_iter=args.num_iterations),
@@ -277,7 +325,7 @@ if __name__ == "__main__":
     )
     print("CONFIG:", best_result.config)
 
-    # ckpt = best_result.checkpoint
-    # algo = config.algo_class.from_checkpoint(ckpt)
-    # eval_results = algo.evaluate()
-    # print(eval_results)
+    ckpt = best_result.checkpoint
+    algo = config.algo_class.from_checkpoint(ckpt)
+    eval_results = algo.evaluate()
+    print(eval_results)
