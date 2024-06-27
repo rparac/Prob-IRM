@@ -59,6 +59,7 @@ Your terminal output should look similar to this:
 """
 import gymnasium as gym
 import numpy as np
+from typing import Optional, Sequence
 
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.env.wrappers.atari_wrappers import wrap_atari_for_new_api_stack
@@ -85,33 +86,36 @@ class EnvRenderCallback(DefaultCallbacks):
     and temporarily store it in the Episode object.
     """
 
-    def __init__(self):
+    def __init__(self, env_runner_indices: Optional[Sequence[int]] = None):
         super().__init__()
+        # Only render and record on certain EnvRunner indices?
+        self.env_runner_indices = env_runner_indices
         # Per sample round (on this EnvRunner), we want to only log the best- and
         # worst performing episode's videos in the custom metrics. Otherwise, too much
         # data would be sent to WandB.
         self.best_episode_and_return = (None, float("-inf"))
         self.worst_episode_and_return = (None, float("inf"))
-        self.frames = []
 
     def on_episode_step(
-            self,
-            *,
-            episode,
-            env_runner,
-            metrics_logger,
-            env,
-            env_index,
-            rl_module,
-            **kwargs,
+        self,
+        *,
+        episode,
+        env_runner,
+        metrics_logger,
+        env,
+        env_index,
+        rl_module,
+        **kwargs,
     ) -> None:
         """On each env.step(), we add the render image to our Episode instance.
 
         Note that this would work with MultiAgentEpisodes as well.
         """
-        # If we have a vector env, only render the sub-env at index 0.
-
-        # Extract the underlying env and render it
+        if (
+            self.env_runner_indices is not None
+            and env_runner.worker_index not in self.env_runner_indices
+        ):
+            return
 
         # If we have a vector env, only render the sub-env at index 0.
         if isinstance(env.unwrapped, gym.vector.VectorEnv):
@@ -123,7 +127,6 @@ class EnvRenderCallback(DefaultCallbacks):
         # Original render images for CartPole are 400x600 (hxw). We'll downsize here to
         # a very small dimension (to save space and bandwidth).
         image = resize(image, 64, 96)
-        # raise RuntimeError(f"{image.min()}, {image.max()}, {image.shape}")
         # For WandB videos, we need to put channels first.
         image = np.transpose(image, axes=[2, 0, 1])
         # Add the compiled single-step image as temp. data to our Episode object.
@@ -132,18 +135,18 @@ class EnvRenderCallback(DefaultCallbacks):
         # See below:
         # `on_episode_end()`: We compile the video and maybe store it).
         # `on_sample_end()` We log the best and worst video to the `MetricsLogger`.
-        self.frames.append(image)
-        # episode.add_temporary_timestep_data("render_images", image)
+        episode.add_temporary_timestep_data("render_images", image)
+
     def on_episode_end(
-            self,
-            *,
-            episode,
-            env_runner,
-            metrics_logger,
-            env,
-            env_index,
-            rl_module,
-            **kwargs,
+        self,
+        *,
+        episode,
+        env_runner,
+        metrics_logger,
+        env,
+        env_index,
+        rl_module,
+        **kwargs,
     ) -> None:
         """Computes episode's return and compiles a video, iff best/worst in this iter.
 
@@ -156,11 +159,11 @@ class EnvRenderCallback(DefaultCallbacks):
 
         # Better than the best or worse than worst Episode thus far?
         if (
-                episode_return > self.best_episode_and_return[1]
-                or episode_return < self.worst_episode_and_return[1]
+            episode_return > self.best_episode_and_return[1]
+            or episode_return < self.worst_episode_and_return[1]
         ):
             # Pull all images from the temp. data of the episode.
-            images = self.frames
+            images = episode.get_temporary_timestep_data("render_images")
             # `images` is now a list of 3D ndarrays
 
             # Create a video from the images by simply stacking them AND
@@ -179,43 +182,43 @@ class EnvRenderCallback(DefaultCallbacks):
             # `video` is worst in this cycle (iteration).
             else:
                 self.worst_episode_and_return = (video, episode_return)
-        self.frames = []
 
     def on_sample_end(
-            self,
-            *,
-            env_runner,
-            metrics_logger,
-            samples,
-            **kwargs,
+        self,
+        *,
+        env_runner,
+        metrics_logger,
+        samples,
+        **kwargs,
     ) -> None:
         """Logs the best and worst video to this EnvRunner's MetricsLogger."""
         # Best video.
-        metrics_logger.log_value(
-            "episode_videos_best",
-            self.best_episode_and_return[0],
-            # Do not reduce the videos (across the various parallel EnvRunners). This
-            # would not make sense (mean over the pixels?). Instead, we want to log all
-            # best videos of all EnvRunners per iteration.
-            reduce=None,
-            # B/c we do NOT reduce over the video data (mean/min/max), we need to make
-            # sure the list of videos in our MetricsLogger does not grow infinitely and
-            # gets cleared after each `reduce()` operation, meaning every time, the
-            # EnvRunner is asked to send its logged metrics.
-            clear_on_reduce=True,
-        )
+        if self.best_episode_and_return[0] is not None:
+            breakpoint()
+            metrics_logger.log_value(
+                "episode_videos_best",
+                self.best_episode_and_return[0],
+                # Do not reduce the videos (across the various parallel EnvRunners).
+                # This would not make sense (mean over the pixels?). Instead, we want to
+                # log all best videos of all EnvRunners per iteration.
+                reduce=None,
+                # B/c we do NOT reduce over the video data (mean/min/max), we need to
+                # make sure the list of videos in our MetricsLogger does not grow
+                # infinitely and gets cleared after each `reduce()` operation, meaning
+                # every time, the EnvRunner is asked to send its logged metrics.
+                clear_on_reduce=True,
+            )
+            self.best_episode_and_return = (None, float("-inf"))
         # Worst video.
-        # metrics_logger.log_value(
-        #     "episode_videos_worst",
-        #     self.worst_episode_and_return[0],
-        #     # Same logging options as above.
-        #     reduce=None,
-        #     clear_on_reduce=True,
-        # )
-        # Reset our best/worst placeholders.
-        self.best_episode_and_return = (None, float("-inf"))
-        self.worst_episode_and_return = (None, float("inf"))
-        self.frames = []
+        if self.worst_episode_and_return[0] is not None:
+            metrics_logger.log_value(
+                "episode_videos_worst",
+                self.worst_episode_and_return[0],
+                # Same logging options as above.
+                reduce=None,
+                clear_on_reduce=True,
+            )
+            self.worst_episode_and_return = (None, float("inf"))
 
 
 if __name__ == "__main__":
@@ -247,6 +250,13 @@ if __name__ == "__main__":
         get_trainable_cls(args.algo).get_default_config()
         # Use the above-registered environment.
         .environment("env")
+        .api_stack(
+            enable_env_runner_and_connector_v2=True,
+            enable_rl_module_and_learner=True,
+        )
+        .env_runners(
+            num_env_runners=1,
+        )
         # Plug in our custom callback that controls, which videos are created (best,
         # and worst per sampling cycle per EnvRunner) and then logged via the
         # `MetricsLogger` API.
@@ -268,10 +278,6 @@ if __name__ == "__main__":
             grad_clip=100.0,
             grad_clip_by="global_norm",
         )
-        .api_stack(
-            enable_env_runner_and_connector_v2=True,
-            enable_rl_module_and_learner=True,
-        )
     )
 
     if base_config.is_atari:
@@ -285,8 +291,7 @@ if __name__ == "__main__":
             },
         )
 
-    algo = base_config.build()
-    algo.train()
-    algo.evaluate()
+    # algo = base_config.build()
+    # algo.train()
 
-    # run_rllib_example_script_experiment(base_config, args)
+    run_rllib_example_script_experiment(base_config, args)
