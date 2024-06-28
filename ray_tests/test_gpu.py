@@ -1,3 +1,8 @@
+"""
+Trying to see if things will get run on GPU
+"""
+
+
 import ray
 from ray import tune
 import os
