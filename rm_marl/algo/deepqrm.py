@@ -19,7 +19,7 @@ import numpy as np
 import torch.nn as nn
 import torch
 from torch.optim import Optimizer, AdamW
-import gym
+import gymnasium as gym
 
 from typing import Type
 from collections import namedtuple, defaultdict

@@ -15,6 +15,8 @@ import gymnasium as gym
 import numpy as np
 
 from gym_subgoal_automata.envs.base.base_env import BaseEnv
+
+from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
 from rm_marl.envs.wrappers import LabelingFunctionWrapper
 from rm_marl.reward_machine import RewardMachine
 
@@ -121,7 +123,8 @@ class GymSubgoalAutomataAdapter(gym.Wrapper):
 
 
 class OfficeWorldAbstractLabelingFunctionWrapper(LabelingFunctionWrapper, abc.ABC):
-    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+    def __init__(self, env: Union[GymSubgoalAutomataAdapter, NewGymSubgoalAutomataAdapter],
+                 sensor_true_confidence: float,
                  sensor_false_confidence: float,
                  seed: int = 0, value_true_prior=2 / (12 * 9)):
         super().__init__(env, noisy=True, sensor_true_confidence=sensor_true_confidence,

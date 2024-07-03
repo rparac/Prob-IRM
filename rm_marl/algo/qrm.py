@@ -2,10 +2,10 @@ import math
 from collections import defaultdict
 from typing import Optional
 
-import gym.spaces
+import gymnasium.spaces
 import gymnasium
 import numpy as np
-from gym.utils import seeding
+from gymnasium.utils import seeding
 
 from ._base import Algo
 from ..reward_machine import RewardMachine
@@ -16,7 +16,7 @@ class QRM(Algo):
 
     def __init__(
             self,
-            action_space: "gym.spaces.Space" = None,
+            action_space: "gymnasium.spaces.Space" = None,
             temperature: float = 50.0,
             alpha: float = 0.8,
             gamma: float = 0.9,
@@ -25,7 +25,7 @@ class QRM(Algo):
             epsilon_end: float = 0.0,
             epsilon_decay: int = 100,
     ):
-        assert isinstance(action_space, gym.spaces.Discrete) or isinstance(action_space, gymnasium.spaces.Discrete)
+        assert isinstance(action_space, gymnasium.spaces.Discrete) or isinstance(action_space, gymnasium.spaces.Discrete)
         self.action_space = action_space
         self.temperature = temperature
         self.alpha = alpha

@@ -6,8 +6,8 @@ from enum import Enum
 from typing import TYPE_CHECKING, List
 
 import numpy as np
-import gym
-from gym.wrappers import RecordEpisodeStatistics, TimeLimit
+import gymnasium as gym
+from gymnasium.wrappers import RecordEpisodeStatistics, TimeLimit
 
 from ..reward_machine import RewardMachine
 from ..rm_transition.rm_transitioner import RMTransitioner
