@@ -80,7 +80,7 @@ class ProbFFNSLLearner(RMLearner):
 
     # We assume this function be called when a trace is fully generated
     def update_rm(self, curr_rm: RewardMachine, curr_state, trace: TraceTracker, terminated, truncated,
-              is_positive_trace):
+                  is_positive_trace):
         assert isinstance(curr_state, np.ndarray)
 
         self._store_trace(trace)

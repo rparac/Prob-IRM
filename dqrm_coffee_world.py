@@ -4,10 +4,10 @@ import cProfile
 import random
 import tracemalloc
 
-import gym
+import gymnasium as gym
 import hydra
 import numpy as np
-from gym.wrappers import RecordEpisodeStatistics
+from gymnasium.wrappers import RecordEpisodeStatistics
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 
@@ -26,7 +26,9 @@ def _get_base_env(env_name, seed, agent_id, label_factories, render_mode, max_ep
                   use_restricted_observables):
     # env=gym.make(
     env = gym.make(env_name,
-                   params={"generation": "random", "environment_seed": seed, "hide_state_variables": True})
+                   params={"generation": "random", "environment_seed": seed, "hide_state_variables": True},
+                   render_mode=render_mode,
+                   )
     env = GymSubgoalAutomataAdapter(env, agent_id, max_episode_length=max_episode_length,
                                     use_restricted_observables=use_restricted_observables)
 
@@ -111,7 +113,7 @@ def run(cfg: DictConfig) -> int:
         # )
 
         algo = QRM(**{
-            "action_space": env.action_space,
+            "action_space": env.action_space[agent_id],
             "seed": run_config["seed"],
             **cfg["algo"],
         })
