@@ -15,7 +15,7 @@ from ray.rllib.utils.framework import try_import_torch
 
 import gymnasium as gym
 
-from rm_marl.trainer.new_ray_utils.RM_state_connector import RMStateConnector
+from rm_marl.new_stack.connectors.RM_state_connector import RMStateConnector
 from src.ray.rllib.core.columns import Columns
 from src.ray.rllib.core.models.specs.specs_dict import SpecDict
 from src.ray.rllib.utils.annotations import override
@@ -48,6 +48,8 @@ class PPORMLearningCatalog(PPOCatalog):
     ) -> ModelConfig:
         # Subgoal automata space is converted automatically to Dict with
         #   (Box(0,1,int)) -observation and rm_state
+        # TODO: fix the observation space, it is not actually a Dict I think?
+        #   It definitely does not have the ORIG_OBS_KEY
         if not isinstance(observation_space, gym.spaces.Dict):
             return super()._get_encoder_config(observation_space, **kwargs)
 

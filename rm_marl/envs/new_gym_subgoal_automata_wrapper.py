@@ -40,6 +40,8 @@ class NewGymSubgoalAutomataAdapter(gym.Wrapper):
         self.observation_space = env.observation_space
         self.action_space = env.action_space
 
+        self.this_episode_infos = []
+
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
         self.current_step = 0
@@ -47,6 +49,7 @@ class NewGymSubgoalAutomataAdapter(gym.Wrapper):
             self.env.render()
 
         info["is_positive_trace"] = False
+        self.this_episode_infos = []
         return obs, info
 
     def step(self, action):

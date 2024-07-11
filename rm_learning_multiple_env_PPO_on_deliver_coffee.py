@@ -7,7 +7,6 @@ Task:
 
  - must use v2
 """
-import os
 from collections import Counter
 
 from dotenv import load_dotenv
@@ -16,14 +15,13 @@ from ray.rllib.core.rl_module.rl_module import SingleAgentRLModuleSpec
 from ray.rllib.env import EnvContext
 from ray.rllib.env.multi_agent_env import make_multi_agent
 
-from rm_marl.envs.gym_subgoal_automata_wrapper import GymSubgoalAutomataAdapter, \
-    OfficeWorldCoffeeLabelingFunctionWrapper, OfficeWorldPlantLabelingFunctionWrapper, \
+from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldCoffeeLabelingFunctionWrapper, \
+    OfficeWorldPlantLabelingFunctionWrapper, \
     OfficeWorldOfficeLabelingFunctionWrapper, OfficeWorldALabelingFunctionWrapper, OfficeWorldBLabelingFunctionWrapper, \
-    OfficeWorldCLabelingFunctionWrapper, OfficeWorldDLabelingFunctionWrapper
+    OfficeWorldCLabelingFunctionWrapper, OfficeWorldDLabelingFunctionWrapper, OfficeWorldMailLabelingFunctionWrapper
 from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
 from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer
-from rm_marl.new_stack.algos.algo import PPORMConfig
-from rm_marl.new_stack.connectors.RM_state_connector import RMStateConnector
+from rm_marl.new_stack.algos.algo import PPORMConfig, PPORMLearningConfig
 from rm_marl.new_stack.networks.model import PPORMLearningCatalog
 
 load_dotenv()
@@ -38,7 +36,6 @@ import numpy as np
 import ray
 import tyro
 from ray import air, train, tune
-from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.utils.framework import try_import_torch
 from ray.rllib.utils.metrics import (
     ENV_RUNNER_RESULTS,
@@ -57,9 +54,9 @@ SEED = 123
 
 
 def make_env(env_id, idx, capture_video, run_name):
+    # Keeps track the number of times the function is called
     def thunk(_env_ctx: EnvContext):
         curr_id = _env_ctx.worker_index
-
         if (capture_video or _env_ctx.get("capture_video")) and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array",
                            params={"generation": "random", "environment_seed": SEED + curr_id,
@@ -70,16 +67,17 @@ def make_env(env_id, idx, capture_video, run_name):
             env = gym.make(env_id,
                            params={"generation": "random", "environment_seed": SEED + curr_id,
                                    "hide_state_variables": True})
-        env = NewGymSubgoalAutomataAdapter(env, max_episode_length=500)
+        env = NewGymSubgoalAutomataAdapter(env, max_episode_length=250)
 
         labeling_funs = [
             OfficeWorldOfficeLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
             OfficeWorldPlantLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
-            OfficeWorldALabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
-            OfficeWorldBLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
-            OfficeWorldCLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
-            OfficeWorldDLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
-            # OfficeWorldCoffeeLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
+            # OfficeWorldALabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
+            # OfficeWorldBLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
+            # OfficeWorldCLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
+            # OfficeWorldDLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
+            OfficeWorldCoffeeLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
+            # OfficeWorldMailLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
         ]
 
         env = NoisyLabelingFunctionComposer(labeling_funs)
@@ -89,15 +87,16 @@ def make_env(env_id, idx, capture_video, run_name):
     return thunk
 
 
-env_name = 'gym_subgoal_automata:OfficeWorldDeliverCoffee-v0'
-# env_name = 'gym_subgoal_automata:OfficeWorldPatrolABCD-v0'
+env_id = 'gym_subgoal_automata:OfficeWorldDeliverCoffee-v0'
+# env_id = 'gym_subgoal_automata:OfficeWorldDeliverCoffeeAndMail-v0'
+# env_id = 'gym_subgoal_automata:OfficeWorldPatrolABCD-v0'
 tune.register_env(
     f"env",
-    make_multi_agent(make_env(env_name, 0, False, "test"))
+    make_multi_agent(make_env(env_id, 0, False, "test"))
 )
 
 # dummy_env = make_multi_agent(make_env('gym_subgoal_automata:OfficeWorldDeliverCoffee-v0', 0, False, "test"))({"num_agents": 2, "seed": 0})
-dummy_env = NewGymSubgoalAutomataAdapter(gym.make(env_name))  # type: ignore
+dummy_env = NewGymSubgoalAutomataAdapter(gym.make(env_id))
 
 
 def create_config(
@@ -105,12 +104,12 @@ def create_config(
         capture_video=False,
 ):
     env_config = {
-        "num_agents": 10,  # 2,
+        "num_agents": 10,
         "seed": seed,
     }
 
     rm = dummy_env.get_perfect_rm()
-    config = PPORMConfig(rm=rm)
+    config = PPORMLearningConfig()
     config = (
         config.environment(
             "env",
@@ -141,17 +140,10 @@ def create_config(
             grad_clip_by="global_norm",
             # train_batch_size=18, # new
         )
-        .resources(
-            num_gpus=1,
-        )
         .env_runners(
-            # num_rollout_workers=10,
-            # num_env_runners=0, # forces everything to be done on the local worker
-            # num_env_runners=23,  # env_config["num_agents"],
-            num_env_runners=env_config["num_agents"],
             num_envs_per_env_runner=1,
-            # num_cpus_per_env_runner=0,
-            # num_gpus_per_env_runner=1 / num_workers,
+            num_env_runners=env_config["num_agents"],
+            # num_env_runners=0,  # Debugging
             # rollout_fragment_length=20, # new
             # env_to_module_connector=lambda env: RMStateConnector(
             #     input_action_space=env.action_space,
@@ -178,7 +170,7 @@ def create_config(
                 explore=False,
                 env_config={
                     "seed": seed,
-                    "capture_video": False,  # True,
+                    "capture_video": True,
                 },
             ),
         )
@@ -187,6 +179,7 @@ def create_config(
             enable_rl_module_and_learner=True,
             enable_env_runner_and_connector_v2=True,
         )
+
     )
     return config
 
@@ -195,7 +188,7 @@ def hyperparams_opt(
         num_iterations=400,
         seed=SEED,
         points_to_evaluate=None,
-        num_samples=2,  # Number of times to sample from the hyperparamter space
+        num_samples=1,  # Number of times to sample from the hyperparamter space
         max_concurrent_trials=None,
 ):
     from ray.tune.schedulers import (
@@ -312,7 +305,7 @@ if __name__ == "__main__":
     )
 
     stop = tune.stopper.CombinedStopper(
-        tune.stopper.MaximumIterationStopper(args.num_iterations),
+        tune.stopper.MaximumIterationStopper(max_iter=args.num_iterations),
         # tune.stopper.TrialPlateauStopper(
         #     metric=f"{ENV_RUNNER_RESULTS}/episode_return_mean",
         #     mode="max",

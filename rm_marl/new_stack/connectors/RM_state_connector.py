@@ -76,7 +76,6 @@ class RMStateConnector(ConnectorV2):
                 curr_state = self.transitioner.get_next_state(curr_state, info["labels"])
                 state_info.append(curr_state)
 
-            # breakpoint()
             # TODO: we are ignoring the last state here. Need to double check if
             #  that is fine
             self.add_n_batch_items(
