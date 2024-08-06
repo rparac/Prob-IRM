@@ -1,0 +1,7 @@
+defaults:
+  # Looking up the initial file in the inverted_pendulum_agent directory; naming the key as agent
+  - inverted-pendulum@agent: initial
+
+name: 'InvertedPendulum-v4'
+render_mode: 'rgb_array'
+max_episode_steps: 200

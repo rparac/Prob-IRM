@@ -1,0 +1,1 @@
+from .ilasp_task_generator import generate_ilasp_task

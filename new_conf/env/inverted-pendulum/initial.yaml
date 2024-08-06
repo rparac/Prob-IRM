@@ -1,0 +1,6 @@
+num_policy_layers: 5
+policy_layer_size: 64
+gamma: 0.99
+epsilon_start: 1.0
+epsilon_end: 0.0
+epsilon_decay: 10

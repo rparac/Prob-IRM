@@ -1,0 +1,18 @@
+# @package _global_
+run:
+  no_display: True
+  name: "visit_abcd"
+  # Avoid checkpointing because I don't have enough storage
+  checkpoint_freq: 1000000
+
+
+# Hydra optuna plugin doesn't support $ interpolation.
+#  So, we can't set two parameters to have the same value directly in the experiment.
+#  We use this value as well as manual_overrides to mitigate that issue
+x: 0
+
+manual_overrides:
+  - env.a_label_factory.sensor_true_confidence
+  - env.a_label_factory.sensor_false_confidence
+
+# Doesn't use optuna to run experiments

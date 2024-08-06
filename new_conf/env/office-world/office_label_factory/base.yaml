@@ -1,0 +1,4 @@
+_target_: rm_marl.envs.gym_subgoal_automata_wrapper.OfficeWorldOfficeLabelingFunctionWrapper
+_partial_: true
+sensor_true_confidence: 1
+sensor_false_confidence: 1

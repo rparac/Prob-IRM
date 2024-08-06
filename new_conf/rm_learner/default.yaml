@@ -1,0 +1,6 @@
+rm_learner_kws:
+  edge_cost: 2
+  n_phi_cost: 1
+  ex_penalty_multiplier: 2
+  min_penalty: 2
+  cross_entropy_threshold: 0.6
