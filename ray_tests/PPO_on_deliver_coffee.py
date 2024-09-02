@@ -13,7 +13,7 @@ from ray.rllib.core.rl_module.rl_module import SingleAgentRLModuleSpec
 from ray.rllib.env import EnvContext
 from ray.rllib.models import ModelCatalog
 
-from rm_marl.trainer.new_ray_utils.model import PPORMLearningCatalog
+from rm_marl.new_stack.networks.model import PPORMLearningCatalog
 
 load_dotenv()
 

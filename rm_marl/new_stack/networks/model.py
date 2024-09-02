@@ -51,7 +51,7 @@ class PPORMLearningCatalog(PPOCatalog):
         # TODO: fix the observation space, it is not actually a Dict I think?
         #   It definitely does not have the ORIG_OBS_KEY
         if not isinstance(observation_space, gym.spaces.Dict):
-            return super()._get_encoder_config(observation_space, **kwargs)
+            return super()._get_encoder_config(observation_space, model_config_dict=model_config_dict, **kwargs)
 
         return RMLearningMLPEncoderConfig(
             input_dims=observation_space[RMStateConnector.ORIG_OBS_KEY].shape,

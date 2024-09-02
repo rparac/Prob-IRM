@@ -27,10 +27,12 @@ class RMStateConnector(ConnectorV2):
         # We assume the input_observation space is a multi-agent space
         # return self.input_observation_space
 
-        ret = {}
-        for ag_id, obs_space in self.input_observation_space.spaces.items():
-            ret[ag_id] = self._convert_individual_space(obs_space)
-        return gymnasium.spaces.Dict(ret)
+        return self._convert_individual_space(self.input_observation_space)
+
+        # ret = {}
+        # for ag_id, obs_space in self.input_observation_space.spaces.items():
+        #     ret[ag_id] = self._convert_individual_space(obs_space)
+        # return gymnasium.spaces.Dict(ret)
 
     def _convert_individual_space(self, obs_space):
         return gymnasium.spaces.Dict(
