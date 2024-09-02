@@ -316,3 +316,22 @@ class RewardMachineWrapper(AutomataWrapper):
 
     def _get_reward(self, reward, u_next):
         return self.reward_function(self.rm_transitioner.rm, self.u, u_next, reward)
+
+
+class DiscreteToBoxObservationWrapper(gym.ObservationWrapper):
+    def __init__(self, env):
+        super(DiscreteToBoxObservationWrapper, self).__init__(env)
+
+        # Check if the original observation space is discrete
+        assert isinstance(env.observation_space, gym.spaces.Discrete), "The observation space must be discrete"
+
+        # Define the new observation space as a Box space with one-hot encoded vectors
+        self.observation_space = gym.spaces.Box(
+            low=0, high=1, shape=(env.observation_space.n,), dtype=np.float32,
+        )
+
+    def observation(self, obs):
+        # Convert the discrete observation into a one-hot encoded vector
+        one_hot_obs = np.zeros(self.observation_space.shape)
+        one_hot_obs[obs] = 1.0
+        return one_hot_obs
