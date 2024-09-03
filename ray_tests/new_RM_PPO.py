@@ -1,4 +1,8 @@
 """
+Trains a PPO agent with a provided reward machine with a configurable number of agents.
+It doesn't use ray tune to do so, but it looks like it works.
+
+
 How to run this script
 ----------------------
 `python [script file name].py --enable-new-api-stack --env [env name e.g. 'ALE/Pong-v5']
