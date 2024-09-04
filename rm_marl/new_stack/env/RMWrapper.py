@@ -1,0 +1,60 @@
+"""
+Wrapper which is used to directly augment RM information as part of the observation
+Assumes, observation is a Box and the RM info is obtained as labels
+"""
+from typing import SupportsFloat, Any
+
+import gymnasium
+import numpy as np
+from gymnasium.core import WrapperActType, WrapperObsType
+
+from rm_marl.agent import RewardMachineAgent
+from rm_marl.reward_machine import RewardMachine
+from rm_marl.rm_transition.prob_rm_transitioner import ProbRMTransitioner
+
+
+class RMWrapper(gymnasium.Wrapper):
+    def __init__(self, env: gymnasium.Wrapper):
+        super().__init__(env)
+        assert isinstance(env.observation_space, gymnasium.spaces.Box)
+
+        self.rm_transitioner = ProbRMTransitioner(RewardMachineAgent.default_rm())
+
+        self._original_obs_space = env.observation_space
+        self._augment_obs_space_with_rm()
+
+        self._curr_rm_state = None
+
+    def _augment_obs_space_with_rm(self):
+        init_state = self.rm_transitioner.get_initial_state()
+
+        low_val = self._original_obs_space.low[0]
+        high_val = self._original_obs_space.high[0]
+
+        self.observation_space = gymnasium.spaces.Box(
+            low=low_val, high=high_val,
+            dtype=self._original_obs_space.dtype,
+            shape=(self._original_obs_space.shape[0] + init_state.shape[0],),
+        )
+
+    def update_rm(self, rm: RewardMachine):
+        # needs to change the observation space
+        self.rm_transitioner = ProbRMTransitioner(rm)
+        self._augment_obs_space_with_rm()
+
+    def reset(
+            self, *, seed: int | None = None, options: dict[str, Any] | None = None
+    ) -> tuple[WrapperObsType, dict[str, Any]]:
+        rm_state = self.rm_transitioner.get_initial_state()
+        obs, info = self.env.reset()
+        rm_state = self.rm_transitioner.get_next_state(rm_state, info["labels"])
+        self._curr_rm_state = rm_state
+        return np.concatenate((obs, rm_state)), info
+
+    def step(
+            self, action: WrapperActType
+    ) -> tuple[WrapperObsType, SupportsFloat, bool, bool, dict[str, Any]]:
+        obs, reward, terminated, truncated, info = self.env.step(action)
+
+        rm_state = self.rm_transitioner.get_next_state(self._curr_rm_state, info["labels"])
+        return np.concatenate((obs, rm_state)), reward, terminated, truncated, info
