@@ -93,6 +93,9 @@ class NewProbFFNSLLearner:
 
         random.seed(0)
 
+    def get_rm(self):
+        return self.curr_rm
+
     def relearn_rm(self):
         curr_rm = self.curr_rm
 
@@ -102,6 +105,7 @@ class NewProbFFNSLLearner:
         candidate_rm = self._update_reward_machine(curr_rm)
         if candidate_rm:
             self._initialize_trace_counters(candidate_rm)
+            self.curr_rm = candidate_rm
         return candidate_rm
 
     # TODO: remove duplication; this is computed by the connector
@@ -127,9 +131,9 @@ class NewProbFFNSLLearner:
         examples, ex_type = self.create_examples_from(trace)
         # breakpoint()
         curr_ex = list(examples.storage.keys())[0]
-        if len(curr_ex.observable_context) == 1 and curr_ex.observable_context[-1] == ObservablePredicate("g",
-                                                                                                         0) and curr_ex.example_type == ISAILASPExample.ExType.GOAL:
-            breakpoint()
+        # if len(curr_ex.observable_context) == 1 and curr_ex.observable_context[-1] == ObservablePredicate("g",
+        #                                                                                                  0) and curr_ex.example_type == ISAILASPExample.ExType.GOAL:
+        #     breakpoint()
         self.examples.merge(examples, ex_type)
 
     def _store_trace(self, trace):
@@ -240,8 +244,8 @@ class NewProbFFNSLLearner:
 
         condition_satisfied = (
                 self._inf_cross_entropy_recorded or self._rm_cross_entropy_sum / self._num_seen_traces > self.cross_entropy_threshold)
-        if condition_satisfied:
-            breakpoint()
+        # if condition_satisfied:
+        #     breakpoint()
         return condition_satisfied
 
     def _update_trace_counters(self, curr_rm, curr_state, trace):

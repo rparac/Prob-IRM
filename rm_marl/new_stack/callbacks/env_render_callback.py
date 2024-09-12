@@ -7,13 +7,13 @@ Use parameters:
 --wandb-run-name=[optional: WandB run name within --wandb-project]`
 """
 
-
 from typing import Sequence, Optional
 
 import gymnasium
 import numpy as np
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.utils.images import resize
+
 
 class EnvRenderCallback(DefaultCallbacks):
     """A custom callback to render the environment.
@@ -36,6 +36,11 @@ class EnvRenderCallback(DefaultCallbacks):
         self.best_episode_and_return = (None, float("-inf"))
         self.worst_episode_and_return = (None, float("inf"))
 
+        self._episodes_seen = 0
+        # Every 10 episodes
+        # TODO: extract as a parameter
+        self._render_freq = 5
+
     def on_episode_step(
             self,
             *,
@@ -55,6 +60,10 @@ class EnvRenderCallback(DefaultCallbacks):
                 self.env_runner_indices is not None
                 and env_runner.worker_index not in self.env_runner_indices
         ):
+            return
+
+        # Skip recording if this episode will not be rendered
+        if self._episodes_seen % self._render_freq != 0:
             return
 
         # If we have a vector env, only render the sub-env at index 0.
@@ -95,6 +104,14 @@ class EnvRenderCallback(DefaultCallbacks):
         at the very env of sampling (when we know, which episode was the best and
         worst). See `on_sample_end` for the implemented logging logic.
         """
+
+        # Skip if we should not render this episode
+        if self._episodes_seen % self._render_freq != 0:
+            self._episodes_seen += 1
+            return
+
+        self._episodes_seen += 1
+
         # Get the episode's return.
         episode_return = episode.get_return()
 

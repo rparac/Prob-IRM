@@ -5,8 +5,8 @@ Assumes, observation is a Box and the RM info is obtained as labels
 from typing import SupportsFloat, Any
 
 import gymnasium
-import numpy as np
 from gymnasium.core import WrapperActType, WrapperObsType
+import numpy as np
 
 from rm_marl.agent import RewardMachineAgent
 from rm_marl.reward_machine import RewardMachine
@@ -14,13 +14,15 @@ from rm_marl.rm_transition.prob_rm_transitioner import ProbRMTransitioner
 
 
 class RMWrapper(gymnasium.Wrapper):
-    def __init__(self, env: gymnasium.Wrapper):
+    def __init__(self, env: gymnasium.Wrapper, rm=None):
         super().__init__(env)
         assert isinstance(env.observation_space, gymnasium.spaces.Box)
 
-        self.rm_transitioner = ProbRMTransitioner(RewardMachineAgent.default_rm())
+        _rm = rm if rm is not None else RewardMachineAgent.default_rm()
 
-        self._original_obs_space = env.observation_space
+        self.rm_transitioner = ProbRMTransitioner(_rm)
+
+        self.observation_space_wo_rm = env.observation_space
         self._augment_obs_space_with_rm()
 
         self._curr_rm_state = None
@@ -28,18 +30,20 @@ class RMWrapper(gymnasium.Wrapper):
     def _augment_obs_space_with_rm(self):
         init_state = self.rm_transitioner.get_initial_state()
 
-        low_val = self._original_obs_space.low[0]
-        high_val = self._original_obs_space.high[0]
+        low_val = self.observation_space_wo_rm.low[0]  # type: ignore
+        high_val = self.observation_space_wo_rm.high[0]  # type: ignore
 
         self.observation_space = gymnasium.spaces.Box(
             low=low_val, high=high_val,
-            dtype=self._original_obs_space.dtype,
-            shape=(self._original_obs_space.shape[0] + init_state.shape[0],),
+            dtype=self.observation_space_wo_rm.dtype,
+            shape=(self.observation_space_wo_rm.shape[0] + init_state.shape[0],),
         )
 
     def update_rm(self, rm: RewardMachine):
         # needs to change the observation space
         self.rm_transitioner = ProbRMTransitioner(rm)
+        # TODO: interrupt episode when RM is updated
+        self._curr_rm_state = self.rm_transitioner.get_initial_state()
         self._augment_obs_space_with_rm()
 
     def reset(

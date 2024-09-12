@@ -19,8 +19,8 @@ class TraceStorage(ConnectorV2):
     Also, transforms the observation state to include curr RM state
     """
 
-    ORIG_OBS_KEY = "_orig_obs"
-    RM_STATE_KEY = "rm_state"
+    # ORIG_OBS_KEY = "_orig_obs"
+    # RM_STATE_KEY = "rm_state"
 
     def __init__(self,
                  input_observation_space: Optional[gym.Space] = None,
@@ -66,12 +66,12 @@ class TraceStorage(ConnectorV2):
         for info in sa_episode.get_infos()[1:]:
             t.update(info["labels"], is_positive, is_complete)
 
-        n_exists = any('n' in info['observations'] for info in sa_episode.get_infos())
-        if not is_complete and n_exists:
-            breakpoint()
-
-        f_exists = any('f' in info['observations'] for info in sa_episode.get_infos())
-        if is_complete and is_positive and not f_exists:
-            breakpoint()
+        # n_exists = any('n' in info['observations'] for info in sa_episode.get_infos())
+        # if not is_complete and n_exists:
+        #     breakpoint()
+        #
+        # f_exists = any('f' in info['observations'] for info in sa_episode.get_infos())
+        # if is_complete and is_positive and not f_exists:
+        #     breakpoint()
 
         return t

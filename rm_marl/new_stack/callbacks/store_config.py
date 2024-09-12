@@ -1,0 +1,48 @@
+from typing import Optional, Union, Dict
+
+import gymnasium as gym
+import ray
+from ray.rllib import BaseEnv, Policy
+
+from ray.rllib.algorithms.callbacks import DefaultCallbacks
+from ray.rllib.core.rl_module import RLModule
+from ray.rllib.evaluation import Episode
+from ray.rllib.evaluation.episode_v2 import EpisodeV2
+from ray.rllib.utils.metrics.metrics_logger import MetricsLogger
+from ray.rllib.utils.typing import EpisodeType, PolicyID
+
+from rm_marl.rm_learning.trace_tracker import TraceTracker
+
+
+class StoreTracesCallback(DefaultCallbacks):
+    def __init__(self, rm_learner_actor: str):
+        self._rm_learner = ray.get_actor(rm_learner_actor)
+
+    def on_episode_end(
+            self,
+            *,
+            episode: Union[EpisodeType, Episode, EpisodeV2],
+            env_runner: Optional["EnvRunner"] = None,
+            metrics_logger: Optional[MetricsLogger] = None,
+            env: Optional[gym.Env] = None,
+            env_index: int,
+            rl_module: Optional[RLModule] = None,
+            # TODO (sven): Deprecate these args.
+            worker: Optional["EnvRunner"] = None,
+            base_env: Optional[BaseEnv] = None,
+            policies: Optional[Dict[PolicyID, Policy]] = None,
+            **kwargs,
+    ) -> None:
+        t = TraceTracker()
+        # Agent did not run out of steps AND the batch sampling did not terminate the episode ahead of time
+        is_complete = not episode.is_truncated and episode.is_done
+        is_positive = episode.get_return() > 0
+
+        # TODO: the starting position is ignored in the orignal pipeline;
+        #  need to check if that is okay
+        # TODO: For unknown reason, the final observation seems duplicated in the
+        #   episode.get_infos(). Removed now; need to double check this. Could be an environment issue
+        for info in episode.get_infos()[1:]:
+            t.update(info["labels"], is_positive, is_complete)
+
+        self._rm_learner.update_examples.remote(t)
