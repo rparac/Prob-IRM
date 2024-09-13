@@ -15,6 +15,10 @@ from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.utils.images import resize
 
 
+#  Bug: Can't prevent mulitple environments appear in some steps
+#     The wandb logger is coupled with the training iteration.
+#     So, we log the results when training is finished to prevent an iteration having multiple videos.
+#     The episodes are shorter later, as the agent works better.
 class EnvRenderCallback(DefaultCallbacks):
     """A custom callback to render the environment.
 
@@ -30,16 +34,11 @@ class EnvRenderCallback(DefaultCallbacks):
         super().__init__()
         # Only render and record on certain EnvRunner indices?
         self.env_runner_indices = env_runner_indices
-        # Per sample round (on this EnvRunner), we want to only log the best- and
-        # worst performing episode's videos in the custom metrics. Otherwise, too much
-        # data would be sent to WandB.
-        self.best_episode_and_return = (None, float("-inf"))
-        self.worst_episode_and_return = (None, float("inf"))
 
         self._episodes_seen = 0
-        # Every 10 episodes
         # TODO: extract as a parameter
-        self._render_freq = 5
+        # Render every 100 episodes
+        self._render_freq = 100
 
     def on_episode_step(
             self,
@@ -98,13 +97,6 @@ class EnvRenderCallback(DefaultCallbacks):
             rl_module,
             **kwargs,
     ) -> None:
-        """Computes episode's return and compiles a video, iff best/worst in this iter.
-
-        Note that the actual logging to the EnvRunner's MetricsLogger only happens
-        at the very env of sampling (when we know, which episode was the best and
-        worst). See `on_sample_end` for the implemented logging logic.
-        """
-
         # Skip if we should not render this episode
         if self._episodes_seen % self._render_freq != 0:
             self._episodes_seen += 1
@@ -112,67 +104,32 @@ class EnvRenderCallback(DefaultCallbacks):
 
         self._episodes_seen += 1
 
-        # Get the episode's return.
-        episode_return = episode.get_return()
+        # Pull all images from the temp. data of the episode.
+        images = episode.get_temporary_timestep_data("render_images")
+        # `images` is now a list of 3D ndarrays
 
-        # Better than the best or worse than worst Episode thus far?
-        if (
-                episode_return > self.best_episode_and_return[1]
-                or episode_return < self.worst_episode_and_return[1]
-        ):
-            # Pull all images from the temp. data of the episode.
-            images = episode.get_temporary_timestep_data("render_images")
-            # `images` is now a list of 3D ndarrays
+        # Create a video from the images by simply stacking them AND
+        # adding an extra B=1 dimension. Note that Tune's WandB logger currently
+        # knows how to log the different data types by the following rules:
+        # array is shape=3D -> An image (c, h, w).
+        # array is shape=4D -> A batch of images (B, c, h, w).
+        # array is shape=5D -> A video (1, L, c, h, w), where L is the length of the
+        # video.
+        # -> Make our video ndarray a 5D one.
+        video = np.expand_dims(np.stack(images, axis=0), axis=0)
+        self._video = video
 
-            # Create a video from the images by simply stacking them AND
-            # adding an extra B=1 dimension. Note that Tune's WandB logger currently
-            # knows how to log the different data types by the following rules:
-            # array is shape=3D -> An image (c, h, w).
-            # array is shape=4D -> A batch of images (B, c, h, w).
-            # array is shape=5D -> A video (1, L, c, h, w), where L is the length of the
-            # video.
-            # -> Make our video ndarray a 5D one.
-            video = np.expand_dims(np.stack(images, axis=0), axis=0)
-
-            # `video` is from the best episode in this cycle (iteration).
-            if episode_return > self.best_episode_and_return[1]:
-                self.best_episode_and_return = (video, episode_return)
-            # `video` is worst in this cycle (iteration).
-            else:
-                self.worst_episode_and_return = (video, episode_return)
-
-    def on_sample_end(
-            self,
-            *,
-            env_runner,
-            metrics_logger,
-            samples,
-            **kwargs,
-    ) -> None:
-        """Logs the best and worst video to this EnvRunner's MetricsLogger."""
-        # Best video.
-        if self.best_episode_and_return[0] is not None:
-            metrics_logger.log_value(
-                "episode_videos_best",
-                self.best_episode_and_return[0],
-                # Do not reduce the videos (across the various parallel EnvRunners).
-                # This would not make sense (mean over the pixels?). Instead, we want to
-                # log all best videos of all EnvRunners per iteration.
-                reduce=None,
-                # B/c we do NOT reduce over the video data (mean/min/max), we need to
-                # make sure the list of videos in our MetricsLogger does not grow
-                # infinitely and gets cleared after each `reduce()` operation, meaning
-                # every time, the EnvRunner is asked to send its logged metrics.
-                clear_on_reduce=True,
-            )
-            self.best_episode_and_return = (None, float("-inf"))
-        # Worst video.
-        if self.worst_episode_and_return[0] is not None:
-            metrics_logger.log_value(
-                "episode_videos_worst",
-                self.worst_episode_and_return[0],
-                # Same logging options as above.
-                reduce=None,
-                clear_on_reduce=True,
-            )
-            self.worst_episode_and_return = (None, float("inf"))
+        # `video` is from the best episode in this cycle (iteration).
+        metrics_logger.log_value(
+            "episode_videos",
+            self._video,
+            # Do not reduce the videos (across the various parallel EnvRunners).
+            # This would not make sense (mean over the pixels?). Instead, we want to
+            # log all best videos of all EnvRunners per iteration.
+            reduce=None,
+            # B/c we do NOT reduce over the video data (mean/min/max), we need to
+            # make sure the list of videos in our MetricsLogger does not grow
+            # infinitely and gets cleared after each `reduce()` operation, meaning
+            # every time, the EnvRunner is asked to send its logged metrics.
+            clear_on_reduce=True,
+        )

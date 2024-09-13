@@ -25,7 +25,7 @@ from rm_marl.reward_machine import RewardMachine
 class NewGymSubgoalAutomataAdapter(gym.Wrapper):
     def __init__(self, env: BaseEnv, max_episode_length=None,
                  use_restricted_observables: bool = True,
-                 env_idx: int = 0, num_agents: int = 1):
+                 env_idx: int = 0):
 
         # Explicitly returns observables as a part of the observation.
         # We regenerate them in this adapter using the info output.
@@ -44,7 +44,7 @@ class NewGymSubgoalAutomataAdapter(gym.Wrapper):
         self.one_env_size = env.observation_space.n
 
         # self.observation_space = gymnasium.spaces.Discrete(self.one_env_size * num_agents)
-        self.observation_space = gymnasium.spaces.Discrete(self.one_env_size * num_agents)
+        self.observation_space = gymnasium.spaces.Discrete(self.one_env_size)
         self.action_space = env.action_space
 
         self.this_episode_infos = []
