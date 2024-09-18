@@ -15,7 +15,7 @@ class ProbRMTransitioner(RMTransitioner):
 
     def get_initial_state(self):
         assert isinstance(self.rm.u0, (str, int))
-        u0 = np.zeros(len(self.rm.states))
+        u0 = np.zeros(len(self.rm.states), dtype=np.float32)
         curr_true_state = self.rm.states.index(self.rm.u0)
         u0[curr_true_state] = 1
 
@@ -27,7 +27,7 @@ class ProbRMTransitioner(RMTransitioner):
 
         # return self.get_next_state_simple(curr_state, event.copy())
 
-        belief_out = np.zeros(curr_state.shape)
+        belief_out = np.zeros(curr_state.shape, dtype=np.float32)
 
         label_probs = event.copy()
         # Adds absorbing state labels

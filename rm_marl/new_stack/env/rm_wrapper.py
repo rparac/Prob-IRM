@@ -53,7 +53,8 @@ class RMWrapper(gymnasium.Wrapper):
         obs, info = self.env.reset()
         rm_state = self.rm_transitioner.get_next_state(rm_state, info["labels"])
         self._curr_rm_state = rm_state
-        return np.concatenate((obs, rm_state)), info
+        new_obs = np.concatenate((obs, rm_state))
+        return new_obs, info
 
     def step(
             self, action: WrapperActType

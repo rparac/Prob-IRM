@@ -170,8 +170,7 @@ class PPORMLearning(PPO):
     @PublicAPI
     def get_obs_space(self) -> gym.Space:
         def _get_obs_space(w):
-            env = w.env.envs[0]
-            # env = w.env
+            env = w.env
             if hasattr(env, "single_observation_space") and isinstance(
                     env.single_observation_space, gym.Space
             ):
@@ -185,7 +184,8 @@ class PPORMLearning(PPO):
             return None
 
         obs_spaces = self.env_runner_group.foreach_worker(_get_obs_space)
-        return space_from_dict(obs_spaces[0])
+        ret = space_from_dict(obs_spaces[0])
+        return ret
 
     def reset_policies(self, rm) -> None:
         obs_spaces = self.get_obs_space()
@@ -194,9 +194,10 @@ class PPORMLearning(PPO):
         def _update_config(w):
             w.config._is_frozen = False
             w.config._rl_module_spec = None
-            rl_module_spec = w.config.get_rl_module_spec(
+            rl_module_spec = w.config.get_marl_module_spec(
                 spaces={
-                    DEFAULT_MODULE_ID: (obs_spaces, act_spaces),
+                    f"p{pid}": (obs_spaces[pid], act_spaces[pid])
+                    for pid in obs_spaces
                 }
             )
             w.config.rl_module(
@@ -208,19 +209,26 @@ class PPORMLearning(PPO):
         def _reset_worker(w):
             _update_config(w)
 
-            observation_space = w.env.envs[0].observation_space
-            num_envs = len(w.env.envs)
-            w.env.single_observation_space = observation_space
-            w.env.observation_space = batch_space(observation_space, n=num_envs)
-            w.env.observations = create_empty_array(
-                observation_space, n=num_envs, fn=np.zeros
-            )
+            # observation_space = w.env.envs[0].observation_space
+            # num_envs = len(w.env.envs)
+            # w.env.single_observation_space = observation_space
+            # w.env.observation_space = batch_space(observation_space, n=num_envs)
+            # w.env.observations = create_empty_array(
+            #     observation_space, n=num_envs, fn=np.zeros
+            # )
 
             w._env_to_module = w.config.build_env_to_module_connector(w.env, debugging=True)
             w._cached_to_module = None
 
             w.make_env()
-            w.module = w.config.get_rl_module_spec().build()
+            # raise RuntimeError(w.config.get_marl_module_spec())
+            w.module = w.config.get_marl_module_spec(
+                spaces={
+                    f"p{pid}": (obs_spaces[pid], act_spaces[pid])
+                    for pid in obs_spaces
+                }
+            ).build()
+            # w.module = w.config.get_rl_module_spec().build()
             # w.module = w._make_module()
             w._module_to_env = w.config.build_module_to_env_connector(w.env)
             w._needs_initial_reset = True
@@ -238,9 +246,7 @@ class PPORMLearning(PPO):
             _update_config(l)
 
             # raise RuntimeError(l._module_spec, l.config.rl_module_spec)
-            l._module_spec = MultiRLModuleSpec(module_specs={
-                DEFAULT_MODULE_ID: l.config.rl_module_spec,
-            })
+            l._module_spec = l.config.rl_module_spec
             l._module = l._make_module()
             # l._module = l._module_spec.build()
             # raise RuntimeError(l._module.framework)
@@ -248,7 +254,6 @@ class PPORMLearning(PPO):
 
         self.learner_group.foreach_learner(_reset_learner)
 
-        x = self.get_module(DEFAULT_MODULE_ID)
         # raise RuntimeError(x)
 
         # def _test(w):
@@ -263,19 +268,10 @@ class PPORMLearning(PPO):
         def _set_rm(w):
             w.env.update_rm(rm)
 
-        self.env_runner_group.foreach_worker(
-            lambda env_runner: [
-                env.update_rm(rm) for env in env_runner.env.envs  # Access each individual environment
-            ]
-        )
+        self.env_runner_group.foreach_worker(_set_rm)
 
         if self.eval_env_runner_group is not None:
-            self.eval_env_runner_group.foreach_worker(
-                lambda env_runner: [
-                    env.update_rm(rm) for env in env_runner.env.envs  # Access each individual environment
-                ]
-            )
-            # self.evaluation_workers.foreach_worker(_set_rm)
+            self.eval_env_runner_group.foreach_worker(_set_rm)
 
     # TODO: verify if this is hte correct way to reset the policy
     def _reset_with_rm(self, new_rm):

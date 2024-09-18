@@ -42,6 +42,7 @@ class TraceStorage(ConnectorV2):
                  data: Optional[Any],
                  episodes: List[EpisodeType],
                  **kwargs):
+
         for sa_episode in self.single_agent_episode_iterator(
                 episodes, agents_that_stepped_only=False,
         ):

@@ -5,6 +5,7 @@ import ray
 from ray.rllib import BaseEnv, Policy
 
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
+from ray.rllib.connectors.connector_v2 import ConnectorV2
 from ray.rllib.core.rl_module import RLModule
 from ray.rllib.evaluation import Episode
 from ray.rllib.evaluation.episode_v2 import EpisodeV2
@@ -33,16 +34,19 @@ class StoreTracesCallback(DefaultCallbacks):
             policies: Optional[Dict[PolicyID, Policy]] = None,
             **kwargs,
     ) -> None:
-        t = TraceTracker()
         # Agent did not run out of steps AND the batch sampling did not terminate the episode ahead of time
-        is_complete = not episode.is_truncated and episode.is_done
-        is_positive = episode.get_return() > 0
 
-        # TODO: the starting position is ignored in the orignal pipeline;
-        #  need to check if that is okay
-        # TODO: For unknown reason, the final observation seems duplicated in the
-        #   episode.get_infos(). Removed now; need to double check this. Could be an environment issue
-        for info in episode.get_infos()[1:]:
-            t.update(info["labels"], is_positive, is_complete)
+        # We assume these are multi agent episodes
+        for sa_episode in ConnectorV2.single_agent_episode_iterator([episode]):
+            t = TraceTracker()
+            is_complete = not sa_episode.is_truncated and sa_episode.is_done
+            is_positive = sa_episode.get_return() > 0
 
-        self._rm_learner.update_examples.remote(t)
+            # TODO: the starting position is ignored in the orignal pipeline;
+            #  need to check if that is okay
+            # TODO: For unknown reason, the final observation seems duplicated in the
+            #   episode.get_infos(). Removed now; need to double check this. Could be an environment issue
+            for info in sa_episode.get_infos()[1:]:
+                t.update(info["labels"], is_positive, is_complete)
+
+            self._rm_learner.update_examples.remote(t)

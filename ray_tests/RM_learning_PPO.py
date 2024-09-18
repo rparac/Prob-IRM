@@ -21,6 +21,7 @@ from ray import tune
 from ray.rllib.core import DEFAULT_MODULE_ID
 from ray.rllib.core.rl_module import RLModuleSpec, MultiRLModuleSpec
 from ray.rllib.env import EnvContext
+from ray.rllib.env.multi_agent_env import make_multi_agent
 from ray.rllib.utils.test_utils import (
     add_rllib_example_script_args,
     run_rllib_example_script_experiment,
@@ -36,8 +37,10 @@ from rm_marl.new_stack.callbacks.callback_composer import CallbackComposer
 from rm_marl.new_stack.callbacks.env_render_callback import EnvRenderCallback
 from rm_marl.new_stack.callbacks.store_config import StoreTracesCallback
 from rm_marl.new_stack.connectors.new_rm_state_connector import NewRMStateConnector
-from rm_marl.new_stack.env.RMWrapper import RMWrapper
+from rm_marl.new_stack.env.multi_env_with_rm import make_multi_agent_with_rm
+from rm_marl.new_stack.env.rm_wrapper import RMWrapper
 from rm_marl.new_stack.modules.net import NewCustomNet
+from rm_marl.new_stack.utils.env import env_creator
 
 parser = add_rllib_example_script_args()
 parser.set_defaults(env='gym_subgoal_automata:OfficeWorldDeliverCoffee-v0')
@@ -45,41 +48,10 @@ parser.set_defaults(env='gym_subgoal_automata:OfficeWorldDeliverCoffee-v0')
 
 # Register our environment with tune.
 
-def _env_creator(env_id, num_agents):
-    def thunk(_env_ctx: EnvContext):
-        curr_id = _env_ctx.worker_index - 1
-
-        # env = gym.make("CartPole-v1")
-        env = gym.make(env_id, render_mode="rgb_array",
-                       params={"generation": "random", "environment_seed": 5 + curr_id,
-                               "hide_state_variables": True})
-        env = NewGymSubgoalAutomataAdapter(env, max_episode_length=250, env_idx=curr_id)  # type: ignore
-        # raise RuntimeError(env.observation_space.shape)
-
-        labeling_funs = [
-            OfficeWorldOfficeLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
-            OfficeWorldPlantLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
-            # OfficeWorldALabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
-            # OfficeWorldBLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
-            # OfficeWorldCLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
-            # OfficeWorldDLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
-            OfficeWorldCoffeeLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
-        ]
-
-        env = NoisyLabelingFunctionComposer(labeling_funs)
-        env = gym.wrappers.FlattenObservation(env)
-        env = gym.experimental.wrappers.DtypeObservationV0(env, **{"dtype": np.float32})
-        env = RMWrapper(env, rm=_env_ctx.get("rm", None))
-
-        # raise RuntimeError(env.observation_space.shape)
-        return env
-
-    return thunk
 
 
 def create_config(
 ):
-    rm = dummy_env.get_perfect_rm()
     config = PPORMLearningConfig()
     # config = PPOConfig()
     actor_name = "rm_learner_actor"
@@ -89,10 +61,6 @@ def create_config(
             env_config=env_config, is_atari=False,
         )
         .framework("torch")
-        # .multi_agent
-        #     policies={f"p{i}" for i in range(env_config["num_agents"])},
-        #     policy_mapping_fn=lambda aid, *a, **kw: f"p{aid}",
-        # )
         .training(
             lambda_=0.95,
             kl_coeff=0.5,
@@ -125,18 +93,6 @@ def create_config(
         #         }
         #     ),
         # )
-        .rl_module(
-            rl_module_spec=MultiRLModuleSpec(module_specs={
-                DEFAULT_MODULE_ID: RLModuleSpec(
-                    module_class=NewCustomNet,
-                    # TODO: Use this
-                    model_config_dict={
-                        "hidden_layer_dims": [16, 16],
-                        "num_rm_states": 1,
-                    }
-                )
-            }),
-        )
         # .resources(num_cpus_per_worker=0.5)
         .evaluation(
             evaluation_interval=5,  # 10,
@@ -169,6 +125,35 @@ def create_config(
         # files.
         .debugging(seed=env_config["seed"], log_level="WARN", logger_config={"type": tune.logger.NoopLogger})
     )
+
+    def policy_mapping_fn_(aid, worker, **kwargs):
+        return f"p{aid}"
+
+    policies = {
+        f"p{i}"
+        for i in range(env_config["num_agents"])
+    }
+    config.multi_agent(
+        policies=policies,
+        policy_mapping_fn=policy_mapping_fn_,
+    )
+
+    module_specs = {
+        f"p{i}": RLModuleSpec(
+            module_class=NewCustomNet,
+            # TODO: Use this
+            model_config_dict={
+                "hidden_layer_dims": [16, 16],
+                "num_rm_states": 1,
+            }
+        )
+        for i in range(env_config["num_agents"])
+    }
+
+    config.rl_module(
+        rl_module_spec=MultiRLModuleSpec(module_specs=module_specs),
+    )
+
     return config
 
 
@@ -179,7 +164,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     env_config = {
-        "num_agents": 1,  # 10
+        "num_agents": 2,  # 10
         "seed": 123,
     }
 
@@ -187,8 +172,8 @@ if __name__ == "__main__":
         args.enable_new_api_stack
     ), "Must set --enable-new-api-stack when running this script!"
 
-    register_env("env", _env_creator(env_name,
-                                     num_agents=env_config['num_agents']))  # make_multi_agent(_env_creator(env_name)))
+    register_env("env", make_multi_agent_with_rm(env_creator(env_name)))
+    # register_env("env", env_creator(env_name))
 
     rm = dummy_env.get_perfect_rm()
     base_config = create_config()

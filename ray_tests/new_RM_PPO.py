@@ -51,8 +51,7 @@ def _env_creator(env_id, num_agents):
         env = gym.make(env_id, render_mode="rgb_array",
                        params={"generation": "random", "environment_seed": 5 + curr_id,
                                "hide_state_variables": True})
-        env = NewGymSubgoalAutomataAdapter(env, max_episode_length=250, env_idx=curr_id,
-                                           num_agents=num_agents)  # type: ignore
+        env = NewGymSubgoalAutomataAdapter(env, max_episode_length=250, num_agents=num_agents)  # type: ignore
         # raise RuntimeError(env.observation_space.shape)
 
         labeling_funs = [

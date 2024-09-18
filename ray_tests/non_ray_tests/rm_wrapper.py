@@ -21,7 +21,7 @@ from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelingF
     OfficeWorldPlantLabelingFunctionWrapper, OfficeWorldCoffeeLabelingFunctionWrapper
 from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
 from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer
-from rm_marl.new_stack.env.RMWrapper import RMWrapper
+from rm_marl.new_stack.env.rm_wrapper import RMWrapper
 
 
 # Register our environment with tune.
@@ -31,8 +31,7 @@ def main():
     env = gym.make('gym_subgoal_automata:OfficeWorldDeliverCoffee-v0', render_mode="rgb_array",
                    params={"generation": "random", "environment_seed": 5,
                            "hide_state_variables": True})
-    env = NewGymSubgoalAutomataAdapter(env, max_episode_length=250, env_idx=0,
-                                       num_agents=1)  # type: ignore
+    env = NewGymSubgoalAutomataAdapter(env, max_episode_length=250, num_agents=1)  # type: ignore
     # raise RuntimeError(env.observation_space.shape)
 
     labeling_funs = [

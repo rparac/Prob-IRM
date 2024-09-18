@@ -24,8 +24,7 @@ from rm_marl.reward_machine import RewardMachine
 
 class NewGymSubgoalAutomataAdapter(gym.Wrapper):
     def __init__(self, env: BaseEnv, max_episode_length=None,
-                 use_restricted_observables: bool = True,
-                 env_idx: int = 0):
+                 use_restricted_observables: bool = True):
 
         # Explicitly returns observables as a part of the observation.
         # We regenerate them in this adapter using the info output.
@@ -40,23 +39,9 @@ class NewGymSubgoalAutomataAdapter(gym.Wrapper):
         self.max_episode_length = max_episode_length
         self.current_step = 0
 
-        assert isinstance(env.observation_space, gymnasium.spaces.Discrete)
-        self.one_env_size = env.observation_space.n
-
         # self.observation_space = gymnasium.spaces.Discrete(self.one_env_size * num_agents)
-        self.observation_space = gymnasium.spaces.Discrete(self.one_env_size)
+        self.observation_space = env.observation_space
         self.action_space = env.action_space
-
-        self.this_episode_infos = []
-
-        # Useful for multiple independent agents.
-        #   The observations in this setting represent position in the environment
-        #    and the environment configuration
-        self.env_idx = env_idx
-
-    # Shift observation based on the env_idx
-    def _shift_observation(self, obs):
-        return self.env_idx * self.one_env_size + obs
 
 
     def reset(self, **kwargs):
@@ -67,7 +52,7 @@ class NewGymSubgoalAutomataAdapter(gym.Wrapper):
 
         info["is_positive_trace"] = False
         self.this_episode_infos = []
-        return self._shift_observation(obs), info
+        return obs, info
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
@@ -83,7 +68,7 @@ class NewGymSubgoalAutomataAdapter(gym.Wrapper):
             truncated = True
 
         info["is_positive_trace"] = reward > 0
-        return self._shift_observation(obs), reward, terminated, truncated, info
+        return obs, reward, terminated, truncated, info
 
     def render(self, **kwargs):
         if self.render_mode == "rgb_array":

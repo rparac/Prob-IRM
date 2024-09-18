@@ -120,6 +120,7 @@ class NewProbFFNSLLearner:
         if not trace:
             return False
 
+        # raise RuntimeError(trace.trace, trace.is_positive, trace.is_complete)
         self._store_trace(trace)
         self._update_trace_counters(self.curr_rm, self._compute_curr_state_from_trace(trace), trace)
 
