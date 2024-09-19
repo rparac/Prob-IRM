@@ -6,7 +6,7 @@ from rm_marl.agent import RewardMachineAgent
 from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelingFunctionWrapper, \
     OfficeWorldPlantLabelingFunctionWrapper, OfficeWorldCoffeeLabelingFunctionWrapper
 from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
-from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer, ProbabilisticRewardShaping
+from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer, ProbabilisticRewardShaping, RewardMachineWrapper
 from rm_marl.new_stack.env.rm_wrapper import RMWrapper
 
 GET_PERFECT_RM = "perfect"

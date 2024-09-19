@@ -38,8 +38,8 @@ class ProbabilisticRewardShaping(gym.Wrapper):
         obs, reward, terminated, truncated, info = super().step(action)
 
         assert "labels" in info and type(info["labels"]) == dict, "Unsupported labeling function, list of events needed"
-        assert "rm_state" in info and type(
-            info["rm_state"]) == np.ndarray, "Unsupported env, belief over RM states needed"
+        # assert "rm_state" in info and type(
+        #     info["rm_state"]) == np.ndarray, "Unsupported env, belief over RM states needed"
 
         # Determine additional reward due to reward shaping
         new_rm_state_belief = self._rm_transitioner.get_next_state(self._rm_state_belief, info["labels"])
