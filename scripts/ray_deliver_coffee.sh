@@ -6,16 +6,33 @@ cd ..
 
 seeds=(0) # 100 200 300 400)
 noise_levels=(1) # 0.9979081153869629 0.995305061340332 0.9814815521240234)
+wandb_name="single_agent_rm"
+# wandb_name= "single_agent_rm_learning"
+# wandb_name= "10_agents_rm"
+# wandb_name= "10_agents_rm_learning"
+# wandb_name= "single_agent_tune"
 
 directory="deliver_coffee"
 for seed in "${seeds[@]}"; do
   for noise_level in "${noise_levels[@]}"; do
-    name="${directory}_${seed}_${noise_level}"
-    # run noise on all three
-    python submit_rcs_script.py ${directory} ${name} \
-     ray_tests/RM_learning_PPO.py --enable-new-api-stack --wandb-project=prob-irm --stop-iters=25  \
-      --use-perfect-rm --wandb-run-name=single_agent_rm \
-      --wandb-key=INSERT
+    name="${wandb_name}"
+
+    cmd="python submit_rcs_old_script.py ${directory} ${name} ray_tests/RM_learning_PPO.py --enable-new-api-stack --wandb-project=prob-irm --stop-iters=25"
+    if [ "$wandb_name" = "single_agent_rm" ]; then
+      cmd="$cmd --use-perfect-rm --wandb-run-name=single_agent_rm"
+    elif [ "$wandb_name" = "single_agent_rm_learning" ]; then
+      cmd="$cmd --wandb-run-name=single_agent_rm_learning"
+    elif [ "$wandb_name" = "10_agents_rm" ]; then
+      cmd="$cmd --custom-num-agents 10 --use-perfect-rm --wandb-run-name=10_agents_rm"
+    elif [ "$wandb_name" = "10_agents_rm_learning" ]; then
+      cmd="$cmd --custom-num-agents 10 --wandb-run-name=10_agents_rm_learning"
+    elif [ "$wandb_name" = "single_agent_tune" ]; then
+      cmd="$cmd --use-perfect-rm --num-samples 5 --wandb-run-name=single_agent_tune"
+    else
+      cmd=cmd
+    fi
+
+    cmd="$cmd --wandb-key=INSERT"
   done
 done
 
