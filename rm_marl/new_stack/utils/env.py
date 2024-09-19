@@ -15,7 +15,7 @@ def env_creator(env_id):
 
         # env = gym.make("CartPole-v1")
         env = gym.make(env_id, render_mode="rgb_array",
-                       params={"generation": "random", "environment_seed": 6 + curr_id, # 5 + curr_id,
+                       params={"generation": "random", "environment_seed": 6 + curr_id,
                                "hide_state_variables": True})
         env = NewGymSubgoalAutomataAdapter(env, max_episode_length=250)  # type: ignore
         # raise RuntimeError(env.observation_space.shape)

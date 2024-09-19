@@ -80,6 +80,7 @@ def create_config(
             num_envs_per_env_runner=1,
             # By default, environments are stepped one at a time
             # https://docs.ray.io/en/latest/rllib/rllib-env.html
+            # https://docs.ray.io/en/latest/rllib/package_ref/env.html
             # remote_worker_envs=True,
             # env_to_module_connector=NewRMStateConnector,
         )
