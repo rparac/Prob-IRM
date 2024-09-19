@@ -6,11 +6,11 @@ cd ..
 
 seeds=(0) # 100 200 300 400)
 noise_levels=(1) # 0.9979081153869629 0.995305061340332 0.9814815521240234)
-wandb_name="single_agent_rm"
-# wandb_name= "single_agent_rm_learning"
-# wandb_name= "10_agents_rm"
-# wandb_name= "10_agents_rm_learning"
-# wandb_name= "single_agent_tune"
+# wandb_name="single_agent_rm"
+# wandb_name="single_agent_rm_learning"
+# wandb_name="10_agents_rm"
+# wandb_name="10_agents_rm_learning"
+wandb_name="single_agent_tune"
 
 directory="deliver_coffee"
 for seed in "${seeds[@]}"; do
@@ -32,8 +32,8 @@ for seed in "${seeds[@]}"; do
       cmd=cmd
     fi
 
-    cmd="$cmd --wandb-key=INSERT"
+    cmd="$cmd --wandb-key=7aa07ea83aacbc6521c091eb60561b8637a7f512"
+    eval ${cmd}
   done
 done
 
-# Running on login.hx1.hpc.ic.ac.uk
