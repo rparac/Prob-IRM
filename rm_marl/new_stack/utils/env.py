@@ -8,6 +8,8 @@ from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataA
 from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer
 from rm_marl.new_stack.env.rm_wrapper import RMWrapper
 
+GET_PERFECT_RM = "perfect"
+
 
 def env_creator(env_id):
     def thunk(_env_ctx: EnvContext):
@@ -33,7 +35,10 @@ def env_creator(env_id):
         env = NoisyLabelingFunctionComposer(labeling_funs)
         env = gym.wrappers.FlattenObservation(env)
         env = gym.experimental.wrappers.DtypeObservationV0(env, **{"dtype": np.float32})
-        env = RMWrapper(env, rm=_env_ctx.get("rm", None))
+        rm = _env_ctx.get("rm", None)
+        if rm == GET_PERFECT_RM:
+            rm = env.get_perfect_rm()
+        env = RMWrapper(env, rm=rm)
 
         # raise RuntimeError(env.observation_space.shape)
         return env

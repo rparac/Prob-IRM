@@ -37,8 +37,8 @@ class EnvRenderCallback(DefaultCallbacks):
 
         self._episodes_seen = 0
         # TODO: extract as a parameter
-        # Render every 100 episodes
-        self._render_freq = 100
+        # Render every 1 episodes; only use this in evaluation for now
+        self._render_freq = 1000
 
     def on_episode_step(
             self,
@@ -117,12 +117,11 @@ class EnvRenderCallback(DefaultCallbacks):
         # video.
         # -> Make our video ndarray a 5D one.
         video = np.expand_dims(np.stack(images, axis=0), axis=0)
-        self._video = video
 
         # `video` is from the best episode in this cycle (iteration).
         metrics_logger.log_value(
             "episode_videos",
-            self._video,
+            video,
             # Do not reduce the videos (across the various parallel EnvRunners).
             # This would not make sense (mean over the pixels?). Instead, we want to
             # log all best videos of all EnvRunners per iteration.

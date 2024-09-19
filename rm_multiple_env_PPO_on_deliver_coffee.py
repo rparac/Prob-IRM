@@ -110,7 +110,7 @@ def create_config(
     }
 
     rm = dummy_env.get_perfect_rm()
-    config = PPORMConfig(rm=rm)
+    config = PPORMConfig()
     config = (
         config.environment(
             "env",

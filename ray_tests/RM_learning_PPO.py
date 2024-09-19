@@ -40,24 +40,35 @@ from rm_marl.new_stack.connectors.new_rm_state_connector import NewRMStateConnec
 from rm_marl.new_stack.env.multi_env_with_rm import make_multi_agent_with_rm
 from rm_marl.new_stack.env.rm_wrapper import RMWrapper
 from rm_marl.new_stack.modules.net import NewCustomNet
-from rm_marl.new_stack.utils.env import env_creator
+from rm_marl.new_stack.utils.env import env_creator, GET_PERFECT_RM
 
 parser = add_rllib_example_script_args()
 parser.set_defaults(env='gym_subgoal_automata:OfficeWorldDeliverCoffee-v0')
+
+parser.add_argument('--custom-num-agents', type=int, default=1,
+                    help='Number of agents in our script')
+parser.add_argument('--use-perfect-rm', action="store_true",
+                    help="Whether to use perfect RM, as opposed to no RM at all")
 
 
 # Register our environment with tune.
 
 
-
 def create_config(
+        learn_rm=True
 ):
-    config = PPORMLearningConfig()
-    # config = PPOConfig()
-    actor_name = "rm_learner_actor"
+    callbacks = [EnvRenderCallback]
+    if learn_rm:
+        config = PPORMLearningConfig()
+        actor_name = "rm_learner_actor"
+        config.actor_name(actor_name)
+        callbacks.append(lambda: StoreTracesCallback(actor_name))
+    else:
+        config = PPORMConfig()
+
     config = (
         config.environment(
-            "env",
+            env="env",
             env_config=env_config, is_atari=False,
         )
         .framework("torch")
@@ -84,17 +95,6 @@ def create_config(
             # remote_worker_envs=True,
             # env_to_module_connector=NewRMStateConnector,
         )
-        # .rl_module(
-        #     rl_module_spec=RLModuleSpec(
-        #         module_class=NewCustomNet,
-        #         # TODO: Use this
-        #         model_config_dict={
-        #             "hidden_layer_dims": [16, 16],
-        #             "num_rm_states": 1,
-        #         }
-        #     ),
-        # )
-        # .resources(num_cpus_per_worker=0.5)
         .evaluation(
             evaluation_interval=5,  # 10,
             evaluation_duration=1,  # 5
@@ -109,19 +109,13 @@ def create_config(
                 },
             ),
         )
+        .callbacks(
+            lambda: CallbackComposer(callbacks)
+        )
         .api_stack(
             enable_rl_module_and_learner=True,
             enable_env_runner_and_connector_v2=True,
         )
-        .actor_name(actor_name=actor_name)
-        # .callbacks(EnvRenderCallback)
-        .callbacks(
-            lambda: CallbackComposer([
-                lambda: StoreTracesCallback(actor_name),
-                EnvRenderCallback,
-            ])
-        )
-        # .callbacks(lambda: StoreTracesCallback(actor_name))
         # Switch off RLlib's logging to avoid having the large videos show up in any log
         # files.
         .debugging(seed=env_config["seed"], log_level="WARN", logger_config={"type": tune.logger.NoopLogger})
@@ -165,7 +159,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     env_config = {
-        "num_agents": 2,  # 10
+        "num_agents": args.custom_num_agents,
         "seed": 123,
     }
 
@@ -177,6 +171,7 @@ if __name__ == "__main__":
     # register_env("env", env_creator(env_name))
 
     rm = dummy_env.get_perfect_rm()
-    base_config = create_config()
+    learn_rm = not args.use_perfect_rm
+    base_config = create_config(learn_rm=False)
 
     run_rllib_example_script_experiment(base_config, args)
