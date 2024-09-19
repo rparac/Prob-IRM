@@ -17,12 +17,12 @@ script_directory = "outputs"
 def pbs_script_base(ram):
     return f"""#!/bin/bash
 #PBS -l walltime=24:00:00
-#PBS -l select=1:ncpus=4:mem={ram_usage}Gb
-
+#PBS -l select=1:ncpus=4:mem={ram}Gb
 cd $EPHEMERAL/rm-marl
+export PYTHONPATH=$PYTHONPATH:/rds/general/user/rp218/ephemeral/rm-marl
 export PATH=$PATH:/rds/general/user/rp218/home/bin
 eval "$(~/miniconda3/bin/conda shell.bash hook)"
-conda activate new
+conda activate ray
 """
 
 
@@ -46,10 +46,9 @@ def run_pbs(args, name, experiment_directory, ram):
 
 if __name__ == "__main__":
     arguments = sys.argv
-    ram_usage = arguments[1]
-    directory = arguments[2]
-    name = arguments[3]
-    args = arguments[4:]
+    directory = arguments[1]
+    name = arguments[2]
+    args = arguments[3:]
 
     os.makedirs(script_directory, exist_ok=True)
-    run_pbs(args, name, directory, ram_usage)
+    run_pbs(args, name, directory, ram=50)
