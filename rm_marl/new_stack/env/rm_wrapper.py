@@ -46,6 +46,10 @@ class RMWrapper(gymnasium.Wrapper):
         self._curr_rm_state = self.rm_transitioner.get_initial_state()
         self._augment_obs_space_with_rm()
 
+        # set shaping reward machine if it exits
+        if hasattr(self, 'set_shaping_rm'):
+            self.set_shaping_rm(rm)
+
     def reset(
             self, *, seed: int | None = None, options: dict[str, Any] | None = None
     ) -> tuple[WrapperObsType, dict[str, Any]]:

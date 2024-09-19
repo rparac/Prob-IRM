@@ -2,10 +2,11 @@ import gymnasium as gym
 import numpy as np
 from ray.rllib.env import EnvContext
 
+from rm_marl.agent import RewardMachineAgent
 from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelingFunctionWrapper, \
     OfficeWorldPlantLabelingFunctionWrapper, OfficeWorldCoffeeLabelingFunctionWrapper
 from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
-from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer
+from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer, ProbabilisticRewardShaping
 from rm_marl.new_stack.env.rm_wrapper import RMWrapper
 
 GET_PERFECT_RM = "perfect"
@@ -36,8 +37,13 @@ def env_creator(env_id):
         env = gym.wrappers.FlattenObservation(env)
         env = gym.experimental.wrappers.DtypeObservationV0(env, **{"dtype": np.float32})
         rm = _env_ctx.get("rm", None)
+        if rm is None:
+            rm = RewardMachineAgent.default_rm()
         if rm == GET_PERFECT_RM:
             rm = env.get_perfect_rm()
+        else:
+            raise RuntimeError("Unexpected RM provided")
+        env = ProbabilisticRewardShaping(env, shaping_rm=rm)
         env = RMWrapper(env, rm=rm)
 
         # raise RuntimeError(env.observation_space.shape)
