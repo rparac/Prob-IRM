@@ -18,6 +18,7 @@ have the execution stop there for inspection and debugging.
 import gymnasium as gym
 import numpy as np
 from ray import tune
+from ray.air.constants import TRAINING_ITERATION
 from ray.rllib.core import DEFAULT_MODULE_ID
 from ray.rllib.core.rl_module import RLModuleSpec, MultiRLModuleSpec
 from ray.rllib.env import EnvContext
@@ -174,4 +175,8 @@ if __name__ == "__main__":
     learn_rm = not args.use_perfect_rm
     base_config = create_config(learn_rm=False)
 
-    run_rllib_example_script_experiment(base_config, args)
+    stop = {
+        TRAINING_ITERATION: args.stop_iters,
+    }
+
+    run_rllib_example_script_experiment(base_config, args, stop=stop)
