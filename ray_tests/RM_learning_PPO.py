@@ -180,7 +180,7 @@ if __name__ == "__main__":
 
     rm = dummy_env.get_perfect_rm()
     learn_rm = not args.use_perfect_rm
-    base_config = create_config(learn_rm=False)
+    base_config = create_config(learn_rm=learn_rm)
 
     stop = {
         TRAINING_ITERATION: args.stop_iters,
@@ -188,4 +188,6 @@ if __name__ == "__main__":
 
     scheduler = ASHAScheduler(metric="env_runners/episode_return_mean", mode="max")
 
+    # TODO: it is possible to integrate this with optuna dashboard to better understand
+    #   hyperparameter choices. Do this if needed and after seeing how it interoperates with cluster
     run_rllib_example_script_experiment(base_config, args, stop=stop, scheduler=scheduler)
