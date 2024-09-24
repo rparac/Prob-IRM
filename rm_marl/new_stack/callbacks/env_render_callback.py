@@ -38,7 +38,8 @@ class EnvRenderCallback(DefaultCallbacks):
         self._episodes_seen = 0
         # TODO: extract as a parameter
         # Render every 1 episodes; only use this in evaluation for now
-        self._render_freq = 1000
+        # self._render_freq = 1000
+        self._render_freq = 10000
 
     def on_episode_step(
             self,

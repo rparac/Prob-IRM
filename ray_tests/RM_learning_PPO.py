@@ -28,6 +28,7 @@ from ray.rllib.utils.test_utils import (
     run_rllib_example_script_experiment,
 )
 from ray.tune.registry import register_env
+from ray.tune.schedulers import ASHAScheduler
 
 from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelingFunctionWrapper, \
     OfficeWorldPlantLabelingFunctionWrapper, OfficeWorldCoffeeLabelingFunctionWrapper
@@ -74,13 +75,19 @@ def create_config(
         )
         .framework("torch")
         .training(
-            lambda_=0.95,
-            kl_coeff=0.5,
-            clip_param=0.1,
-            vf_clip_param=10.0,
-            entropy_coeff=0.01,
-            num_sgd_iter=10,
-            lr=0.00015,
+            lr=tune.loguniform(1e-5, 1e-3),  # Learning rate on a log scale
+            gamma=0.99,
+        )
+        .training(
+            mini_batch_size_per_learner=tune.choice([4, 8, 16, 32, 64]),
+            clip_param=tune.choice([0.1, 0.2, 0.3]),
+            vf_clip_param=tune.uniform(5.0, 30.0),  # Value function clipping
+            kl_target=tune.loguniform(0.003, 0.3),
+            kl_coeff=tune.uniform(0.3, 1),
+            num_sgd_iter=tune.randint(3, 30),  # Number of epochs to execute per training batch
+            lambda_=tune.uniform(0.9, 1),
+            vf_loss_coeff=tune.uniform(0.5, 1),
+            entropy_coeff=tune.uniform(0.0, 0.1),
             grad_clip=100.0,
             grad_clip_by="global_norm",
         )
@@ -119,7 +126,7 @@ def create_config(
         )
         # Switch off RLlib's logging to avoid having the large videos show up in any log
         # files.
-        .debugging(seed=env_config["seed"], log_level="WARN", logger_config={"type": tune.logger.NoopLogger})
+        .debugging(seed=env_config["seed"], log_level="WARN", logger_config={})#{"type": tune.logger.NoopLogger})
     )
 
     def policy_mapping_fn_(aid, worker, **kwargs):
@@ -179,4 +186,6 @@ if __name__ == "__main__":
         TRAINING_ITERATION: args.stop_iters,
     }
 
-    run_rllib_example_script_experiment(base_config, args, stop=stop)
+    scheduler = ASHAScheduler(metric="env_runners/episode_return_mean", mode="max")
+
+    run_rllib_example_script_experiment(base_config, args, stop=stop, scheduler=scheduler)
