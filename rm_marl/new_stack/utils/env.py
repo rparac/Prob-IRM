@@ -7,9 +7,11 @@ from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelingF
     OfficeWorldPlantLabelingFunctionWrapper, OfficeWorldCoffeeLabelingFunctionWrapper
 from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
 from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer, ProbabilisticRewardShaping, RewardMachineWrapper
+from rm_marl.new_stack.env.augment_labels_wrapper import AugmentLabelsWrapper
 from rm_marl.new_stack.env.rm_wrapper import RMWrapper
 
 GET_PERFECT_RM = "perfect"
+NO_RM = "none"
 
 
 def env_creator(env_id):
@@ -39,12 +41,16 @@ def env_creator(env_id):
         rm = _env_ctx.get("rm", None)
         if rm is None:
             rm = RewardMachineAgent.default_rm()
-        if rm == GET_PERFECT_RM:
+            env = ProbabilisticRewardShaping(env, shaping_rm=rm)
+            env = RMWrapper(env, rm=rm)
+        elif rm == GET_PERFECT_RM:
             rm = env.get_perfect_rm()
+            env = ProbabilisticRewardShaping(env, shaping_rm=rm)
+            env = RMWrapper(env, rm=rm)
+        elif rm == NO_RM:
+            env = AugmentLabelsWrapper(env)
         else:
             raise RuntimeError("Unexpected RM provided")
-        env = ProbabilisticRewardShaping(env, shaping_rm=rm)
-        env = RMWrapper(env, rm=rm)
 
         # raise RuntimeError(env.observation_space.shape)
         return env

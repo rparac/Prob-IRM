@@ -142,7 +142,7 @@ class PPORMLearning(PPO):
         def _reset_worker(w):
             _update_config(w)
 
-            w._env_to_module = w.config.build_env_to_module_connector(w.env, debugging=True)
+            w._env_to_module = w.config.build_env_to_module_connector(w.env)
             w._cached_to_module = None
 
             w.make_env()

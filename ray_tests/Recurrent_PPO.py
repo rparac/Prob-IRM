@@ -19,6 +19,7 @@ import gymnasium as gym
 import numpy as np
 from ray import tune
 from ray.air.constants import TRAINING_ITERATION
+from ray.rllib.algorithms import PPOConfig
 from ray.rllib.core import DEFAULT_MODULE_ID
 from ray.rllib.core.rl_module import RLModuleSpec, MultiRLModuleSpec
 from ray.rllib.env import EnvContext
@@ -56,17 +57,10 @@ parser.add_argument('--use-perfect-rm', action="store_true",
 # Register our environment with tune.
 
 
-def create_config(
-        learn_rm=True
-):
+def create_config():
     callbacks = [EnvRenderCallback]
-    if learn_rm:
-        config = PPORMLearningConfig()
-        actor_name = "rm_learner_actor"
-        config.actor_name(actor_name)
-        callbacks.append(lambda: StoreTracesCallback(actor_name))
-    else:
-        config = PPORMConfig()
+
+    config = PPOConfig()
 
     config = (
         config.environment(
@@ -75,19 +69,22 @@ def create_config(
         )
         .framework("torch")
         .training(
-            lr=tune.loguniform(1e-5, 1e-3),  # Learning rate on a log scale
+            lr=0.0010, # tune.loguniform(1e-5, 1e-3),  # Learning rate on a log scale
             gamma=0.99,
         )
+        # entropy_coeff = 0.0340, kl_coeff = 0.5914, kl_target = 0.0069, lambda
+        #     =0.9319, lr=0.0010, mini_batch_s_2024-0
+        # 9 - 25_14 - 03 - 17
         .training(
-            mini_batch_size_per_learner=tune.choice([4, 8, 16, 32, 64]),
-            clip_param=tune.choice([0.1, 0.2, 0.3]),
-            vf_clip_param=tune.uniform(5.0, 30.0),  # Value function clipping
-            kl_target=tune.loguniform(0.003, 0.3),
-            kl_coeff=tune.uniform(0.3, 1),
-            num_sgd_iter=tune.randint(3, 30),  # Number of epochs to execute per training batch
-            lambda_=tune.uniform(0.9, 1),
-            vf_loss_coeff=tune.uniform(0.5, 1),
-            entropy_coeff=tune.uniform(0.0, 0.1),
+            mini_batch_size_per_learner=300, # 8, # tune.choice([4, 8, 16, 32, 64]),
+            clip_param=0.3, # tune.choice([0.1, 0.2, 0.3]),
+            vf_clip_param=28.1457, # tune.uniform(5.0, 30.0),  # Value function clipping
+            kl_target=0.0069, # tune.loguniform(0.003, 0.3),
+            kl_coeff=0.5914, # tune.uniform(0.3, 1),
+            num_sgd_iter=9, # tune.randint(3, 30),  # Number of epochs to execute per training batch
+            lambda_=0.9319, # tune.uniform(0.9, 1),
+            vf_loss_coeff=0.5915, # tune.uniform(0.5, 1),
+            entropy_coeff=0.340, # tune.uniform(0.0, 0.1),
             grad_clip=100.0,
             grad_clip_by="global_norm",
         )
@@ -141,11 +138,14 @@ def create_config(
         policy_mapping_fn=policy_mapping_fn_,
     )
 
+
     module_specs = {
         f"p{i}": RLModuleSpec(
             # module_class=NewCustomNet,
             # TODO: Use this
             model_config_dict={
+                "use_lstm": True,
+                # "lstm_cell_size": 32,
                 "hidden_layer_dims": [16, 16],
                 "num_rm_states": 1,
             }
@@ -169,6 +169,7 @@ if __name__ == "__main__":
     env_config = {
         "num_agents": args.custom_num_agents,
         "seed": 123,
+        "rm": NO_RM,
     }
 
     assert (
@@ -178,9 +179,7 @@ if __name__ == "__main__":
     register_env("env", make_multi_agent_with_rm(env_creator(env_name)))
     # register_env("env", env_creator(env_name))
 
-    rm = dummy_env.get_perfect_rm()
-    learn_rm = not args.use_perfect_rm
-    base_config = create_config(learn_rm=learn_rm)
+    base_config = create_config()
 
     stop = {
         TRAINING_ITERATION: args.stop_iters,
