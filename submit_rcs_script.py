@@ -48,25 +48,26 @@ pip install -r to_install.txt
 """
 
 
-def get_pbs_script_base(experiment_directory: str):
+def get_pbs_script_base(experiment_directory: str, ncpus, ram):
     # return pbs_script_gpu2
 
     return f"""#!/bin/bash
     #PBS -l walltime=24:00:00
-    #PBS -l select=1:ncpus=4:mem=200Gb
+    #PBS -l select=1:ncpus={ncpus}:mem={ram}Gb
 
     eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
 
     export PATH=$PATH:/gpfs/home/rp218/bin
+    export RAY_RESULTS_DIR=/gpfs/home/rp218/ray_results
 
     module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 
     cd $HOME/rm-marl
-    conda activate new
+    conda activate custom-ray
     """
 
 
-def run_pbs(args, name, experiment_directory):
+def run_pbs(args, name, experiment_directory, ncpus, ram):
     python_run = f"python {' '.join(args)}"
 
     # generate scripts
@@ -75,7 +76,7 @@ def run_pbs(args, name, experiment_directory):
         os.makedirs(f"{script_directory}/{experiment_directory}")
 
     with open(pbs_out, 'w') as f:
-        f.write(get_pbs_script_base(experiment_directory))
+        f.write(get_pbs_script_base(experiment_directory, ncpus, ram))
         f.write('\n')
         f.write(python_run)
 
@@ -86,9 +87,11 @@ def run_pbs(args, name, experiment_directory):
 
 if __name__ == "__main__":
     arguments = sys.argv
-    directory = arguments[1]
-    name = arguments[2]
-    args = arguments[3:]
+    _ncpus = int(arguments[1])
+    _ram = int(arguments[2])
+    directory = arguments[3]
+    name = arguments[4]
+    args = arguments[5:]
 
     os.makedirs(script_directory, exist_ok=True)
-    run_pbs(args, name, directory)
+    run_pbs(args, name, directory, _ncpus, _ram)
