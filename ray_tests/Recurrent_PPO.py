@@ -16,14 +16,10 @@ have the execution stop there for inspection and debugging.
 """
 
 import gymnasium as gym
-import numpy as np
 from ray import tune
 from ray.air.constants import TRAINING_ITERATION
 from ray.rllib.algorithms import PPOConfig
-from ray.rllib.core import DEFAULT_MODULE_ID
 from ray.rllib.core.rl_module import RLModuleSpec, MultiRLModuleSpec
-from ray.rllib.env import EnvContext
-from ray.rllib.env.multi_agent_env import make_multi_agent
 from ray.rllib.utils.test_utils import (
     add_rllib_example_script_args,
     run_rllib_example_script_experiment,
@@ -31,27 +27,19 @@ from ray.rllib.utils.test_utils import (
 from ray.tune.registry import register_env
 from ray.tune.schedulers import ASHAScheduler
 
-from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelingFunctionWrapper, \
-    OfficeWorldPlantLabelingFunctionWrapper, OfficeWorldCoffeeLabelingFunctionWrapper
 from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
-from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer
-from rm_marl.new_stack.algos.algo import PPORMConfig, PPORMLearning, PPORMLearningConfig
 from rm_marl.new_stack.callbacks.callback_composer import CallbackComposer
 from rm_marl.new_stack.callbacks.env_render_callback import EnvRenderCallback
-from rm_marl.new_stack.callbacks.store_config import StoreTracesCallback
-from rm_marl.new_stack.connectors.new_rm_state_connector import NewRMStateConnector
 from rm_marl.new_stack.env.multi_env_with_rm import make_multi_agent_with_rm
-from rm_marl.new_stack.env.rm_wrapper import RMWrapper
-from rm_marl.new_stack.modules.net import NewCustomNet
-from rm_marl.new_stack.utils.env import env_creator, GET_PERFECT_RM, NO_RM
+from rm_marl.new_stack.utils.env import env_creator, NO_RM
 
 parser = add_rllib_example_script_args()
-parser.set_defaults(env='gym_subgoal_automata:OfficeWorldDeliverCoffee-v0')
+parser.set_defaults(env='gym_subgoal_automata:Officeworlddelivercoffee-v0')
 
 parser.add_argument('--custom-num-agents', type=int, default=1,
-                    help='Number of agents in our script')
+                    help='number of agents in our script')
 parser.add_argument('--use-perfect-rm', action="store_true",
-                    help="Whether to use perfect RM, as opposed to no RM at all")
+                    help="whether to use perfect rm, as opposed to no rm at all")
 
 
 # Register our environment with tune.
@@ -60,8 +48,11 @@ parser.add_argument('--use-perfect-rm', action="store_true",
 def create_config():
     callbacks = [EnvRenderCallback]
 
+    # config = PPORMLearningConfig()
     config = PPOConfig()
-
+    # config.resources(
+    #     cpu
+    # )
     config = (
         config.environment(
             env="env",
@@ -69,22 +60,22 @@ def create_config():
         )
         .framework("torch")
         .training(
-            lr=0.0010, # tune.loguniform(1e-5, 1e-3),  # Learning rate on a log scale
+            lr=tune.loguniform(1e-5, 1e-3),  # learning rate on a log scale
             gamma=0.99,
         )
         # entropy_coeff = 0.0340, kl_coeff = 0.5914, kl_target = 0.0069, lambda
         #     =0.9319, lr=0.0010, mini_batch_s_2024-0
         # 9 - 25_14 - 03 - 17
         .training(
-            mini_batch_size_per_learner=300, # 8, # tune.choice([4, 8, 16, 32, 64]),
-            clip_param=0.3, # tune.choice([0.1, 0.2, 0.3]),
-            vf_clip_param=28.1457, # tune.uniform(5.0, 30.0),  # Value function clipping
-            kl_target=0.0069, # tune.loguniform(0.003, 0.3),
-            kl_coeff=0.5914, # tune.uniform(0.3, 1),
-            num_sgd_iter=9, # tune.randint(3, 30),  # Number of epochs to execute per training batch
-            lambda_=0.9319, # tune.uniform(0.9, 1),
-            vf_loss_coeff=0.5915, # tune.uniform(0.5, 1),
-            entropy_coeff=0.340, # tune.uniform(0.0, 0.1),
+            mini_batch_size_per_learner=tune.choice([300, 400, 500]),  # 8, # tune.choice([4, 8, 16, 32, 64]),
+            clip_param=tune.choice([0.1, 0.2, 0.3]),
+            vf_clip_param=tune.uniform(5.0, 30.0),  # value function clipping
+            kl_target=tune.loguniform(0.003, 0.3),
+            kl_coeff=tune.uniform(0.3, 1),
+            num_sgd_iter=tune.randint(3, 30),  # number of epochs to execute per training batch
+            lambda_=tune.uniform(0.9, 1),
+            vf_loss_coeff=tune.uniform(0.5, 1),
+            entropy_coeff=0.1,  # tune.uniform(0.0, 0.1),
             grad_clip=100.0,
             grad_clip_by="global_norm",
         )
@@ -106,7 +97,7 @@ def create_config():
             # Important: Otherwise the evaluation runs in the main thread, which ruins environment ids
             evaluation_num_env_runners=env_config["num_agents"],
             evaluation_duration_unit="episodes",
-            evaluation_config=PPORMConfig.overrides(
+            evaluation_config=PPOConfig.overrides(
                 entropy_coeff=0.0,
                 explore=False,
                 env_config={
@@ -138,23 +129,28 @@ def create_config():
         policy_mapping_fn=policy_mapping_fn_,
     )
 
-
     module_specs = {
-        f"p{i}": RLModuleSpec(
-            # module_class=NewCustomNet,
-            # TODO: Use this
-            model_config_dict={
-                "use_lstm": True,
-                # "lstm_cell_size": 32,
-                "hidden_layer_dims": [16, 16],
-                "num_rm_states": 1,
-            }
-        )
+        f"p{i}": RLModuleSpec()
         for i in range(env_config["num_agents"])
     }
 
+    layer_sizes = [8, 16, 32]
+    num_layers = [1, 2, 4]
+    hidden_architectures = [[layer_size] * n_layers for n_layers in num_layers for layer_size in layer_sizes]
+
     config.rl_module(
         rl_module_spec=MultiRLModuleSpec(module_specs=module_specs),
+        # rl_module_spec=spec,
+        # IMPORTANT: the model config dict needs to be defined here; it gets ignored if defined for individual policies.
+        #   Noticed when resetting workers
+        model_config_dict={
+            "use_lstm": True,
+            # "fcnet_hiddens": tune.choice([[16, 16, 16], [32, 32]]),
+            "fcnet_hiddens": tune.choice(hidden_architectures),
+            # encoder lstm cell size
+            "lstm_cell_size": tune.choice([8, 16, 32]),
+            "fcnet_activation": tune.choice(["relu", "tanh", "elu"]),
+        }
     )
 
     return config
@@ -180,6 +176,10 @@ if __name__ == "__main__":
     # register_env("env", env_creator(env_name))
 
     base_config = create_config()
+
+    # rl_spec = base_config.get_rl_module_spec(
+    #     spaces={DEFAULT_MODULE_ID: (Box(low=0, high=1, shape=(110,)), Discrete(4))})
+    # raise RuntimeError(rl_spec.build())
 
     stop = {
         TRAINING_ITERATION: args.stop_iters,
