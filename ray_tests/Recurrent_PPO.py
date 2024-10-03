@@ -32,6 +32,7 @@ from rm_marl.new_stack.callbacks.callback_composer import CallbackComposer
 from rm_marl.new_stack.callbacks.env_render_callback import EnvRenderCallback
 from rm_marl.new_stack.env.multi_env_with_rm import make_multi_agent_with_rm
 from rm_marl.new_stack.utils.env import env_creator, NO_RM
+from rm_marl.new_stack.utils.run import custom_run_rllib_example_script_experiment
 
 parser = add_rllib_example_script_args()
 parser.set_defaults(env='gym_subgoal_automata:Officeworlddelivercoffee-v0')
@@ -46,7 +47,8 @@ parser.add_argument('--use-perfect-rm', action="store_true",
 
 
 def create_config():
-    callbacks = [EnvRenderCallback]
+    # callbacks = [EnvRenderCallback]
+    callbacks = []
 
     # config = PPORMLearningConfig()
     config = PPOConfig()
@@ -88,7 +90,7 @@ def create_config():
             # By default, environments are stepped one at a time
             # https://docs.ray.io/en/latest/rllib/rllib-env.html
             # https://docs.ray.io/en/latest/rllib/package_ref/env.html
-            # remote_worker_envs=True,
+            remote_worker_envs=True,
             # env_to_module_connector=NewRMStateConnector,
         )
         .evaluation(
@@ -187,4 +189,4 @@ if __name__ == "__main__":
 
     scheduler = ASHAScheduler(metric="env_runners/episode_return_mean", mode="max")
 
-    run_rllib_example_script_experiment(base_config, args, stop=stop, scheduler=scheduler)
+    custom_run_rllib_example_script_experiment(base_config, args, stop=stop, scheduler=scheduler)
