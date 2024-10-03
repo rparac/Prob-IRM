@@ -35,7 +35,7 @@ from rm_marl.new_stack.utils.env import env_creator, NO_RM
 from rm_marl.new_stack.utils.run import custom_run_rllib_example_script_experiment
 
 parser = add_rllib_example_script_args()
-parser.set_defaults(env='gym_subgoal_automata:Officeworlddelivercoffee-v0')
+parser.set_defaults(env='gym_subgoal_automata:OfficeWorldDeliverCoffee-v0')
 
 parser.add_argument('--custom-num-agents', type=int, default=1,
                     help='number of agents in our script')

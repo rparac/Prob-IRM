@@ -192,6 +192,7 @@ def custom_run_rllib_example_script_experiment(
             config.offline_data(output=args.output)
 
     # Run the experiment w/o Tune (directly operate on the RLlib Algorithm object).
+    # TODO: no_tune doesn't allow us to set the directory where we want the experiment to be stored. Uses ~/
     if args.no_tune:
         assert not args.as_test and not args.as_release_test
         algo = config.build()
