@@ -83,8 +83,10 @@ def create_config():
         )
         .env_runners(
             batch_mode="complete_episodes",
+            # This should be on if environment rendering is expensive; e.g. video game (might be needed for
+            #  three pillars)
+            # num_gpus_per_env_runner=(1/env_config["num_agents"] * getattr(args, "num_samples", 1)),
             # num_env_runners=0, # forces everything to be done on the local worker
-            # num_env_runners=23,  # env_config["num_agents"],
             num_env_runners=env_config["num_agents"],
             num_envs_per_env_runner=1,
             # By default, environments are stepped one at a time
@@ -116,7 +118,7 @@ def create_config():
         )
         # Switch off RLlib's logging to avoid having the large videos show up in any log
         # files.
-        .debugging(seed=env_config["seed"], log_level="WARN", logger_config={})#{"type": tune.logger.NoopLogger})
+        .debugging(seed=env_config["seed"], log_level="WARN", logger_config={})  # {"type": tune.logger.NoopLogger})
     )
 
     def policy_mapping_fn_(aid, worker, **kwargs):
@@ -187,6 +189,7 @@ if __name__ == "__main__":
         TRAINING_ITERATION: args.stop_iters,
     }
 
-    scheduler = ASHAScheduler(metric="env_runners/episode_return_mean", mode="max")
+    scheduler = ASHAScheduler(metric="env_runners/episode_return_mean", mode="max", grace_period=15,
+                              max_t=args.stop_iters)
 
     custom_run_rllib_example_script_experiment(base_config, args, stop=stop, scheduler=scheduler)
