@@ -66,4 +66,9 @@ class RMWrapper(gymnasium.Wrapper):
         obs, reward, terminated, truncated, info = self.env.step(action)
 
         rm_state = self.rm_transitioner.get_next_state(self._curr_rm_state, info["labels"])
+
+        # We intentionally interrupt the episode if the RM believes the episode should be done
+        if self.rm_transitioner.rm.is_state_terminal(rm_state) and not terminated:
+            return np.concatenate((obs, rm_state)), reward, terminated, True, info
+
         return np.concatenate((obs, rm_state)), reward, terminated, truncated, info
