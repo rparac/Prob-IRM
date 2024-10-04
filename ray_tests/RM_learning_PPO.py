@@ -16,13 +16,9 @@ have the execution stop there for inspection and debugging.
 """
 
 import gymnasium as gym
-import numpy as np
 from ray import tune
 from ray.air.constants import TRAINING_ITERATION
-from ray.rllib.core import DEFAULT_MODULE_ID
 from ray.rllib.core.rl_module import RLModuleSpec, MultiRLModuleSpec
-from ray.rllib.env import EnvContext
-from ray.rllib.env.multi_agent_env import make_multi_agent
 from ray.rllib.utils.test_utils import (
     add_rllib_example_script_args,
     run_rllib_example_script_experiment,
@@ -30,19 +26,14 @@ from ray.rllib.utils.test_utils import (
 from ray.tune.registry import register_env
 from ray.tune.schedulers import ASHAScheduler
 
-from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelingFunctionWrapper, \
-    OfficeWorldPlantLabelingFunctionWrapper, OfficeWorldCoffeeLabelingFunctionWrapper
 from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
-from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer
-from rm_marl.new_stack.algos.algo import PPORMConfig, PPORMLearning, PPORMLearningConfig
+from rm_marl.new_stack.algos.algo import PPORMConfig, PPORMLearningConfig
 from rm_marl.new_stack.callbacks.callback_composer import CallbackComposer
 from rm_marl.new_stack.callbacks.env_render_callback import EnvRenderCallback
 from rm_marl.new_stack.callbacks.store_config import StoreTracesCallback
-from rm_marl.new_stack.connectors.new_rm_state_connector import NewRMStateConnector
 from rm_marl.new_stack.env.multi_env_with_rm import make_multi_agent_with_rm
-from rm_marl.new_stack.env.rm_wrapper import RMWrapper
-from rm_marl.new_stack.modules.net import NewCustomNet
-from rm_marl.new_stack.utils.env import env_creator, GET_PERFECT_RM, NO_RM
+from rm_marl.new_stack.utils.env import env_creator
+from rm_marl.new_stack.utils.run import custom_run_rllib_example_script_experiment
 
 parser = add_rllib_example_script_args()
 parser.set_defaults(env='gym_subgoal_automata:OfficeWorldDeliverCoffee-v0')
@@ -59,7 +50,9 @@ parser.add_argument('--use-perfect-rm', action="store_true",
 def create_config(
         learn_rm=True
 ):
-    callbacks = [EnvRenderCallback]
+    # Slows down process; add back when debugging
+    # callbacks = [EnvRenderCallback]
+    callbacks = []
     if learn_rm:
         config = PPORMLearningConfig()
         actor_name = "rm_learner_actor"
@@ -100,7 +93,7 @@ def create_config(
             # By default, environments are stepped one at a time
             # https://docs.ray.io/en/latest/rllib/rllib-env.html
             # https://docs.ray.io/en/latest/rllib/package_ref/env.html
-            # remote_worker_envs=True,
+            remote_worker_envs=True,
             # env_to_module_connector=NewRMStateConnector,
         )
         .evaluation(
@@ -126,7 +119,7 @@ def create_config(
         )
         # Switch off RLlib's logging to avoid having the large videos show up in any log
         # files.
-        .debugging(seed=env_config["seed"], log_level="WARN", logger_config={})#{"type": tune.logger.NoopLogger})
+        .debugging(seed=env_config["seed"], log_level="WARN", logger_config={})  # {"type": tune.logger.NoopLogger})
     )
 
     def policy_mapping_fn_(aid, worker, **kwargs):
@@ -142,19 +135,24 @@ def create_config(
     )
 
     module_specs = {
-        f"p{i}": RLModuleSpec(
-            # module_class=NewCustomNet,
-            # TODO: Use this
-            model_config_dict={
-                "hidden_layer_dims": [16, 16],
-                "num_rm_states": 1,
-            }
-        )
+        f"p{i}": RLModuleSpec()
         for i in range(env_config["num_agents"])
     }
 
+    layer_sizes = [8, 16, 32]
+    num_layers = [1, 2, 4]
+    hidden_architectures = [[layer_size] * n_layers for n_layers in num_layers for layer_size in layer_sizes]
+
     config.rl_module(
         rl_module_spec=MultiRLModuleSpec(module_specs=module_specs),
+        # rl_module_spec=spec,
+        # IMPORTANT: the model config dict needs to be defined here; it gets ignored if defined for individual policies.
+        #   Noticed when resetting workers
+        model_config_dict={
+            # "fcnet_hiddens": tune.choice([[16, 16, 16], [32, 32]]),
+            "fcnet_hiddens": tune.choice(hidden_architectures),
+            "fcnet_activation": tune.choice(["relu", "tanh", "elu"]),
+        }
     )
 
     return config
@@ -186,8 +184,7 @@ if __name__ == "__main__":
         TRAINING_ITERATION: args.stop_iters,
     }
 
-    scheduler = ASHAScheduler(metric="env_runners/episode_return_mean", mode="max")
+    scheduler = ASHAScheduler(metric="env_runners/episode_return_mean", mode="max", grace_period=15,
+                              max_t=args.stop_iters)
 
-    # TODO: it is possible to integrate this with optuna dashboard to better understand
-    #   hyperparameter choices. Do this if needed and after seeing how it interoperates with cluster
-    run_rllib_example_script_experiment(base_config, args, stop=stop, scheduler=scheduler)
+    custom_run_rllib_example_script_experiment(base_config, args, stop=stop, scheduler=scheduler)

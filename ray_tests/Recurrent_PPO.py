@@ -77,7 +77,7 @@ def create_config():
             num_sgd_iter=tune.randint(3, 30),  # number of epochs to execute per training batch
             lambda_=tune.uniform(0.9, 1),
             vf_loss_coeff=tune.uniform(0.5, 1),
-            entropy_coeff=0.1,  # tune.uniform(0.0, 0.1),
+            entropy_coeff=tune.uniform(0.0, 0.1),
             grad_clip=100.0,
             grad_clip_by="global_norm",
         )
