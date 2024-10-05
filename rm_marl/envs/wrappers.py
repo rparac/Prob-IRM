@@ -30,7 +30,10 @@ class ProbabilisticRewardShaping(gym.Wrapper):
 
     def reset(self, **kwargs):
         self._rm_state_belief = self._rm_transitioner.get_initial_state()
-        return super().reset(**kwargs)
+        obs, info = super().reset(**kwargs)
+        info["shaping_reward"] = 0
+        info["original_reward"] = 0
+        return obs, info
 
     def step(self, action):
         assert self._rm_state_belief is not None, "Environment was not properly reset before step()"
@@ -48,6 +51,7 @@ class ProbabilisticRewardShaping(gym.Wrapper):
 
         # Provide info relating to the shaped reward
         info["shaping_reward"] = shaping_reward
+        info["original_reward"] = reward
 
         return obs, reward + shaping_reward, terminated, truncated, info
 
