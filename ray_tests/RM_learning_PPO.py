@@ -185,7 +185,7 @@ if __name__ == "__main__":
         TRAINING_ITERATION: args.stop_iters,
     }
 
-    scheduler = ASHAScheduler(metric="env_runners/episode_return_mean", mode="max",
+    scheduler = ASHAScheduler(metric="env_runners/original_episode_return_mean", mode="max",
                               grace_period=min(15, args.stop_iters),
                               max_t=args.stop_iters)
 
