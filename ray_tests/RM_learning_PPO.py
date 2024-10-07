@@ -21,7 +21,6 @@ from ray.air.constants import TRAINING_ITERATION
 from ray.rllib.core.rl_module import RLModuleSpec, MultiRLModuleSpec
 from ray.rllib.utils.test_utils import (
     add_rllib_example_script_args,
-    run_rllib_example_script_experiment,
 )
 from ray.tune.registry import register_env
 from ray.tune.schedulers import ASHAScheduler
@@ -192,7 +191,9 @@ if __name__ == "__main__":
     }
 
     scheduler = ASHAScheduler(metric="env_runners/original_episode_return_mean", mode="max",
-                              grace_period=min(15, args.stop_iters),
+                              grace_period=min(50, args.stop_iters),
                               max_t=args.stop_iters)
 
+    # tune_callbacks = [TestCallback()]
     custom_run_rllib_example_script_experiment(base_config, args, stop=stop, scheduler=scheduler)
+                                               # tune_callbacks=tune_callbacks)
