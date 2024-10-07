@@ -75,7 +75,8 @@ def create_config(
             gamma=0.99,
         )
         .training(
-            mini_batch_size_per_learner=4, # tune.choice([4, 8, 16, 32, 64]),
+            train_batch_size_per_learner=5120,
+            mini_batch_size_per_learner=256,
             clip_param=0.3, # tune.choice([0.1, 0.2, 0.3]),
             vf_clip_param=25.212437444571123, # tune.uniform(5.0, 30.0),  # Value function clipping
             kl_target=0.03649854777022278, # tune.loguniform(0.003, 0.3),

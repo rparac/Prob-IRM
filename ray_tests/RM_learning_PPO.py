@@ -49,11 +49,13 @@ parser.add_argument('--use-perfect-rm', action="store_true",
 
 
 def create_config(
-        learn_rm=True
+        learn_rm=True,
+        render_env=False,
 ):
     # Slows down process; add back when debugging
-    # callbacks = [EnvRenderCallback]
     callbacks = [LogOriginalReward]
+    if render_env:
+        callbacks.append(EnvRenderCallback)
     if learn_rm:
         config = PPORMLearningConfig()
         actor_name = "rm_learner_actor"
@@ -73,7 +75,8 @@ def create_config(
             gamma=0.99,
         )
         .training(
-            mini_batch_size_per_learner=tune.choice([4, 8, 16, 32, 64]),
+            train_batch_size_per_learner=5120,
+            mini_batch_size_per_learner=tune.choice([64, 128, 256]),
             clip_param=tune.choice([0.1, 0.2, 0.3]),
             vf_clip_param=tune.uniform(5.0, 30.0),  # Value function clipping
             kl_target=tune.loguniform(0.003, 0.3),
@@ -179,7 +182,10 @@ if __name__ == "__main__":
 
     rm = dummy_env.get_perfect_rm()
     learn_rm = not args.use_perfect_rm
-    base_config = create_config(learn_rm=learn_rm)
+
+    # We can only render on wandb; turn on rendering if the key exists
+    render_env = hasattr(args, "wandb_key") and args.wandb_key is not None
+    base_config = create_config(learn_rm=learn_rm, render_env=render_env)
 
     stop = {
         TRAINING_ITERATION: args.stop_iters,
