@@ -28,6 +28,8 @@ module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 cd ${HOME}/rm-marl
 conda activate rm_marl
 """
+# might be needed
+# pip install scikit-learn==1.4.2
 
 pbs_script_gpu2 = f"""#!/bin/bash
 #PBS -l walltime=24:00:00
