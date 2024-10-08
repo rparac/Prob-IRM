@@ -14,10 +14,10 @@ from typing import List
 script_directory = "outputs"
 
 
-def pbs_script_base(ncpus, ram):
+def pbs_script_base(nodes, ncpus, ram):
     return f"""#!/bin/bash
 #PBS -l walltime=24:00:00
-#PBS -l select=2:ncpus={ncpus}:mem={ram}Gb
+#PBS -l select={nodes}:ncpus={ncpus}:mem={ram}Gb
 cd $EPHEMERAL/rm-marl
 export PYTHONPATH=$PYTHONPATH:/rds/general/user/rp218/ephemeral/rm-marl
 export PATH=$PATH:/rds/general/user/rp218/home/bin
@@ -35,7 +35,7 @@ sleep 5
 """
 
 
-def run_pbs(args, name, experiment_directory, ncpus, ram):
+def run_pbs(args, name, experiment_directory, nodes, ncpus, ram):
     python_run = f"python {' '.join(args)}"
 
     # generate scripts
@@ -44,7 +44,7 @@ def run_pbs(args, name, experiment_directory, ncpus, ram):
         os.makedirs(f"{script_directory}/{experiment_directory}")
 
     with open(pbs_out, 'w') as f:
-        f.write(pbs_script_base(ncpus, ram))
+        f.write(pbs_script_base(nodes, ncpus, ram))
         f.write('\n')
         f.write(python_run)
 
@@ -55,11 +55,12 @@ def run_pbs(args, name, experiment_directory, ncpus, ram):
 
 if __name__ == "__main__":
     arguments = sys.argv
-    ncpus = int(arguments[1])
-    ram = int(arguments[2])
-    directory = arguments[3]
-    name = arguments[4]
-    args = arguments[5:]
+    _nodes = int(arguments[1])
+    _ncpus = int(arguments[2])
+    _ram = int(arguments[3])
+    directory = arguments[5]
+    name = arguments[5]
+    args = arguments[6:]
 
     os.makedirs(script_directory, exist_ok=True)
-    run_pbs(args, name, directory, ncpus, ram)
+    run_pbs(args, name, directory, _ncpus, _ram)

@@ -101,11 +101,12 @@ def run_pbs(args, name, experiment_directory, ncpus, ram):
 
 if __name__ == "__main__":
     arguments = sys.argv
-    _ncpus = int(arguments[1])
-    _ram = int(arguments[2])
-    directory = arguments[3]
-    name = arguments[4]
-    args = arguments[5:]
+    _nodes = int(arguments[1])
+    _ncpus = int(arguments[2])
+    _ram = int(arguments[3])
+    directory = arguments[5]
+    name = arguments[5]
+    args = arguments[6:]
 
     os.makedirs(script_directory, exist_ok=True)
     run_pbs(args, name, directory, _ncpus, _ram)
