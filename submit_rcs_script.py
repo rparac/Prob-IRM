@@ -50,12 +50,12 @@ pip install -r to_install.txt
 """
 
 
-def get_pbs_script_base(experiment_directory: str, ncpus, ram):
+def get_pbs_script_base(experiment_directory: str, nodes, ncpus, ram):
     # return pbs_script_gpu2
 
     return f"""#!/bin/bash
 #PBS -l walltime=24:00:00
-#PBS -l select=2:ncpus={ncpus}:mem={ram}Gb
+#PBS -l select={nodes}:ncpus={ncpus}:mem={ram}Gb
 
 eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
 
@@ -81,7 +81,7 @@ sleep 5
 """
 
 
-def run_pbs(args, name, experiment_directory, ncpus, ram):
+def run_pbs(args, name, experiment_directory, nodes, ncpus, ram):
     python_run = f"python {' '.join(args)}"
 
     # generate scripts
@@ -90,7 +90,7 @@ def run_pbs(args, name, experiment_directory, ncpus, ram):
         os.makedirs(f"{script_directory}/{experiment_directory}")
 
     with open(pbs_out, 'w') as f:
-        f.write(get_pbs_script_base(experiment_directory, ncpus, ram))
+        f.write(get_pbs_script_base(experiment_directory, nodes, ncpus, ram))
         f.write('\n')
         f.write(python_run)
 
@@ -109,4 +109,4 @@ if __name__ == "__main__":
     args = arguments[6:]
 
     os.makedirs(script_directory, exist_ok=True)
-    run_pbs(args, name, directory, _ncpus, _ram)
+    run_pbs(args, name, directory, _nodes, _ncpus, _ram)

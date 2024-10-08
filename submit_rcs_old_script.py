@@ -63,4 +63,4 @@ if __name__ == "__main__":
     args = arguments[6:]
 
     os.makedirs(script_directory, exist_ok=True)
-    run_pbs(args, name, directory, _ncpus, _ram)
+    run_pbs(args, name, directory, _nodes, _ncpus, _ram)
