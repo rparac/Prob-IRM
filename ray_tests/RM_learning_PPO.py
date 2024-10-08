@@ -14,6 +14,7 @@ For debugging, use the following additional command line options
 which should allow you to set breakpoints anywhere in the RLlib code and
 have the execution stop there for inspection and debugging.
 """
+from functools import partial
 
 import gymnasium as gym
 from ray import tune
@@ -57,9 +58,7 @@ def create_config(
         callbacks.append(EnvRenderCallback)
     if learn_rm:
         config = PPORMLearningConfig()
-        actor_name = "rm_learner_actor"
-        config.actor_name(actor_name)
-        callbacks.append(lambda: StoreTracesCallback(actor_name))
+        callbacks.append(StoreTracesCallback)
     else:
         config = PPORMConfig()
 
@@ -114,7 +113,7 @@ def create_config(
             ),
         )
         .callbacks(
-            lambda: CallbackComposer(callbacks)
+            partial(CallbackComposer, callbacks),
         )
         .api_stack(
             enable_rl_module_and_learner=True,
@@ -194,6 +193,4 @@ if __name__ == "__main__":
                               grace_period=min(15, args.stop_iters),
                               max_t=args.stop_iters)
 
-    # tune_callbacks = [TestCallback()]
     custom_run_rllib_example_script_experiment(base_config, args, stop=stop, scheduler=scheduler)
-                                               # tune_callbacks=tune_callbacks)
