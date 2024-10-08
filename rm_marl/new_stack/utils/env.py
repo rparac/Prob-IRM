@@ -33,7 +33,8 @@ def env_creator(env_id):
             # OfficeWorldBLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
             # OfficeWorldCLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
             # OfficeWorldDLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
-            OfficeWorldCoffeeLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
+            OfficeWorldCoffeeLabelingFunctionWrapper(env, sensor_true_confidence=0.9814815521240234,
+                                                     sensor_false_confidence=0.9814815521240234),
         ]
 
         env = NoisyLabelingFunctionComposer(labeling_funs)
