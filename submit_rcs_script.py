@@ -55,17 +55,21 @@ def get_pbs_script_base(experiment_directory: str, ncpus, ram):
 
     return f"""#!/bin/bash
     #PBS -l walltime=24:00:00
-    #PBS -l select=1:ncpus={ncpus}:mem={ram}Gb
+    #PBS -l select=2:ncpus={ncpus}:mem={ram}Gb
 
     eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
 
     export PATH=$PATH:/gpfs/home/rp218/bin
     export RAY_RESULTS_DIR=/gpfs/home/rp218/ray_results
-
-    module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
+    export PYTHONPATH=$PYTHONPATH:$HOME/rm-marl
 
     cd $HOME/rm-marl
     conda activate custom-ray
+    conda install -c git
+    pip install scikit-learn==1.4.2
+    pip install torch==2.3.1
+    pip install -r to_install.txt
+    pip freeze
     """
 
 
