@@ -54,6 +54,18 @@ class LogOriginalReward(DefaultCallbacks):
                 reduce='mean',
                 clear_on_reduce=True,
             )
+            metrics_logger.log_value(
+                f"original_agent_episode_return_max/{i}",
+                value=original_reward,
+                reduce='max',
+                clear_on_reduce=True,
+            )
+            metrics_logger.log_value(
+                f"original_agent_episode_return_min/{i}",
+                value=original_reward,
+                reduce='min',
+                clear_on_reduce=True,
+            )
 
         multi_agent_reward = sum(single_agent_rewards)
         metrics_logger.log_value(
