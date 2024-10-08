@@ -30,7 +30,7 @@ class EnvRenderCallback(DefaultCallbacks):
     and temporarily store it in the Episode object.
     """
 
-    def __init__(self, env_runner_indices: Optional[Sequence[int]] = None):
+    def __init__(self, env_runner_indices: Optional[Sequence[int]] = None, **kwargs):
         super().__init__()
         # Only render and record on certain EnvRunner indices?
         self.env_runner_indices = env_runner_indices

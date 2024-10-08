@@ -18,6 +18,9 @@ For an unknown reason the value in original episode return is slightly different
 
 
 class LogOriginalReward(DefaultCallbacks):
+    def __init__(self, **kwargs):
+        super().__init__()
+
     def on_episode_end(
             self,
             *,

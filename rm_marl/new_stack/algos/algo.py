@@ -1,3 +1,5 @@
+import uuid
+from functools import partial
 from typing import Optional
 
 import gymnasium as gym
@@ -57,7 +59,13 @@ class PPORMLearning(PPO):
 
     def setup(self, config: AlgorithmConfig) -> None:
         rm = RewardMachineAgent.default_rm()
-        self._rm_learner = NewProbFFNSLLearner.options(name=config._actor_name).remote(rm)  # type: ignore
+        actor_name = str(uuid.uuid4())
+        kwargs = {"rm_learner_actor": actor_name}
+        self.config._is_frozen = False
+        self.config.callbacks_class = partial(self.config.callbacks_class, **kwargs)
+        self.config._is_frozen = True
+
+        self._rm_learner = NewProbFFNSLLearner.options(name=actor_name).remote(rm)  # type: ignore
         super().setup(config)
 
     @classmethod

@@ -2,10 +2,10 @@ from ray.rllib.algorithms.callbacks import DefaultCallbacks
 
 
 class CallbackComposer(DefaultCallbacks):
-    def __init__(self, callbacks_cls):
+    def __init__(self, callbacks_cls, **kwargs):
         super().__init__()
         # Ray requires passing classes instead of objects, so we keep the design consistent
-        self.callbacks = [_cls() for _cls in callbacks_cls]
+        self.callbacks = [_cls(**kwargs) for _cls in callbacks_cls]
 
     def on_algorithm_init(self, **kwargs) -> None:
         """Callback run when a new Algorithm instance has finished setup."""
