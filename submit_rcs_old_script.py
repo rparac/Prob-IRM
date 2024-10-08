@@ -17,7 +17,7 @@ script_directory = "outputs"
 def pbs_script_base(ncpus, ram):
     return f"""#!/bin/bash
 #PBS -l walltime=24:00:00
-#PBS -l select=1:ncpus={ncpus}:mem={ram}Gb
+#PBS -l select=2:ncpus={ncpus}:mem={ram}Gb
 cd $EPHEMERAL/rm-marl
 export PYTHONPATH=$PYTHONPATH:/rds/general/user/rp218/ephemeral/rm-marl
 export PATH=$PATH:/rds/general/user/rp218/home/bin

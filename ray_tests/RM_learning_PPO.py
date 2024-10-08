@@ -191,7 +191,7 @@ if __name__ == "__main__":
     }
 
     scheduler = ASHAScheduler(metric="env_runners/original_episode_return_mean", mode="max",
-                              grace_period=min(50, args.stop_iters),
+                              grace_period=min(15, args.stop_iters),
                               max_t=args.stop_iters)
 
     # tune_callbacks = [TestCallback()]
