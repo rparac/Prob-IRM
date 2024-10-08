@@ -24,6 +24,14 @@ export PATH=$PATH:/rds/general/user/rp218/home/bin
 export RAY_RESULTS_DIR=$EPHEMERAL/ray_results
 eval "$(~/miniconda3/bin/conda shell.bash hook)"
 conda activate custom-ray
+
+# Launch a ray cluster
+ray start --head --node-ip-address=$(hostname -i) --port=6379
+head_ip=$(hostname -i)
+echo "Head node started on $head_ip"
+
+# Wait a few seconds to ensure the head node is up
+sleep 5
 """
 
 

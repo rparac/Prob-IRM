@@ -54,23 +54,31 @@ def get_pbs_script_base(experiment_directory: str, ncpus, ram):
     # return pbs_script_gpu2
 
     return f"""#!/bin/bash
-    #PBS -l walltime=24:00:00
-    #PBS -l select=2:ncpus={ncpus}:mem={ram}Gb
+#PBS -l walltime=24:00:00
+#PBS -l select=2:ncpus={ncpus}:mem={ram}Gb
 
-    eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
+eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
 
-    export PATH=$PATH:/gpfs/home/rp218/bin
-    export RAY_RESULTS_DIR=/gpfs/home/rp218/ray_results
-    export PYTHONPATH=$PYTHONPATH:$HOME/rm-marl
+export PATH=$PATH:/gpfs/home/rp218/bin
+export RAY_RESULTS_DIR=/gpfs/home/rp218/ray_results
+export PYTHONPATH=$PYTHONPATH:$HOME/rm-marl
 
-    cd $HOME/rm-marl
-    conda activate custom-ray
-    conda install -c git
-    pip install scikit-learn==1.4.2
-    pip install torch==2.3.1
-    pip install -r to_install.txt
-    pip freeze
-    """
+cd $HOME/rm-marl
+conda activate custom-ray
+conda install -c git
+pip install scikit-learn==1.4.2
+pip install torch==2.3.1
+pip install -r to_install.txt
+pip freeze
+
+# Launch a ray cluster
+ray start --head --node-ip-address=$(hostname -i) --port=6379
+head_ip=$(hostname -i)
+echo "Head node started on $head_ip"
+
+# Wait a few seconds to ensure the head node is up
+sleep 5
+"""
 
 
 def run_pbs(args, name, experiment_directory, ncpus, ram):
