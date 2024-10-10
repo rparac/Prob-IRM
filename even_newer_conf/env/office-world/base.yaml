@@ -1,0 +1,19 @@
+defaults:
+  - coffee_label_factory: perfect
+  - plant_label_factory: perfect
+  - office_label_factory: perfect
+
+name: ???
+render_mode: 'rgb_array'
+max_episode_length: 250
+
+use_restricted_observables: true
+
+# Variables that can be overriden with Optuna
+overridable:
+  - env.coffee_label_factory.sensor_true_confidence
+  - env.coffee_label_factory.sensor_false_confidence
+  - env.plant_label_factory.sensor_true_confidence
+  - env.plant_label_factory.sensor_false_confidence
+  - env.office_label_factory.sensor_true_confidence
+  - env.office_label_factory.sensor_false_confidence

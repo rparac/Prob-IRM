@@ -38,6 +38,165 @@ torch, _ = try_import_torch()
 
 logger = logging.getLogger(__name__)
 
+
+def simplified_custom_run_rllib_example_script_experiment(
+        base_config: "AlgorithmConfig",
+        run_args=None,
+        *,
+        stop: Optional[Dict] = None,
+        scheduler=None,
+) -> Union[ResultDict, tune.result_grid.ResultGrid]:
+    """
+    Args:
+        base_config: The AlgorithmConfig object to use for this experiment. This base
+            config will be automatically "extended" based on some of the provided
+            `args`. For example, `args.num_env_runners` is used to set
+            `config.num_env_runners`, etc..
+        run_args: A hydra object containing the necessary arguments for running the program
+        stop: An optional dict mapping ResultDict key strings (using "/" in case of
+            nesting, e.g. "env_runners/episode_return_mean" for referring to
+            `result_dict['env_runners']['episode_return_mean']` to minimum
+            values, reaching of which will stop the experiment). Default is:
+            {
+            "env_runners/episode_return_mean": args.stop_reward,
+            "training_iteration": args.stop_iters,
+            "num_env_steps_sampled_lifetime": args.stop_timesteps,
+            }
+
+    Returns:
+        The last ResultDict from a --no-tune run OR the tune.Tuner.fit()
+        results.
+    """
+    # Initialize Ray.
+    ray.init()
+
+    config = base_config
+
+    config.framework("torch")
+    config.api_stack(
+        enable_rl_module_and_learner=True,
+        enable_env_runner_and_connector_v2=True,
+    )
+
+    # Define compute resources used automatically (only using the --num-gpus arg).
+    # New stack.
+    # Define compute resources used.
+    # TODO: maybe multiple learners would be better
+    # config.resources(num_gpus=0)
+    config.learners(
+        num_learners=0,
+        num_gpus_per_learner=(
+            1
+            if torch and torch.cuda.is_available()
+            else 0
+        ),
+    )
+    # config.resources(num_gpus=0)
+
+    # Run the experiment w/o Tune (directly operate on the RLlib Algorithm object).
+    # TODO: no_tune doesn't allow us to set the directory where we want the experiment to be stored. Uses ~/
+    if run_args["no_tune"]:
+        algo = config.build()
+        for i in range(stop.get(TRAINING_ITERATION)):
+            results = algo.train()
+            if ENV_RUNNER_RESULTS in results:
+                print(
+                    f"iter={i} R={results[ENV_RUNNER_RESULTS][EPISODE_RETURN_MEAN]}",
+                    end="",
+                )
+            if EVALUATION_RESULTS in results:
+                Reval = results[EVALUATION_RESULTS][ENV_RUNNER_RESULTS][
+                    EPISODE_RETURN_MEAN
+                ]
+                print(f" R(eval)={Reval}", end="")
+            print()
+            for key, threshold in stop.items():
+                val = results
+                for k in key.split("/"):
+                    try:
+                        val = val[k]
+                    except KeyError:
+                        val = None
+                        break
+                if val is not None and not np.isnan(val) and val >= threshold:
+                    print(f"Stop criterium ({key}={threshold}) fulfilled!")
+                    ray.shutdown()
+                    return results
+
+        ray.shutdown()
+        return results
+
+    # Run the experiment using Ray Tune.
+
+    # Log results using WandB.
+    tune_callbacks = []
+    wandb_args = run_args["wandb"]
+    if wandb_args["key"] is not None:
+        tune_callbacks.append(
+            WandbLoggerCallback(
+                api_key=wandb_args["key"],
+                project=wandb_args["project"],
+                upload_checkpoints=True,
+                **({"name": wandb_args["run_name"]}),
+            )
+        )
+
+    # Auto-configure a CLIReporter (to log the results to the console).
+    # Use better ProgressReporter for multi-agent cases: List individual policy rewards.
+    progress_reporter = CLIReporter(
+        metric_columns={
+            **{
+                TRAINING_ITERATION: "iter",
+                "time_total_s": "total time (s)",
+                NUM_ENV_STEPS_SAMPLED_LIFETIME: "ts",
+                f"{ENV_RUNNER_RESULTS}/{EPISODE_RETURN_MEAN}": "combined return",
+            },
+            **{
+                (
+                    f"{ENV_RUNNER_RESULTS}/module_episode_returns_mean/" f"{pid}"
+                ): f"return {pid}"
+                for pid in config.policies
+            },
+        },
+    )
+
+    # Force Tuner to use old progress output as the new one silently ignores our custom
+    # `CLIReporter`.
+    os.environ["RAY_AIR_NEW_OUTPUT"] = "0"
+
+    # Run the actual experiment (using Tune).
+    start_time = time.time()
+    storage_dir = str(os.environ["RAY_RESULTS_DIR"])
+
+    tune_args = run_args["tune_config"]
+
+    results = tune.Tuner(
+        config.algo_class,
+        param_space=config,
+        run_config=air.RunConfig(
+            stop=stop,
+            verbose=tune_args["verbose"],
+            callbacks=tune_callbacks,
+            checkpoint_config=air.CheckpointConfig(
+                checkpoint_frequency=tune_args["checkpoint_freq"],
+                checkpoint_at_end=tune_args["checkpoint_at_end"],
+            ),
+            progress_reporter=progress_reporter,
+            storage_path=storage_dir,
+        ),
+        tune_config=tune.TuneConfig(
+            num_samples=tune_args["num_samples"],
+            scheduler=scheduler,
+        ),
+    ).fit()
+    time_taken = time.time() - start_time
+    print(f"Time taken is {time_taken}")
+
+    ray.shutdown()
+
+    return results
+
+
 # TODO (sven): Make this the de-facto, well documented, and unified utility for most of
 #  our tests:
 #  - CI (label: "learning_tests")
@@ -287,7 +446,7 @@ def custom_run_rllib_example_script_experiment(
             num_samples=args.num_samples,
             scheduler=scheduler,
         ),
-        ).fit()
+    ).fit()
     time_taken = time.time() - start_time
 
     ray.shutdown()

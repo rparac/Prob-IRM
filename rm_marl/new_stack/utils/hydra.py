@@ -1,0 +1,28 @@
+from ray import tune
+
+
+# Converts from config to a function
+def _to_tune(param):
+    if param["tune_func"] == 'choice':
+        return tune.choice(param["options"])
+    if param["tune_func"] == 'uniform':
+        return tune.uniform(*param["options"])
+    if param["tune_func"] == 'loguniform':
+        return tune.loguniform(*param["options"])
+    if param["tune_func"] == 'randint':
+        return tune.randint(*param["options"])
+
+
+def from_hydra_config(conf, should_tune):
+    new_config = {}
+    for k, v in conf.items():
+        # Ignore helper keys
+        if k.startswith('_'):
+            continue
+
+        if should_tune and hasattr(v, 'tune_func'):
+            new_config[k] = _to_tune(v)
+        else:
+            new_config[k] = v.best_value
+
+    return new_config

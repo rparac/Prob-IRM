@@ -1,0 +1,39 @@
+defaults:
+  - a_label_factory: perfect
+  - b_label_factory: perfect
+  - c_label_factory: perfect
+  - d_label_factory: perfect
+  - plant_label_factory: perfect
+  - coffee_label_factory: perfect
+  - office_label_factory: perfect
+
+name: 'gym_subgoal_automata:OfficeWorldPatrolABCD-v0'
+render_mode: 'rgb_array'
+max_episode_length: 500
+use_restricted_observables: true
+
+core_label_factories:
+  # Inserts the configuration of abcd label factories
+  # This setup allows modifying the values of label factories individually while accessing them through this variable
+  - ${env.a_label_factory}
+  - ${env.b_label_factory}
+  - ${env.c_label_factory}
+  - ${env.d_label_factory}
+  - ${env.plant_label_factory}
+
+noise_label_factories:
+  - ${env.coffee_label_factory}
+  - ${env.office_label_factory}
+
+# Variables that can be overriden with Optuna
+overridable:
+  - env.a_label_factory.sensor_true_confidence
+  - env.a_label_factory.sensor_false_confidence
+  - env.b_label_factory.sensor_true_confidence
+  - env.b_label_factory.sensor_false_confidence
+  - env.c_label_factory.sensor_true_confidence
+  - env.c_label_factory.sensor_false_confidence
+  - env.d_label_factory.sensor_true_confidence
+  - env.d_label_factory.sensor_false_confidence
+  - env.plant_label_factory.sensor_true_confidence
+  - env.plant_label_factory.sensor_false_confidence

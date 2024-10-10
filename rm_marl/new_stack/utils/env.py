@@ -15,6 +15,45 @@ GET_PERFECT_RM = "perfect"
 NO_RM = "none"
 
 
+def hydra_env_creator(env_config):
+    def thunk(_env_ctx: EnvContext):
+        curr_id = _env_ctx.worker_index - 1
+
+        # env = gym.make("CartPole-v1")
+        env = gym.make(env_config["name"], render_mode=env_config["render_mode"],
+                       params={"generation": "random", "environment_seed": env_config["seed"] + curr_id,
+                               "hide_state_variables": True})
+        env = NewGymSubgoalAutomataAdapter(env, max_episode_length=250)  # type: ignore
+        # raise RuntimeError(env.observation_space.shape)
+
+        labeling_funs = [label_factory(env) for label_factory in env_config["label_factories"]]
+
+        env = NoisyLabelingFunctionComposer(labeling_funs)
+        env = gym.wrappers.FlattenObservation(env)
+        env = gym.experimental.wrappers.DtypeObservationV0(env, **{"dtype": np.float32})
+        rm = _env_ctx.get("rm", None)
+        if rm is None:
+            rm = RewardMachineAgent.default_rm()
+            env = ProbabilisticRewardShaping(env, shaping_rm=rm)
+            env = RMWrapper(env, rm=rm)
+        elif isinstance(rm, RewardMachine):
+            env = ProbabilisticRewardShaping(env, shaping_rm=rm)
+            env = RMWrapper(env, rm=rm)
+        elif rm == GET_PERFECT_RM:
+            rm = env.get_perfect_rm()
+            env = ProbabilisticRewardShaping(env, shaping_rm=rm)
+            env = RMWrapper(env, rm=rm)
+        elif rm == NO_RM:
+            env = AugmentLabelsWrapper(env)
+        else:
+            raise RuntimeError(f"Unexpected RM provided {rm}")
+
+        # raise RuntimeError(env.observation_space.shape)
+        return env
+
+    return thunk
+
+
 def env_creator(env_id):
     def thunk(_env_ctx: EnvContext):
         curr_id = _env_ctx.worker_index - 1

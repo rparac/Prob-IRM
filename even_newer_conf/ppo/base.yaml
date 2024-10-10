@@ -1,0 +1,60 @@
+train_batch_size_per_learner:
+  best_value: 5120
+
+mini_batch_size_per_learner:
+  options: [64, 128, 256]
+  tune_func: 'choice'
+  best_value: ???
+
+clip_param:
+  options: [0.1, 0.2, 0.3]
+  tune_func: 'choice'
+  best_value: ???
+
+# Value function clipping
+vf_clip_param:
+  options: [5.0, 3.0]
+  tune_func: 'uniform'
+  best_value: ???
+
+kl_target:
+  options: [0.003, 0.3]
+  tune_func: 'loguniform'
+  best_value: ???
+
+kl_coeff:
+  options: [0.3, 1]
+  tune_func: 'uniform'
+  best_value: ???
+
+num_sgd_iter:
+  options: [3, 30]
+  tune_func: 'randint'
+  best_value: ???
+
+lambda_:
+  options: [0.9, 1]
+  tune_func: 'uniform'
+  best_value: ???
+
+vf_loss_coeff:
+  options: [0.5, 1]
+  tune_func: 'uniform'
+  best_value: ???
+
+entropy_coeff:
+  options: [0.0, 0.1]
+  tune_func: 'uniform'
+  best_value: ???
+
+
+grad_clip:
+  best_value: 100.0
+grad_clip_by:
+  best_value: "global_norm"
+
+
+# Hyperparameters setup with a fixed structure so they can be easily parsed
+#  - options: arguments of the tune.tune_func
+#  - tune_func: use tune.tune_func in the tuning loop
+#  - best_value: value to choose if not tuning

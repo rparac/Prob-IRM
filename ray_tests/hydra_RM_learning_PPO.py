@@ -1,0 +1,209 @@
+"""
+Trains a PPO agent with a provided reward machine with a configurable number of agents.
+It doesn't use ray tune to do so, but it looks like it works.
+
+
+How to run this script
+----------------------
+`python [script file name].py --enable-new-api-stack --env [env name e.g. 'ALE/Pong-v5']
+--wandb-key=[your WandB API key] --wandb-project=[some WandB project name]
+--wandb-run-name=[optional: WandB run name within --wandb-project]`
+
+For debugging, use the following additional command line options
+`--no-tune --num-env-runners=0`
+which should allow you to set breakpoints anywhere in the RLlib code and
+have the execution stop there for inspection and debugging.
+
+
+
+There are 2 important hyperparameters that we haven't tuned:
+ - entropy_coeff_schedule
+ - learning_rate_schedule
+They may be needed if we are not getting good enough results
+"""
+import random
+from functools import partial
+
+import gymnasium as gym
+import hydra
+import numpy as np
+from hydra.utils import instantiate
+from omegaconf import DictConfig, OmegaConf
+from ray import tune
+from ray.air.constants import TRAINING_ITERATION
+from ray.rllib.core.rl_module import RLModuleSpec, MultiRLModuleSpec
+from ray.rllib.utils.test_utils import (
+    add_rllib_example_script_args,
+)
+from ray.tune.registry import register_env
+from ray.tune.schedulers import ASHAScheduler
+
+from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
+from rm_marl.new_stack.algos.algo import PPORMConfig, PPORMLearningConfig
+from rm_marl.new_stack.callbacks.callback_composer import CallbackComposer
+from rm_marl.new_stack.callbacks.env_render_callback import EnvRenderCallback
+from rm_marl.new_stack.callbacks.log_original_reward import LogOriginalReward
+from rm_marl.new_stack.callbacks.store_config import StoreTracesCallback
+from rm_marl.new_stack.env.multi_env_with_rm import make_multi_agent_with_rm
+from rm_marl.new_stack.utils.env import env_creator, hydra_env_creator
+from rm_marl.new_stack.utils.hydra import from_hydra_config
+from rm_marl.new_stack.utils.run import custom_run_rllib_example_script_experiment, \
+    simplified_custom_run_rllib_example_script_experiment
+
+
+# Hacky solution. In the ideal world we could just set one value and use $ interpolation for the rest
+# Hydra doesn't support overriding multiple values at once with optuna
+#  We override values that should be overriden with this function
+def _manual_value_override(cfg):
+    if 'manual_overrides' not in cfg:
+        return
+
+    override_values = cfg['manual_overrides']
+
+    for override_value in override_values:
+        if override_value in cfg["env"]["overridable"]:
+            command = f"cfg.{override_value} = {cfg['x']}"
+            exec(command)
+
+
+def create_config(
+        learn_rm=True,
+        render_env=False,
+        num_agents=None,
+        seed=123,
+        should_tune=False,
+        ppo_config=None,
+        algo_config=None,
+        model_config=None,
+):
+    # Slows down process; add back when debugging
+    callbacks = [LogOriginalReward]
+    if render_env:
+        callbacks.append(EnvRenderCallback)
+    if learn_rm:
+        config = PPORMLearningConfig()
+        callbacks.append(StoreTracesCallback)
+    else:
+        config = PPORMConfig()
+
+    config = (
+        config.environment(
+            env="env",
+            env_config={},
+        )
+        .training(
+            **from_hydra_config(algo_config, should_tune),
+        )
+        .training(
+            **from_hydra_config(ppo_config, should_tune),
+        )
+        .env_runners(
+            batch_mode="complete_episodes",
+            # num_env_runners=0, # forces everything to be done on the local worker
+            num_env_runners=num_agents,
+            num_envs_per_env_runner=1,
+            # By default, environments are stepped one at a time
+            # https://docs.ray.io/en/latest/rllib/rllib-env.html
+            # https://docs.ray.io/en/latest/rllib/package_ref/env.html
+            remote_worker_envs=True,
+        )
+        .evaluation(
+            evaluation_interval=5,  # 10,
+            evaluation_duration=1,  # 5
+            # Important: Otherwise the evaluation runs in the main thread, which ruins environment ids
+            evaluation_num_env_runners=num_agents,
+            evaluation_duration_unit="episodes",
+            evaluation_config=PPORMConfig.overrides(
+                entropy_coeff=0.0,
+                explore=False,
+                # env_config={
+                #     "seed": seed,
+                # },
+            ),
+        )
+        .callbacks(
+            partial(CallbackComposer, callbacks),
+        )
+        .debugging(seed=seed, log_level="WARN", logger_config={})  # {"type": tune.logger.NoopLogger})
+    )
+
+    def policy_mapping_fn_(aid, worker, **kwargs):
+        return f"p{aid}"
+
+    policies = {
+        f"p{i}"
+        for i in range(num_agents)
+    }
+    config.multi_agent(
+        policies=policies,
+        policy_mapping_fn=policy_mapping_fn_,
+    )
+
+    module_specs = {
+        f"p{i}": RLModuleSpec()
+        for i in range(num_agents)
+    }
+
+    model_config["fcnet_hiddens"]["options"] = [[layer_size] * n_layers for n_layers in model_config["_num_layers"] for
+                                                layer_size in model_config["_layer_sizes"]]
+
+    config.rl_module(
+        rl_module_spec=MultiRLModuleSpec(module_specs=module_specs),
+        # IMPORTANT: the model config dict needs to be defined here; it gets ignored if defined for individual policies.
+        #   Noticed when resetting workers
+        model_config_dict=from_hydra_config(model_config, should_tune)
+    )
+
+    return config
+
+
+@hydra.main(version_base=None, config_path="../even_newer_conf", config_name="config")
+def run(cfg: DictConfig) -> int:
+    _manual_value_override(cfg)
+
+    run_config = cfg['run']
+    print(run_config)
+
+    np.random.seed(run_config["seed"])
+    random.seed(run_config["seed"])
+
+    env_config = cfg["env"]
+    label_factories = [instantiate(label_factory_conf) for label_factory_conf in env_config["core_label_factories"]]
+
+    if not env_config["use_restricted_observables"]:
+        noisy_label_factories = [instantiate(label_factory_conf) for label_factory_conf in
+                                 env_config["noise_label_factories"]]
+        label_factories.extend(noisy_label_factories)
+    print(env_config)
+    env_config = OmegaConf.to_container(env_config, resolve=True)
+    env_config["label_factories"] = label_factories
+    # TODO: set to 6 for now; change to run_config["seed"] later
+    env_config["seed"] = 6
+    register_env("env", make_multi_agent_with_rm(hydra_env_creator(env_config)))
+
+    # We can only render on wandb; turn on rendering if the key exists
+    render_env = run_config["wandb"]["key"] is not None
+    learn_rm = not run_config["use_perfect_rm"]
+    ppo_config = cfg["ppo"]
+    algo_config = cfg["algo"]
+    model_config = cfg["model"]
+    base_config = create_config(learn_rm=learn_rm, render_env=render_env, num_agents=run_config["num_agents"],
+                                seed=run_config["seed"], should_tune=run_config["should_tune"],
+                                ppo_config=ppo_config, algo_config=algo_config, model_config=model_config)
+
+    stop = {
+        TRAINING_ITERATION: run_config["stop_iters"],
+    }
+
+    scheuduler_conf = run_config["tune_config"]["scheduler"]
+    scheduler = ASHAScheduler(metric=scheuduler_conf["metric"], mode=scheuduler_conf["mode"],
+                              grace_period=min(scheuduler_conf["min_grace_period"], run_config["stop_iters"]),
+                              max_t=run_config["stop_iters"])
+
+    simplified_custom_run_rllib_example_script_experiment(base_config, run_config, stop=stop, scheduler=scheduler)
+
+    return 0
+
+
+if __name__ == "__main__":
+    run()

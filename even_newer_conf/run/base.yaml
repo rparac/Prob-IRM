@@ -1,0 +1,30 @@
+stop_iters: 500
+seed: 123
+
+num_agents: 1
+
+
+use_perfect_rm: True
+use_rs : True
+
+
+# TODO: add checkpoint
+
+should_tune: True
+
+tune_config:
+  num_samples: 10
+  verbose: 2
+  checkpoint_freq: 0
+  checkpoint_at_end: False
+  # TODO: put scheduler method as part of hydra config
+  scheduler:
+    metric: "env_runners/original_episode_return_mean"
+    mode: "max"
+    min_grace_period: 15
+
+wandb:
+  project: "Prob-IRM"
+  run_name: "run"
+  key: None
+

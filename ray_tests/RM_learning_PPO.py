@@ -13,6 +13,13 @@ For debugging, use the following additional command line options
 `--no-tune --num-env-runners=0`
 which should allow you to set breakpoints anywhere in the RLlib code and
 have the execution stop there for inspection and debugging.
+
+
+
+There are 2 important hyperparameters that we haven't tuned:
+ - entropy_coeff_schedule
+ - learning_rate_schedule
+They may be needed if we are not getting good enough results
 """
 from functools import partial
 
