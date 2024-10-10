@@ -116,9 +116,9 @@ def create_config(
             evaluation_config=PPORMConfig.overrides(
                 entropy_coeff=0.0,
                 explore=False,
-                # env_config={
-                #     "seed": seed,
-                # },
+                env_config={
+                    "seed": run_config["seed"],
+                },
             ),
         )
         .callbacks(
@@ -179,11 +179,10 @@ def run(cfg: DictConfig) -> int:
     env_config["label_factories"] = label_factories
     # TODO: set to 6 for now; change to run_config["seed"] later
     env_config["seed"] = 6
+    env_config["num_agents"] = run_config["num_agents"]
     register_env("env", make_multi_agent_with_rm(hydra_env_creator(env_config)))
 
     # We can only render on wandb; turn on rendering if the key exists
-    render_env = run_config["wandb"]["key"] is not None
-    learn_rm = not run_config["use_perfect_rm"]
     ppo_config = cfg["ppo"]
     algo_config = cfg["algo"]
     model_config = cfg["model"]
