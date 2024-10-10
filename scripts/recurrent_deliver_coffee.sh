@@ -20,7 +20,7 @@ for num_agent in "${num_agents[@]}"; do
     # run noise on all three
     python submit_rcs_old_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
      ray_tests/hydra_RM_learning_PPO.py run.num_agents=${num_agent} run.should_tune=False \
-      run.recurrent=True model=recurrent ppo=recurrent +hyperparams/recurrent=config1
+      run.recurrent=True model=recurrent ppo=recurrent +hyperparams/recurrent=config1 \
       +experiment=vanilla_coffee_symmetric_error x=${noise_level}
   done
 done
