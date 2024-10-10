@@ -124,7 +124,7 @@ def create_config(
         .callbacks(
             partial(CallbackComposer, callbacks),
         )
-        .debugging(seed=run_config["seed"], log_level="WARN", logger_config={})  # {"type": tune.logger.NoopLogger})
+        .debugging(seed=run_config["seed"], log_level="WARN", logger_config={"type": tune.logger.NoopLogger})
     )
 
     def policy_mapping_fn_(aid, worker, **kwargs):
