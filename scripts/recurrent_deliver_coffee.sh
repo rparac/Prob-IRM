@@ -13,15 +13,15 @@ nodes=1
 ncpus=64
 ram=128
 
-directory="deliver_coffee"
+directory="recurrent_deliver_coffee"
 for num_agent in "${num_agents[@]}"; do
   for noise_level in "${noise_levels[@]}"; do
     name="${directory}_${num_agent}_${noise_level}"
     # run noise on all three
     python submit_rcs_old_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
      ray_tests/hydra_RM_learning_PPO.py run.num_agents=${num_agent} run.should_tune=False \
-       +hyperparams/with_rm=config1 \
-       +experiment=vanilla_coffee_symmetric_error x=${noise_level}
+      run.recurrent=True model=recurrent ppo=recurrent +hyperparams/recurrent=config1
+      +experiment=vanilla_coffee_symmetric_error x=${noise_level}
   done
 done
 
