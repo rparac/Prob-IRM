@@ -95,7 +95,7 @@ def simplified_custom_run_rllib_example_script_experiment(
 
     # Run the experiment w/o Tune (directly operate on the RLlib Algorithm object).
     # TODO: no_tune doesn't allow us to set the directory where we want the experiment to be stored. Uses ~/
-    if run_args["no_tune"]:
+    if not run_args["should_tune"]:
         algo = config.build()
         for i in range(stop.get(TRAINING_ITERATION)):
             results = algo.train()
