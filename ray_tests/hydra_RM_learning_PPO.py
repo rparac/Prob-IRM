@@ -31,6 +31,7 @@ from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from ray import tune
 from ray.air.constants import TRAINING_ITERATION
+from ray.rllib.algorithms import PPOConfig
 from ray.rllib.core.rl_module import RLModuleSpec, MultiRLModuleSpec
 from ray.rllib.utils.test_utils import (
     add_rllib_example_script_args,
@@ -67,24 +68,23 @@ def _manual_value_override(cfg):
 
 
 def create_config(
-        learn_rm=True,
-        render_env=False,
-        num_agents=None,
-        seed=123,
-        should_tune=False,
+        run_config=None,
         ppo_config=None,
         algo_config=None,
         model_config=None,
 ):
     # Slows down process; add back when debugging
     callbacks = [LogOriginalReward]
-    if render_env:
+    if run_config["wandb"]["key"] is not None:
         callbacks.append(EnvRenderCallback)
-    if learn_rm:
+
+    if run_config["recurrent"]:
+        config = PPOConfig()
+    elif run_config["use_perfect_rm"]:
+        config = PPORMConfig()
+    else:
         config = PPORMLearningConfig()
         callbacks.append(StoreTracesCallback)
-    else:
-        config = PPORMConfig()
 
     config = (
         config.environment(
@@ -92,15 +92,15 @@ def create_config(
             env_config={},
         )
         .training(
-            **from_hydra_config(algo_config, should_tune),
+            **from_hydra_config(algo_config, run_config["should_tune"]),
         )
         .training(
-            **from_hydra_config(ppo_config, should_tune),
+            **from_hydra_config(ppo_config, run_config["should_tune"]),
         )
         .env_runners(
             batch_mode="complete_episodes",
             # num_env_runners=0, # forces everything to be done on the local worker
-            num_env_runners=num_agents,
+            num_env_runners=run_config["num_agents"],
             num_envs_per_env_runner=1,
             # By default, environments are stepped one at a time
             # https://docs.ray.io/en/latest/rllib/rllib-env.html
@@ -111,7 +111,7 @@ def create_config(
             evaluation_interval=5,  # 10,
             evaluation_duration=1,  # 5
             # Important: Otherwise the evaluation runs in the main thread, which ruins environment ids
-            evaluation_num_env_runners=num_agents,
+            evaluation_num_env_runners=run_config["num_agents"],
             evaluation_duration_unit="episodes",
             evaluation_config=PPORMConfig.overrides(
                 entropy_coeff=0.0,
@@ -124,7 +124,7 @@ def create_config(
         .callbacks(
             partial(CallbackComposer, callbacks),
         )
-        .debugging(seed=seed, log_level="WARN", logger_config={})  # {"type": tune.logger.NoopLogger})
+        .debugging(seed=run_config["seed"], log_level="WARN", logger_config={})  # {"type": tune.logger.NoopLogger})
     )
 
     def policy_mapping_fn_(aid, worker, **kwargs):
@@ -132,7 +132,7 @@ def create_config(
 
     policies = {
         f"p{i}"
-        for i in range(num_agents)
+        for i in range(run_config["num_agents"])
     }
     config.multi_agent(
         policies=policies,
@@ -141,7 +141,7 @@ def create_config(
 
     module_specs = {
         f"p{i}": RLModuleSpec()
-        for i in range(num_agents)
+        for i in range(run_config["num_agents"])
     }
 
     model_config["fcnet_hiddens"]["options"] = [[layer_size] * n_layers for n_layers in model_config["_num_layers"] for
@@ -151,7 +151,7 @@ def create_config(
         rl_module_spec=MultiRLModuleSpec(module_specs=module_specs),
         # IMPORTANT: the model config dict needs to be defined here; it gets ignored if defined for individual policies.
         #   Noticed when resetting workers
-        model_config_dict=from_hydra_config(model_config, should_tune)
+        model_config_dict=from_hydra_config(model_config, run_config["should_tune"])
     )
 
     return config
@@ -187,9 +187,7 @@ def run(cfg: DictConfig) -> int:
     ppo_config = cfg["ppo"]
     algo_config = cfg["algo"]
     model_config = cfg["model"]
-    base_config = create_config(learn_rm=learn_rm, render_env=render_env, num_agents=run_config["num_agents"],
-                                seed=run_config["seed"], should_tune=run_config["should_tune"],
-                                ppo_config=ppo_config, algo_config=algo_config, model_config=model_config)
+    base_config = create_config(run_config, ppo_config, algo_config, model_config)
 
     stop = {
         TRAINING_ITERATION: run_config["stop_iters"],

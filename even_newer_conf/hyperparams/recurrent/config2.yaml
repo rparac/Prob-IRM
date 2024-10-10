@@ -1,0 +1,31 @@
+# @package _global_
+
+algo:
+  lr:
+    best_value: 0.0007403021002345106
+model:
+  fcnet_hiddens:
+    best_value: [16]
+  fcnet_activations:
+    best_value: "tanh"
+  lstm_cell_size:
+    best_value: 16
+ppo:
+  mini_batch_size_per_learner:
+    best_value: 300
+  clip_param:
+    best_value: 0.3
+  vf_clip_param:
+    best_value: 12.419610685151124
+  kl_target:
+    best_value: 0.006339601201865822
+  kl_coeff:
+    best_value: 0.8497046951841134
+  num_sgd_iter:
+    best_value: 24
+  lambda_:
+    best_value: 0.9153625931160497
+  vf_loss_coeff:
+    best_value: 0.563657946724748
+  entropy_coeff:
+    best_value: 0.07387258066782439
