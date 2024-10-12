@@ -1,10 +1,13 @@
+from omegaconf import ListConfig
 from ray import tune
 
 
 # Converts from config to a function
 def _to_tune(param):
     if param["tune_func"] == 'choice':
-        return tune.choice(param["options"])
+        # Convert ListConfig (possibly nested) to pure list
+        options = [list(item) if isinstance(item, ListConfig) else item for item in param["options"]]
+        return tune.choice(options)
     if param["tune_func"] == 'uniform':
         return tune.uniform(*param["options"])
     if param["tune_func"] == 'loguniform':
