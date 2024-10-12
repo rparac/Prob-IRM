@@ -3,7 +3,7 @@ _num_layers: [ 1, 2, 4 ]
 
 fcnet_hiddens:
   # Dynamically filled from layer_sizes and num_layers
-  options: None
+  options: null
   tune_func: 'choice'
   best_value: ???
 

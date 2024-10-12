@@ -36,6 +36,7 @@ from ray.rllib.core.rl_module import RLModuleSpec, MultiRLModuleSpec
 from ray.rllib.utils.test_utils import (
     add_rllib_example_script_args,
 )
+from ray.tune.logger import NoopLogger
 from ray.tune.registry import register_env
 from ray.tune.schedulers import ASHAScheduler
 
@@ -124,7 +125,7 @@ def create_config(
         .callbacks(
             partial(CallbackComposer, callbacks),
         )
-        .debugging(seed=run_config["seed"], log_level="WARN", logger_config={"type": tune.logger.NoopLogger})
+        .debugging(seed=run_config["seed"], log_level="WARN", logger_config={"type": NoopLogger})
     )
 
     def policy_mapping_fn_(aid, worker, **kwargs):
