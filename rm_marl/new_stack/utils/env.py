@@ -32,21 +32,23 @@ def hydra_env_creator(env_config):
         env = gym.wrappers.FlattenObservation(env)
         env = gym.experimental.wrappers.DtypeObservationV0(env, **{"dtype": np.float32})
         rm = _env_ctx.get("rm", None)
-        if rm is None:
-            rm = RewardMachineAgent.default_rm()
-            env = ProbabilisticRewardShaping(env, shaping_rm=rm)
-            env = RMWrapper(env, rm=rm)
-        elif isinstance(rm, RewardMachine):
-            env = ProbabilisticRewardShaping(env, shaping_rm=rm)
-            env = RMWrapper(env, rm=rm)
-        elif rm == GET_PERFECT_RM:
-            rm = env.get_perfect_rm()
-            env = ProbabilisticRewardShaping(env, shaping_rm=rm)
-            env = RMWrapper(env, rm=rm)
-        elif rm == NO_RM:
+
+        if rm == NO_RM:
             env = AugmentLabelsWrapper(env)
+            return env
+
+        if rm == GET_PERFECT_RM:
+            rm = env.get_perfect_rm()
+        elif rm is None:
+            rm = RewardMachineAgent.default_rm()
+        elif isinstance(rm, RewardMachine):
+            rm = rm
         else:
             raise RuntimeError(f"Unexpected RM provided {rm}")
+
+        if env_config["use_rs"]:
+            env = ProbabilisticRewardShaping(env, shaping_rm=rm)
+        env = RMWrapper(env, rm=rm)
 
         # raise RuntimeError(env.observation_space.shape)
         return env

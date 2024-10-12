@@ -181,6 +181,8 @@ def run(cfg: DictConfig) -> int:
     # TODO: set to 6 for now; change to run_config["seed"] later
     env_config["seed"] = 6
     env_config["num_agents"] = run_config["num_agents"]
+    # TODO: check if we can move this directly
+    env_config["use_rs"] = run_config["use_rs"]
     register_env("env", make_multi_agent_with_rm(hydra_env_creator(env_config)))
 
     # We can only render on wandb; turn on rendering if the key exists

@@ -6,7 +6,7 @@ num_agents: 1
 
 recurrent: False
 use_perfect_rm: True
-use_rs : True
+use_rs: True
 
 
 # TODO: add checkpoint
