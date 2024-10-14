@@ -36,7 +36,7 @@ class NewProbFFNSLLearner:
     # min_penalty - the penalty threshold for discarding an ILASP example - makes the ILASP task simpler
     """
 
-    def __init__(self, starting_rm, edge_cost=2, n_phi_cost=1, ex_penalty_multiplier=2, min_penalty=2,
+    def __init__(self, starting_rm, actor_name, edge_cost=2, n_phi_cost=1, ex_penalty_multiplier=2, min_penalty=2,
                  cross_entropy_threshold=0.6):
         self.examples = MultiISAExampleContainer(min_penalty)
 
@@ -88,7 +88,7 @@ class NewProbFFNSLLearner:
         # log_id = uuid.uuid4()
         log_id = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        self.log_folder = f'logs/{log_id}'
+        self.log_folder = f'logs/{log_id}-{actor_name}'
         os.makedirs(self.log_folder, exist_ok=True)
 
         random.seed(0)
@@ -245,8 +245,8 @@ class NewProbFFNSLLearner:
 
         condition_satisfied = (
                 self._inf_cross_entropy_recorded or self._rm_cross_entropy_sum / self._num_seen_traces > self.cross_entropy_threshold)
-        # if condition_satisfied:
-        #     breakpoint()
+        if condition_satisfied:
+            print(self._inf_cross_entropy_recorded, self._rm_cross_entropy_sum / self._num_seen_traces)
         return condition_satisfied
 
     def _update_trace_counters(self, curr_rm, curr_state, trace):
@@ -271,6 +271,7 @@ class NewProbFFNSLLearner:
         # Check if cross entropy should be infinity.
         # We make the loss extremely large to always trigger relearning
         if np.isclose(pred_vec[np.argmax(true_vec)], 0):
+            # print(f"Inf cross entropy recorded: pred vec is {pred_vec}, while {true_vec}, {curr_state}, {trace.trace}")
             self._inf_cross_entropy_recorded = True
         loss_val = log_loss(true_vec, pred_vec)
         self._rm_cross_entropy_sum += loss_val

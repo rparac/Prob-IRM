@@ -64,10 +64,11 @@ class NewGymSubgoalAutomataAdapter(gym.Wrapper):
         if 'n' in info['observations']:
             reward = -1
 
-        if self.max_episode_length and self.current_step >= self.max_episode_length:
+        if self.max_episode_length and self.current_step >= self.max_episode_length and not terminated:
             truncated = True
 
         info["is_positive_trace"] = reward > 0
+
         return obs, reward, terminated, truncated, info
 
     def render(self, **kwargs):

@@ -65,7 +65,9 @@ class PPORMLearning(PPO):
         self.config.callbacks_class = partial(self.config.callbacks_class, **kwargs)
         self.config._is_frozen = True
 
-        self._rm_learner = NewProbFFNSLLearner.options(name=actor_name).remote(rm)  # type: ignore
+        self._rm_learner = NewProbFFNSLLearner.options(name=actor_name).remote(rm, actor_name)  # type: ignore
+        print(actor_name)
+        # raise RuntimeError(actor_name)
         super().setup(config)
 
     @classmethod
@@ -135,12 +137,20 @@ class PPORMLearning(PPO):
         def _update_config(w):
             w.config._is_frozen = False
             w.config._rl_module_spec = None
-            rl_module_spec = w.config.get_marl_module_spec(
+            # Apply the same observation space to every agent
+            rl_module_spec = w.config.get_multi_rl_module_spec(
                 spaces={
-                    f"p{pid}": (obs_spaces[pid], act_spaces[pid])
-                    for pid in obs_spaces
+                    f"p{pid}": (obs_spaces[0], act_spaces[0])
+                    for pid in range(w.config.num_env_runners)
                 }
+
             )
+            # rl_module_spec = w.config.get_marl_module_spec(
+            #     spaces={
+            #         f"p{pid}": (obs_spaces[pid], act_spaces[pid])
+            #         for pid in obs_spaces
+            #     }
+            # )
             w.config.rl_module(
                 rl_module_spec=rl_module_spec
             )
@@ -154,10 +164,11 @@ class PPORMLearning(PPO):
             w._cached_to_module = None
 
             w.make_env()
-            w.module = w.config.get_marl_module_spec(
+
+            w.module = w.config.get_multi_rl_module_spec(
                 spaces={
-                    f"p{pid}": (obs_spaces[pid], act_spaces[pid])
-                    for pid in obs_spaces
+                    f"p{pid}": (obs_spaces[0], act_spaces[0])
+                    for pid in range(w.config.num_env_runners)
                 }
             ).build()
             w._module_to_env = w.config.build_module_to_env_connector(w.env)

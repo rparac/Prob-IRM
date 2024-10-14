@@ -39,6 +39,7 @@ class StoreTracesCallback(DefaultCallbacks):
         # We assume these are multi agent episodes
         for sa_episode in ConnectorV2.single_agent_episode_iterator([episode]):
             t = TraceTracker()
+            # Should use is_truncated since is_terminated doesn't work well with a multi-agent adapter
             is_complete = not sa_episode.is_truncated and sa_episode.is_done
             is_positive = sa_episode.get_return() > 0
 

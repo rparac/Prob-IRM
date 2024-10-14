@@ -86,7 +86,7 @@ def simplified_custom_run_rllib_example_script_experiment(
     config.learners(
         num_learners=0,
         num_gpus_per_learner=(
-            1
+            0
             if torch and torch.cuda.is_available()
             else 0
         ),
