@@ -24,33 +24,25 @@ They may be needed if we are not getting good enough results
 import random
 from functools import partial
 
-import gymnasium as gym
 import hydra
 import numpy as np
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
-from ray import tune
 from ray.air.constants import TRAINING_ITERATION
 from ray.rllib.algorithms import PPOConfig
 from ray.rllib.core.rl_module import RLModuleSpec, MultiRLModuleSpec
-from ray.rllib.utils.test_utils import (
-    add_rllib_example_script_args,
-)
-from ray.tune.logger import NoopLogger
 from ray.tune.registry import register_env
 from ray.tune.schedulers import ASHAScheduler
 
-from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
 from rm_marl.new_stack.algos.algo import PPORMConfig, PPORMLearningConfig
 from rm_marl.new_stack.callbacks.callback_composer import CallbackComposer
 from rm_marl.new_stack.callbacks.env_render_callback import EnvRenderCallback
 from rm_marl.new_stack.callbacks.log_original_reward import LogOriginalReward
 from rm_marl.new_stack.callbacks.store_config import StoreTracesCallback
 from rm_marl.new_stack.env.multi_env_with_rm import make_multi_agent_with_rm
-from rm_marl.new_stack.utils.env import env_creator, hydra_env_creator
+from rm_marl.new_stack.utils.env import hydra_env_creator
 from rm_marl.new_stack.utils.hydra import from_hydra_config
-from rm_marl.new_stack.utils.run import custom_run_rllib_example_script_experiment, \
-    simplified_custom_run_rllib_example_script_experiment
+from rm_marl.new_stack.utils.run import simplified_custom_run_rllib_example_script_experiment
 
 
 # Hacky solution. In the ideal world we could just set one value and use $ interpolation for the rest
@@ -90,7 +82,9 @@ def create_config(
     config = (
         config.environment(
             env="env",
-            env_config={},
+            env_config={
+                "num_agents": run_config["num_agents"],
+            },
         )
         .training(
             **from_hydra_config(algo_config, run_config["should_tune"]),
@@ -125,7 +119,7 @@ def create_config(
         .callbacks(
             partial(CallbackComposer, callbacks),
         )
-        .debugging(seed=run_config["seed"], log_level="WARN", logger_config={"type": NoopLogger})
+        .debugging(seed=run_config["seed"], log_level="WARN")
     )
 
     def policy_mapping_fn_(aid, worker, **kwargs):
@@ -180,7 +174,6 @@ def run(cfg: DictConfig) -> int:
     env_config["label_factories"] = label_factories
     # TODO: set to 6 for now; change to run_config["seed"] later
     env_config["seed"] = 5 # 6
-    env_config["num_agents"] = run_config["num_agents"]
     # TODO: check if we can move this directly
     env_config["use_rs"] = run_config["use_rs"]
     register_env("env", make_multi_agent_with_rm(hydra_env_creator(env_config)))
