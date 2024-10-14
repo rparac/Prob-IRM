@@ -41,7 +41,11 @@ class StoreTracesCallback(DefaultCallbacks):
             t = TraceTracker()
             # Should use is_truncated since is_terminated doesn't work well with a multi-agent adapter
             is_complete = not sa_episode.is_truncated and sa_episode.is_done
-            is_positive = sa_episode.get_return() > 0
+
+            last_info = sa_episode.get_infos(-1)
+            # Prefer original reward if reward shaping is active
+            ret = last_info["original_reward"] if hasattr(last_info, "original_reward") else sa_episode.get_return()
+            is_positive = ret > 0
 
             # TODO: the starting position is ignored in the orignal pipeline;
             #  need to check if that is okay
