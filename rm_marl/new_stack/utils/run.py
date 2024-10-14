@@ -28,6 +28,7 @@ from ray.rllib.utils.metrics import (
 from ray.rllib.utils.test_utils import add_rllib_example_script_args
 from ray.rllib.utils.typing import ResultDict
 from ray.tune import CLIReporter
+from ray.tune.logger import NoopLogger
 
 if TYPE_CHECKING:
     from ray.rllib.algorithms import Algorithm, AlgorithmConfig
@@ -127,6 +128,9 @@ def simplified_custom_run_rllib_example_script_experiment(
         return results
 
     # Run the experiment using Ray Tune.
+
+    # Turn off logger here; tuner turns the ones needed automatically
+    config.debugging(logger_config={"type": NoopLogger})
 
     # Log results using WandB.
     tune_callbacks = []

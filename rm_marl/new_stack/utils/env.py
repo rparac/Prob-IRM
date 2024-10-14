@@ -47,7 +47,7 @@ def hydra_env_creator(env_config):
             raise RuntimeError(f"Unexpected RM provided {rm}")
 
         if env_config["use_rs"]:
-            env = ProbabilisticRewardShaping(env, shaping_rm=rm)
+            env = ProbabilisticRewardShaping(env, shaping_rm=rm, discount_factor=1)
         env = RMWrapper(env, rm=rm)
 
         # raise RuntimeError(env.observation_space.shape)
