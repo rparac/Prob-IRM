@@ -173,7 +173,7 @@ def run(cfg: DictConfig) -> int:
     env_config = OmegaConf.to_container(env_config, resolve=True)
     env_config["label_factories"] = label_factories
     # TODO: set to 6 for now; change to run_config["seed"] later
-    env_config["seed"] = 5 # 6
+    env_config["seed"] = run_config["seed"]
     # TODO: check if we can move this directly
     env_config["use_rs"] = run_config["use_rs"]
     register_env("env", make_multi_agent_with_rm(hydra_env_creator(env_config)))
