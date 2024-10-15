@@ -38,6 +38,7 @@ from rm_marl.new_stack.algos.algo import PPORMConfig, PPORMLearningConfig
 from rm_marl.new_stack.callbacks.callback_composer import CallbackComposer
 from rm_marl.new_stack.callbacks.env_render_callback import EnvRenderCallback
 from rm_marl.new_stack.callbacks.log_original_reward import LogOriginalReward
+from rm_marl.new_stack.callbacks.log_rm_learning import LogRMLearning
 from rm_marl.new_stack.callbacks.store_config import StoreTracesCallback
 from rm_marl.new_stack.env.multi_env_with_rm import make_multi_agent_with_rm
 from rm_marl.new_stack.utils.env import hydra_env_creator
@@ -78,6 +79,7 @@ def create_config(
     else:
         config = PPORMLearningConfig()
         callbacks.append(StoreTracesCallback)
+        callbacks.append(LogRMLearning)
 
     config = (
         config.environment(
@@ -117,7 +119,7 @@ def create_config(
             ),
         )
         .callbacks(
-            partial(CallbackComposer, callbacks),
+            partial(CallbackComposer, callbacks, stop_iters=run_config["stop_iters"]),
         )
         .debugging(seed=run_config["seed"], log_level="WARN")
     )

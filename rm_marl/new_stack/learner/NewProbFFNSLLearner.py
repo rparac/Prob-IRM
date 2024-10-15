@@ -88,10 +88,13 @@ class NewProbFFNSLLearner:
         # log_id = uuid.uuid4()
         log_id = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        self.log_folder = f'logs/{log_id}-{actor_name}'
-        os.makedirs(self.log_folder, exist_ok=True)
+        self._log_folder = f'{os.getcwd()}/logs/{log_id}-{actor_name}'
+        os.makedirs(self._log_folder, exist_ok=True)
 
         random.seed(0)
+
+    def log_folder(self):
+        return self._log_folder
 
     def get_rm(self):
         return self.curr_rm
@@ -152,10 +155,10 @@ class NewProbFFNSLLearner:
             self._seen_incomplete_traces)
 
         ilasp_task_filename = os.path.join(
-            self.log_folder, f"task_{self.rm_learning_counter}"
+            self._log_folder, f"task_{self.rm_learning_counter}"
         )
         ilasp_solution_filename = os.path.join(
-            self.log_folder, f"solution_{self.rm_learning_counter}"
+            self._log_folder, f"solution_{self.rm_learning_counter}"
         )
 
         self._generate_ilasp_task(ilasp_task_filename)
@@ -172,9 +175,9 @@ class NewProbFFNSLLearner:
                     candidate_rm.set_urej("u_rej")
 
                 # TODO: abstract example file name away
-                new_sol_penalty = get_ilasp_solution_penalty(self.log_folder, ilasp_solution_filename,
+                new_sol_penalty = get_ilasp_solution_penalty(self._log_folder, ilasp_solution_filename,
                                                              f"{ilasp_task_filename}_examples")
-                old_sol_penalty = get_ilasp_solution_penalty(self.log_folder, self._curr_ilasp_solution_filename,
+                old_sol_penalty = get_ilasp_solution_penalty(self._log_folder, self._curr_ilasp_solution_filename,
                                                              f"{ilasp_task_filename}_examples")
 
                 # If the RMs are equal or they are equally good for the current task
@@ -186,7 +189,7 @@ class NewProbFFNSLLearner:
                 self.min_rm_num_episodes *= 2
 
                 rm_plot_filename = os.path.join(
-                    self.log_folder, f"plot_{self.rm_learning_counter}"
+                    self._log_folder, f"plot_{self.rm_learning_counter}"
                 )
                 candidate_rm.plot(rm_plot_filename)
                 self._curr_ilasp_solution_filename = ilasp_solution_filename
@@ -225,7 +228,7 @@ class NewProbFFNSLLearner:
             goal_ex,  # self.goal_examples.generate_goal_dend_inc(total_ex_sum),
             dend_ex,  # self.dend_examples.generate_goal_dend_inc(total_ex_sum),
             inc_ex,  # self.inc_examples.generate_goal_dend_inc(total_ex_sum),
-            self.log_folder,
+            self._log_folder,
             ilasp_task_filename,
             symmetry_breaking_method="bfs-alternative",
             max_disj_size=1,
@@ -297,8 +300,8 @@ class NewProbFFNSLLearner:
     def get_statistics(self):
         avg_cross_entropy = self._rm_cross_entropy_sum / self._num_seen_traces if self._num_seen_traces > 0 else 0
         return {
-            "ProbFFNSL/cross_entropy": avg_cross_entropy,
-            "ProbFFNSL/last_relearning_trace_num": self.last_relearning_trace_num,
+            "cross_entropy": avg_cross_entropy,
+            "last_relearning_trace_num": self.last_relearning_trace_num,
         }
 
     # TODO: remove duplicatios
