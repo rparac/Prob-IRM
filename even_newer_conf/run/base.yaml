@@ -14,7 +14,7 @@ use_rs: True
 should_tune: True
 
 tune_config:
-  num_samples: 10
+  num_samples: 1
   verbose: 2
   checkpoint_freq: 0
   checkpoint_at_end: False

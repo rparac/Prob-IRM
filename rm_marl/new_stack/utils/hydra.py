@@ -16,16 +16,16 @@ def _to_tune(param):
         return tune.randint(*param["options"])
 
 
-def from_hydra_config(conf, should_tune):
+def from_hydra_config(conf):
     new_config = {}
     for k, v in conf.items():
         # Ignore helper keys
         if k.startswith('_'):
             continue
 
-        if should_tune and hasattr(v, 'tune_func'):
-            new_config[k] = _to_tune(v)
-        else:
+        if v.best_value is not None:
             new_config[k] = v.best_value
+        else:
+            new_config[k] = _to_tune(v)
 
     return new_config

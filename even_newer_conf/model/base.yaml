@@ -5,13 +5,13 @@ fcnet_hiddens:
   # Dynamically filled from layer_sizes and num_layers
   options: null
   tune_func: 'choice'
-  best_value: ???
+  best_value: null
 
 fcnet_activations:
   # every architecture, i.e. [[layer_size] * n_layers for n_layers in num_layers for layer_size in layer_sizes]
   options: [ 'relu', 'tanh', 'elu' ]
   tune_func: 'choice'
-  best_value: ???
+  best_value: null
 
 # Hyperparameters setup with a fixed structure so they can be easily parsed
 #  - options: arguments of the tune.tune_func

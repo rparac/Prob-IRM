@@ -1,7 +1,7 @@
 lr:
   options: [1e-5, 1e-3]
   tune_func: 'loguniform'
-  best_value: ???
+  best_value: null
 
 gamma:
   best_value: 0.99

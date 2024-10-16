@@ -93,10 +93,10 @@ def create_config(
             },
         )
         .training(
-            **from_hydra_config(algo_config, run_config["should_tune"]),
+            **from_hydra_config(algo_config),
         )
         .training(
-            **from_hydra_config(ppo_config, run_config["should_tune"]),
+            **from_hydra_config(ppo_config),
         )
         .env_runners(
             batch_mode="complete_episodes",
@@ -155,7 +155,7 @@ def create_config(
         rl_module_spec=MultiRLModuleSpec(module_specs=module_specs),
         # IMPORTANT: the model config dict needs to be defined here; it gets ignored if defined for individual policies.
         #   Noticed when resetting workers
-        model_config_dict=from_hydra_config(model_config, run_config["should_tune"])
+        model_config_dict=from_hydra_config(model_config)
     )
 
     return config

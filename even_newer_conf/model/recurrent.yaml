@@ -7,4 +7,4 @@ use_lstm:
 lstm_cell_size:
   options: [ 8, 16, 32 ]
   tune_func: 'choice'
-  best_value: ???
+  best_value: null
