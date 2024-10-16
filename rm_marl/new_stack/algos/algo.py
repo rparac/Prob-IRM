@@ -138,10 +138,11 @@ class PPORMLearning(PPO):
             w.config._is_frozen = False
             w.config._rl_module_spec = None
             # Apply the same observation space to every agent
+            num_agents = w.config.env_config['num_agents']
             rl_module_spec = w.config.get_multi_rl_module_spec(
                 spaces={
                     f"p{pid}": (obs_spaces[0], act_spaces[0])
-                    for pid in range(w.config.num_env_runners)
+                    for pid in range(num_agents)
                 }
 
             )
@@ -165,10 +166,11 @@ class PPORMLearning(PPO):
 
             w.make_env()
 
+            num_agents = w.config.env_config['num_agents']
             w.module = w.config.get_multi_rl_module_spec(
                 spaces={
                     f"p{pid}": (obs_spaces[0], act_spaces[0])
-                    for pid in range(w.config.num_env_runners)
+                    for pid in range(num_agents)
                 }
             ).build()
             w._module_to_env = w.config.build_module_to_env_connector(w.env)
