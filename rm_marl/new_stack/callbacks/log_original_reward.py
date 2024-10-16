@@ -38,7 +38,7 @@ class LogOriginalReward(DefaultCallbacks):
     ) -> None:
         single_agent_rewards = []
         for i, sa_episode in enumerate(
-                ConnectorV2.single_agent_episode_iterator([episode])):
+                ConnectorV2.single_agent_episode_iterator([episode], agents_that_stepped_only=False)):
             original_reward = 0
             for info in sa_episode.get_infos()[1:]:
                 # No need to report if reward shaping is not used
