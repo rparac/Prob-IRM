@@ -17,25 +17,6 @@ class LogRMLearning(DefaultCallbacks):
         self._stop_iters = stop_iters
         self._iters_done = 0
 
-    def on_sample_end(
-            self,
-            *,
-            env_runner: Optional["EnvRunner"] = None,
-            metrics_logger: Optional[MetricsLogger] = None,
-            samples: Union[SampleBatch, List[EpisodeType]],
-            # TODO (sven): Deprecate these args.
-            worker: Optional["EnvRunner"] = None,
-            **kwargs,
-    ) -> None:
-        # raise RuntimeError(self._rm_learner)
-        stats = ray.get(self._rm_learner.get_statistics.remote())
-
-        for k, v in stats.items():
-            metrics_logger.log_value(
-                f"rm_learner/{k}",
-                value=v,
-            )
-
     def on_train_result(
             self,
             *,
@@ -49,6 +30,21 @@ class LogRMLearning(DefaultCallbacks):
         We manually track the number of iterations to log at the end of training.
         """
 
+        self._record_rm_learning_metrics(metrics_logger)
+        self._plot_reward_machines(metrics_logger)
+
+    def _record_rm_learning_metrics(self, metrics_logger: Optional[MetricsLogger]) -> None:
+        stats = ray.get(self._rm_learner.get_statistics.remote())
+
+        for k, v in stats.items():
+            metrics_logger.log_value(
+                f"rm_learner/{k}",
+                value=v,
+                reduce='max',
+                clear_on_reduce=True,
+            )
+
+    def _plot_reward_machines(self, metrics_logger: Optional[MetricsLogger]) -> None:
         self._iters_done += 1
         # Need to do it one iteration before the end as tensorboard doesn't get called otherwise
         if self._iters_done != self._stop_iters - 1:
