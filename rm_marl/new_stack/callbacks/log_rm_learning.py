@@ -55,23 +55,16 @@ class LogRMLearning(DefaultCallbacks):
             return
 
         log_dir = str(ray.get(self._rm_learner.log_folder.remote()))
-        if os.path.exists(log_dir):
-            print("exists")
-        print(log_dir)
-        print([f for f in os.scandir(log_dir)])
 
         rm_plot_entries: List[os.DirEntry] = [
             f for f in os.scandir(log_dir)
             if f.name.startswith('plot_') and f.name.endswith('.pdf')
         ]
-        print(rm_plot_entries)
 
         sorted_plot_entries = sorted(
             rm_plot_entries,
             key=lambda entry: int(entry.name.removeprefix("plot_").removesuffix(".pdf"))
         )
-
-        print(sorted_plot_entries)
 
         for i, rm_plot_entry in enumerate(sorted_plot_entries):
             plot_image = read_pdf_image(rm_plot_entry.path)[0]
