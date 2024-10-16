@@ -17,7 +17,9 @@ NO_RM = "none"
 
 def hydra_env_creator(env_config):
     def thunk(_env_ctx: EnvContext):
-        curr_id = _env_ctx.worker_index - 1
+        # curr_id = _env_ctx.worker_index - 1
+        # curr_id = _env_ctx.vector_index
+        curr_id = _env_ctx["curr_id"]
 
         # env = gym.make("CartPole-v1")
         env = gym.make(env_config["name"], render_mode=env_config["render_mode"],

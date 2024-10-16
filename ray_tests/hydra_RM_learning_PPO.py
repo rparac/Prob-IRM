@@ -97,7 +97,8 @@ def create_config(
         .env_runners(
             batch_mode="complete_episodes",
             # num_env_runners=0, # forces everything to be done on the local worker
-            num_env_runners=run_config["num_agents"],
+            # num_env_runners= run_config["num_agents"],
+            num_env_runners=1, # run_config["num_agents"],
             num_envs_per_env_runner=1,
             # By default, environments are stepped one at a time
             # https://docs.ray.io/en/latest/rllib/rllib-env.html
@@ -108,7 +109,8 @@ def create_config(
             evaluation_interval=5,  # 10,
             evaluation_duration=1,  # 5
             # Important: Otherwise the evaluation runs in the main thread, which ruins environment ids
-            evaluation_num_env_runners=run_config["num_agents"],
+            # evaluation_num_env_runners=run_config["num_agents"],
+            evaluation_num_env_runners=1,
             evaluation_duration_unit="episodes",
             evaluation_config=PPORMConfig.overrides(
                 entropy_coeff=0.0,
@@ -124,7 +126,7 @@ def create_config(
         .debugging(seed=run_config["seed"], log_level="WARN")
     )
 
-    def policy_mapping_fn_(aid, worker, **kwargs):
+    def policy_mapping_fn_(aid, episode, **kwargs):
         return f"p{aid}"
 
     policies = {
@@ -134,6 +136,7 @@ def create_config(
     config.multi_agent(
         policies=policies,
         policy_mapping_fn=policy_mapping_fn_,
+        # Check if policy_states_are_swappable should be true
     )
 
     module_specs = {
@@ -179,6 +182,7 @@ def run(cfg: DictConfig) -> int:
     # TODO: check if we can move this directly
     env_config["use_rs"] = run_config["use_rs"]
     register_env("env", make_multi_agent_with_rm(hydra_env_creator(env_config)))
+    # register_env("env", hydra_env_creator(env_config))
 
     # We can only render on wandb; turn on rendering if the key exists
     ppo_config = cfg["ppo"]

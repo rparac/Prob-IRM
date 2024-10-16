@@ -11,13 +11,13 @@ from ray.rllib.utils.typing import EnvCreator
 from rm_marl.reward_machine import RewardMachine
 
 
-# heavily based on make_multi_agent
 def make_multi_agent_with_rm(
         env_name_or_creator: Union[str, EnvCreator],
 ) -> Type["MultiAgentEnv"]:
     class MultiEnv(MultiAgentEnv):
         def __init__(self, config: EnvContext = None):
             MultiAgentEnv.__init__(self)
+
             # Note(jungong) : explicitly check for None here, because config
             # can have an empty dict but meaningful data fields (worker_index,
             # vector_index) etc.
@@ -30,7 +30,11 @@ def make_multi_agent_with_rm(
             if isinstance(env_name_or_creator, str):
                 self.envs = [gym.make(env_name_or_creator) for _ in range(num)]
             else:
-                self.envs = [env_name_or_creator(config) for _ in range(num)]
+                self.envs = []
+                for i in range(num):
+                    config["curr_id"] = i
+                    self.envs.append(env_name_or_creator(config))
+                # self.envs = [env_name_or_creator(config) for _ in range(num)]
             self.terminateds = set()
             self.truncateds = set()
             self.observation_space = self._build_observation_space()
