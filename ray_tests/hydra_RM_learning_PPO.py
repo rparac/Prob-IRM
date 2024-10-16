@@ -66,6 +66,7 @@ def create_config(
         ppo_config=None,
         algo_config=None,
         model_config=None,
+        rm_learner_config=None,
 ):
     # Slows down process; add back when debugging
     callbacks = [LogOriginalReward]
@@ -80,6 +81,9 @@ def create_config(
         config = PPORMLearningConfig()
         callbacks.append(StoreTracesCallback)
         callbacks.append(LogRMLearning)
+        config.rm_learner(
+            **rm_learner_config,
+        )
 
     config = (
         config.environment(
@@ -188,7 +192,8 @@ def run(cfg: DictConfig) -> int:
     ppo_config = cfg["ppo"]
     algo_config = cfg["algo"]
     model_config = cfg["model"]
-    base_config = create_config(run_config, ppo_config, algo_config, model_config)
+    rm_learner_config = cfg["rm_learner"]
+    base_config = create_config(run_config, ppo_config, algo_config, model_config, rm_learner_config)
 
     stop = {
         TRAINING_ITERATION: run_config["stop_iters"],

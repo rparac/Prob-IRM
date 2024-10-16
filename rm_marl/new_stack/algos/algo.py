@@ -48,11 +48,38 @@ tune.register_trainable("PPORM", PPORM)
 class PPORMLearningConfig(PPOConfig):
     def __init__(self, algo_class=None):
         self._actor_name = None
+
+        # RM learner params
+        self.rm_learner_params = {
+            "edge_cost": 2,
+            "n_phi_cost": 2,
+            "ex_penalty_multiplier": 1,
+            "min_penalty": 1,
+            "cross_entropy_threshold": 0.5,
+        }
+
         super().__init__(algo_class or PPORMLearning)
 
     def actor_name(self, actor_name: str):
         self._actor_name = actor_name
         return self
+
+    def rm_learner(self,
+                   edge_cost=NotProvided,
+                   n_phi_cost=NotProvided,
+                   ex_penalty_multiplier=NotProvided,
+                   min_penalty=NotProvided,
+                   cross_entropy_threshold=NotProvided):
+        if edge_cost is not NotProvided:
+            self.rm_learner_params["edge_cost"] = edge_cost
+        if n_phi_cost is not NotProvided:
+            self.rm_learner_params["n_phi_cost"] = n_phi_cost
+        if ex_penalty_multiplier is not NotProvided:
+            self.rm_learner_params["ex_penalty_multiplier"] = ex_penalty_multiplier
+        if min_penalty is not NotProvided:
+            self.rm_learner_params["min_penalty"] = min_penalty
+        if cross_entropy_threshold is not NotProvided:
+            self.rm_learner_params["cross_entropy_threshold"] = cross_entropy_threshold
 
 
 class PPORMLearning(PPO):
@@ -65,7 +92,8 @@ class PPORMLearning(PPO):
         self.config.callbacks_class = partial(self.config.callbacks_class, **kwargs)
         self.config._is_frozen = True
 
-        self._rm_learner = NewProbFFNSLLearner.options(name=actor_name).remote(rm, actor_name)  # type: ignore
+        self._rm_learner = (NewProbFFNSLLearner.options(name=actor_name)  # type: ignore
+                            .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
         print(actor_name)
         # raise RuntimeError(actor_name)
         super().setup(config)
