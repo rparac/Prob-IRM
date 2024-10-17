@@ -19,8 +19,8 @@ for num_agent in "${num_agents[@]}"; do
     name="${directory}_${num_agent}_${noise_level}"
     # run noise on all three
     python submit_rcs_old_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
-     ray_tests/hydra_RM_learning_PPO.py run.num_agents=${num_agent} run.should_tune=False \
-       +hyperparams/with_rm=config1 \
+     ray_tests/hydra_RM_learning_PPO.py run.num_agents=${num_agent} run.should_tune=False run.num_env_runners=40 \
+       +hyperparams/with_rm=config4 \
        +experiment=vanilla_coffee_symmetric_error x=${noise_level}
   done
 done
