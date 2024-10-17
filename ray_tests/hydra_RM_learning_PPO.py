@@ -102,12 +102,13 @@ def create_config(
             batch_mode="complete_episodes",
             # num_env_runners=0, # forces everything to be done on the local worker
             # num_env_runners= run_config["num_agents"],
-            num_env_runners=1, # run_config["num_agents"],
+            num_env_runners=run_config["num_env_runners"],
             num_envs_per_env_runner=1,
             # By default, environments are stepped one at a time
             # https://docs.ray.io/en/latest/rllib/rllib-env.html
             # https://docs.ray.io/en/latest/rllib/package_ref/env.html
-            remote_worker_envs=True,
+            # Doesn't make a lot of difference; seems like it's not used tbf
+            # remote_worker_envs=False,
         )
         .evaluation(
             evaluation_interval=5,  # 10,

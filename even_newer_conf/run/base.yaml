@@ -3,6 +3,7 @@ seed: 123
 
 num_agents: 1
 
+num_env_runners: 1
 
 recurrent: False
 use_perfect_rm: True
