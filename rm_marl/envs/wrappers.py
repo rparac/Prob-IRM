@@ -17,7 +17,8 @@ from ..rm_transition.prob_rm_transitioner import ProbRMTransitioner
 # Important: This class needs to be the last one used. This also includes the RecordEpisodeStatisticsWrapper
 class ProbabilisticRewardShaping(gym.Wrapper):
 
-    def __init__(self, env, shaping_rm: RewardMachine, discount_factor: float = 0.99):
+    def __init__(self, env, shaping_rm: RewardMachine, discount_factor: float = 0.99,
+                 dist_fn: str = 'max'):
         super().__init__(env)
 
         self._discount_factor = discount_factor
@@ -25,6 +26,8 @@ class ProbabilisticRewardShaping(gym.Wrapper):
         self._rm = None
         self._rm_transitioner = None
         self._rm_state_belief = None
+
+        self._dist_fn = dist_fn
 
         self.set_shaping_rm(shaping_rm)
 
@@ -70,7 +73,7 @@ class ProbabilisticRewardShaping(gym.Wrapper):
 
     def set_shaping_rm(self, shaping_rm):
         self._rm = shaping_rm
-        self._rm.compute_state_pontentials()
+        self._rm.compute_state_pontentials(self._dist_fn)
 
         self._rm_transitioner = ProbRMTransitioner(self._rm)
         self._rm_state_belief = None
