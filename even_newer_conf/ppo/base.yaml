@@ -12,10 +12,10 @@ clip_param:
   best_value: null
 
 # Value function clipping
-vf_clip_param:
-  options: [5.0, 3.0]
-  tune_func: 'uniform'
-  best_value: null
+#vf_clip_param:
+#  options: [5.0, 3.0]
+#  tune_func: 'uniform'
+#  best_value: null
 
 kl_target:
   options: [0.003, 0.3]
