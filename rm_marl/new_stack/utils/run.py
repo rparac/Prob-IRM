@@ -96,6 +96,7 @@ def simplified_custom_run_rllib_example_script_experiment(
 
     # Run the experiment w/o Tune (directly operate on the RLlib Algorithm object).
     # TODO: no_tune doesn't allow us to set the directory where we want the experiment to be stored. Uses ~/
+    #   Also doesn't allow the use of run_config['name']
     if not run_args["should_tune"]:
         algo = config.build()
         for i in range(stop.get(TRAINING_ITERATION)):
@@ -171,6 +172,8 @@ def simplified_custom_run_rllib_example_script_experiment(
     # Run the actual experiment (using Tune).
     start_time = time.time()
     storage_dir = str(os.environ["RAY_RESULTS_DIR"])
+    # Set the storage path to understand which experiment is running
+    storage_dir = f"{storage_dir}/{run_args['name']}"
 
     tune_args = run_args["tune_config"]
 

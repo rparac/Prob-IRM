@@ -2,6 +2,7 @@ stop_iters: 500
 seed: 123
 
 num_agents: 1
+name: "Custom-PPO"
 
 num_env_runners: 1
 
