@@ -29,9 +29,3 @@ ppo:
     best_value: 0.5
   clip_param:
     best_value: 0.2
-
-  # No Andrew Parameters
-  kl_target:
-    best_value: 0.010320099158613536
-  kl_coeff:
-    best_value: 0.619723541800079

@@ -17,15 +17,19 @@ clip_param:
 #  tune_func: 'uniform'
 #  best_value: null
 
-kl_target:
-  options: [0.003, 0.3]
-  tune_func: 'loguniform'
-  best_value: null
+# We use PPO-Clip version of the algorithm
+use_kl_loss:
+  best_value: False
 
-kl_coeff:
-  options: [0.3, 1]
-  tune_func: 'uniform'
-  best_value: null
+#kl_target:
+#  options: [0.003, 0.3]
+#  tune_func: 'loguniform'
+#  best_value: null
+#
+#kl_coeff:
+#  options: [0.3, 1]
+#  tune_func: 'uniform'
+#  best_value: null
 
 num_sgd_iter:
   options: [3, 30]
