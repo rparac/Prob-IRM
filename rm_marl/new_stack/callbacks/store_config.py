@@ -44,7 +44,7 @@ class StoreTracesCallback(DefaultCallbacks):
 
             last_info = sa_episode.get_infos(-1)
             # Prefer original reward if reward shaping is active
-            ret = last_info["original_reward"] if hasattr(last_info, "original_reward") else sa_episode.get_return()
+            ret = last_info["original_reward"] if "original_reward" in last_info else sa_episode.get_return()
             is_positive = ret > 0
 
             # TODO: the starting position is ignored in the orignal pipeline;

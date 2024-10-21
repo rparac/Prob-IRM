@@ -134,7 +134,7 @@ class NewProbFFNSLLearner:
 
         examples, ex_type = self.create_examples_from(trace)
         # breakpoint()
-        curr_ex = list(examples.storage.keys())[0]
+        # curr_ex = list(examples.storage.keys())[0]
         # if len(curr_ex.observable_context) == 1 and curr_ex.observable_context[-1] == ObservablePredicate("g",
         #                                                                                                  0) and curr_ex.example_type == ISAILASPExample.ExType.GOAL:
         #     breakpoint()
