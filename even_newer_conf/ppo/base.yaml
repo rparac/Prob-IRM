@@ -57,7 +57,7 @@ entropy_coeff:
 grad_clip:
   options: [0.1, 10]
   tune_func: 'loguniform'
-  best_value: 100.0
+  best_value: null
 grad_clip_by:
   best_value: "global_norm"
 
