@@ -7,7 +7,7 @@ fcnet_hiddens:
   tune_func: 'choice'
   best_value: null
 
-fcnet_activations:
+fcnet_activation:
   # every architecture, i.e. [[layer_size] * n_layers for n_layers in num_layers for layer_size in layer_sizes]
   options: [ 'relu', 'tanh', 'elu' ]
   tune_func: 'choice'

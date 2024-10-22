@@ -5,7 +5,7 @@ algo:
 model:
   fcnet_hiddens:
     best_value: [32]
-  fcnet_activations:
+  fcnet_activation:
     best_value: "tanh"
 ppo:
   mini_batch_size_per_learner:

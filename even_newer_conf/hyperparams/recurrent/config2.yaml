@@ -6,7 +6,7 @@ algo:
 model:
   fcnet_hiddens:
     best_value: [16]
-  fcnet_activations:
+  fcnet_activation:
     best_value: "tanh"
   lstm_cell_size:
     best_value: 16
