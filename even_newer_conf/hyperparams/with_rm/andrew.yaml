@@ -6,7 +6,7 @@ algo:
 
 model:
   fcnet_hiddens:
-    best_value: [ 128, 128, 128, 128, 128 ]
+    best_value: [ 64, 64, 64, 64 ]
 
   fcnet_activation:
     #  We use ReLU activations everywhere except within the critic, which use Tanh activations.  fcnet_activations:

@@ -1,8 +1,8 @@
 train_batch_size_per_learner:
-  best_value: 5120
+  best_value: 32768
 
 mini_batch_size_per_learner:
-  options: [64, 128, 256]
+  options: [1024, 2048, 4096, 8192]
   tune_func: 'choice'
   best_value: null
 
@@ -32,7 +32,7 @@ use_kl_loss:
 #  best_value: null
 
 num_sgd_iter:
-  options: [3, 30]
+  options: [5, 15]
   tune_func: 'randint'
   best_value: null
 
@@ -41,18 +41,22 @@ lambda_:
   tune_func: 'uniform'
   best_value: null
 
+# We set this value because it's only important when parameters are shared
 vf_loss_coeff:
   options: [0.5, 1]
   tune_func: 'uniform'
-  best_value: null
+  best_value: 0.5
 
+# We set this value because it's only important when parameters are shared
 entropy_coeff:
   options: [0.0, 0.1]
   tune_func: 'uniform'
-  best_value: null
+  best_value: 0.01
 
 
 grad_clip:
+  options: [0.1, 10]
+  tune_func: 'loguniform'
   best_value: 100.0
 grad_clip_by:
   best_value: "global_norm"

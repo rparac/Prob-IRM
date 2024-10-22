@@ -1,0 +1,13 @@
+# @package _global_
+
+algo:
+  lr:
+    best_value: 3e-4
+
+model:
+  fcnet_hiddens:
+    best_value: [ 64, 64, 64, 64 ]
+
+  fcnet_activation:
+    #  We use ReLU activations everywhere except within the critic, which use Tanh activations.  fcnet_activations:
+    best_value: "relu"

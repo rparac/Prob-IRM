@@ -13,6 +13,11 @@ fcnet_activation:
   tune_func: 'choice'
   best_value: null
 
+vf_share_layers:
+  options: [ True, False ]
+  tune_func: 'choice'
+  best_value: False
+
 # Hyperparameters setup with a fixed structure so they can be easily parsed
 #  - options: arguments of the tune.tune_func
 #  - tune_func: use tune.tune_func in the tuning loop
