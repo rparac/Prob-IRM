@@ -23,8 +23,8 @@ def from_hydra_config(conf):
         if k.startswith('_'):
             continue
 
-        if v.best_value is not None:
-            new_config[k] = v.best_value
+        if v['best_value'] is not None:
+            new_config[k] = v['best_value']
         else:
             new_config[k] = _to_tune(v)
 
