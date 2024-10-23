@@ -63,6 +63,14 @@ export PATH=$PATH:/gpfs/home/rp218/bin
 export RAY_RESULTS_DIR=/gpfs/home/rp218/ray_results
 export PYTHONPATH=$PYTHONPATH:$HOME/rm-marl
 
+export LD_LIBRARY_PATH=$HOME/bin:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/lib64/graphviz:$LD_LIBRARY_PATH
+
+# Hacky solution for linking libpython3.10 - not sure why conda doesn't do it automatically
+export LD_LIBRARY_PATH=$HOME/miniconda3/envs/new/lib:$LD_LIBRARY_PATH
+
+
 cd $HOME/rm-marl
 conda activate custom-ray
 conda install -c git
