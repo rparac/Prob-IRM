@@ -34,10 +34,11 @@ class NewProbFFNSLLearner:
     # n_phi_cost - ILASP penalty for using the n_phi_predicate
     # ex_penalty_multiplier - multipler for the ILASP penalties
     # min_penalty - the penalty threshold for discarding an ILASP example - makes the ILASP task simpler
+    # base_dir - relative directory path where results will be stored
     """
 
-    def __init__(self, starting_rm, actor_name, edge_cost=2, n_phi_cost=1, ex_penalty_multiplier=2, min_penalty=2,
-                 cross_entropy_threshold=0.6):
+    def __init__(self, starting_rm, actor_name, edge_cost, n_phi_cost, ex_penalty_multiplier, min_penalty,
+                 cross_entropy_threshold, base_dir):
         self.examples = MultiISAExampleContainer(min_penalty)
 
         # Minimum is 3 states (accepting, rejecting, u0)
@@ -88,7 +89,7 @@ class NewProbFFNSLLearner:
         # log_id = uuid.uuid4()
         log_id = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        self._log_folder = f'{os.getcwd()}/logs/{log_id}-{actor_name}'
+        self._log_folder = f'{os.getcwd()}/logs/{base_dir}/{log_id}-{actor_name}'
         os.makedirs(self._log_folder, exist_ok=True)
 
         random.seed(0)

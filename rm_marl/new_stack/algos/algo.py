@@ -56,6 +56,7 @@ class PPORMLearningConfig(PPOConfig):
             "ex_penalty_multiplier": 1,
             "min_penalty": 1,
             "cross_entropy_threshold": 0.5,
+            "base_dir": "not_categorized",
         }
 
         super().__init__(algo_class or PPORMLearning)
@@ -69,7 +70,9 @@ class PPORMLearningConfig(PPOConfig):
                    n_phi_cost=NotProvided,
                    ex_penalty_multiplier=NotProvided,
                    min_penalty=NotProvided,
-                   cross_entropy_threshold=NotProvided):
+                   cross_entropy_threshold=NotProvided,
+                   base_dir=NotProvided,
+                   ):
         if edge_cost is not NotProvided:
             self.rm_learner_params["edge_cost"] = edge_cost
         if n_phi_cost is not NotProvided:
@@ -80,6 +83,8 @@ class PPORMLearningConfig(PPOConfig):
             self.rm_learner_params["min_penalty"] = min_penalty
         if cross_entropy_threshold is not NotProvided:
             self.rm_learner_params["cross_entropy_threshold"] = cross_entropy_threshold
+        if base_dir is not NotProvided:
+            self.rm_learner_params["base_dir"] = base_dir
 
 
 class PPORMLearning(PPO):
