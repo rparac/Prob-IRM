@@ -10,7 +10,7 @@ seed = 0
 
 
 env = gym.make("OfficeWorldDeliverCoffee-v0",
-               params={"generation": "random", "environment_seed": 129, "hide_state_variables": True},
+               params={"generation": "random", "environment_seed": 126, "hide_state_variables": True},
                render_mode="human",
                )
 env = NewGymSubgoalAutomataAdapter(env, max_episode_length=250)  # type: ignore
@@ -22,8 +22,7 @@ labeling_funs = [
     # OfficeWorldBLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
     # OfficeWorldCLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
     # OfficeWorldDLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1),
-    OfficeWorldCoffeeLabelingFunctionWrapper(env, sensor_true_confidence=1,
-                                             sensor_false_confidence=1,)
+    OfficeWorldCoffeeLabelingFunctionWrapper(env, sensor_true_confidence=1, sensor_false_confidence=1)
 ]
 
 

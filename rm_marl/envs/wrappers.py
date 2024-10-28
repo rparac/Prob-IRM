@@ -56,7 +56,7 @@ class ProbabilisticRewardShaping(gym.Wrapper):
         info["shaping_reward"] = shaping_reward
         info["original_reward"] = reward
 
-        return obs, 10 * (reward + shaping_reward), terminated, truncated, info
+        return obs, reward + shaping_reward, terminated, truncated, info
 
     def _compute_shaping_reward(self, next_belief_vector):
         current_belief_vector = self._rm_state_belief
