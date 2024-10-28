@@ -14,6 +14,9 @@ def _to_tune(param):
         return tune.loguniform(*param["options"])
     if param["tune_func"] == 'randint':
         return tune.randint(*param["options"])
+    if param["tune_func"] == 'grid_search':
+        return tune.grid_search(param["options"])
+    raise ValueError(f"Unknown tune func {param['tune_func']}")
 
 
 def from_hydra_config(conf):
