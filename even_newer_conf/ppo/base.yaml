@@ -41,17 +41,15 @@ lambda_:
   tune_func: 'uniform'
   best_value: null
 
-# We set this value because it's only important when parameters are shared
 vf_loss_coeff:
   options: [0.5, 1]
   tune_func: 'uniform'
-  best_value: 0.5
+  best_value: null
 
-# We set this value because it's only important when parameters are shared
 entropy_coeff:
-  options: [0.0, 0.1]
-  tune_func: 'uniform'
-  best_value: 0.01
+  options: [0.0, 0.01, 0.1, 1]
+  tune_func: 'choice'
+  best_value: null
 
 
 grad_clip:
