@@ -3,6 +3,22 @@ Quick script to run hydra with condor launcher
 Run the file as
 python submit_script.py <DIRECTORY> <NAME> ../dqrm_coffee_world.py <ARGS>
 
+Environment variables require special care on HX1
+  - https://icl-rcs-user-guide.readthedocs.io/en/latest/hpc/applications/guides/pytorch/
+
+The following is the content of env_vars in the custom-ray environment
+CUDNN_PATH=$(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib/:$CUDNN_PATH/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/bin:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/lib64/graphviz:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/miniconda3/envs/new/lib:$LD_LIBRARY_PATH
+export PATH=$PATH:/gpfs/home/rp218/bin
+export RAY_RESULTS_DIR=/gpfs/home/rp218/ray_results
+export PYTHONPATH=$PYTHONPATH:$HOME/rm-marl
+export PYTHONPATH=$PYTHONPATH:$HOME/miniconda3/envs/custom-ray/lib/python3.10/site-packages
+export PYTHONPATH=$PYTHONPATH:$HOME/rm-marl/src
+
 """
 import os
 import shutil
