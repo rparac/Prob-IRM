@@ -4,13 +4,12 @@
 
 cd ..
 
-nodes=1
+nodes=2
 ncpus=64
 ram=128 # Gb
 
 directory="deliver_coffee"
-name="with_hyperparam_experiment"
+name="rm_learning_experiment"
 
-cmd="python submit_rcs_old_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} ray_tests/hydra_RM_learning_PPO.py run.num_agents=10 run.should_tune=False +hyperparams/with_rm=config1"
+python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} ray_tests/hydra_RM_learning_PPO.py run.num_agents=2 run.use_perfect_rm=False run.should_tune=False run.use_rs=True run.stop_iters=100 run.seed=127 +hyperparams/with_rm=andrew +experiment=vanilla_coffee_symmetric_error x=0.9814815521240234
 
-eval ${cmd}

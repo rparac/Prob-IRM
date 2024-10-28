@@ -59,33 +59,43 @@ def get_pbs_script_base(experiment_directory: str, nodes, ncpus, ram):
 
 eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
 
-export PATH=$PATH:/gpfs/home/rp218/bin
+# export PATH=$PATH:/gpfs/home/rp218/bin
 export RAY_RESULTS_DIR=/gpfs/home/rp218/ray_results
-export PYTHONPATH=$PYTHONPATH:$HOME/rm-marl
-
-export LD_LIBRARY_PATH=$HOME/bin:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$HOME/lib64:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$HOME/lib64/graphviz:$LD_LIBRARY_PATH
+# export PYTHONPATH=$PYTHONPATH:$HOME/rm-marl
+# 
+# export LD_LIBRARY_PATH=$HOME/bin:$LD_LIBRARY_PATH
+# export LD_LIBRARY_PATH=$HOME/lib64:$LD_LIBRARY_PATH
+# export LD_LIBRARY_PATH=$HOME/lib64/graphviz:$LD_LIBRARY_PATH
 
 # Hacky solution for linking libpython3.10 - not sure why conda doesn't do it automatically
 export LD_LIBRARY_PATH=$HOME/miniconda3/envs/new/lib:$LD_LIBRARY_PATH
 
 
 cd $HOME/rm-marl
+echo "Run Home successfully" >&2
 conda activate custom-ray
-conda install -c git
-pip install scikit-learn==1.4.2
-pip install torch==2.3.1
+echo "Activated environment" >&2
+# conda uninstall pip
+# echo "Uninstalled pip" >&2
+# conda install pip==21.2.4
+# echo "Installed pip" >&2
+conda install -c conda-forge git
+echo "Installed git" >&2
+# pip install scikit-learn==1.4.2
+# pip install torch==2.3.1
 pip install -r to_install.txt
+echo "Installed deps" >&2
 pip freeze
 
 # Launch a ray cluster
-ray start --head --node-ip-address=$(hostname -i) --port=6379
+echo "Starting cluster" >&2
+# ray start --head --node-ip-address=192.0.0.1 --port 6379 --dashboard-agent-grpc-port=52364
 head_ip=$(hostname -i)
+echo "Cluster started on $head_ip" >&2
 echo "Head node started on $head_ip"
 
 # Wait a few seconds to ensure the head node is up
-sleep 5
+sleep 10
 """
 
 
