@@ -48,8 +48,8 @@ vf_loss_coeff:
 
 entropy_coeff:
   options: [0.0, 0.01, 0.1, 1]
-  tune_func: 'grid_search'
-  best_value: null
+  tune_func: 'choice'
+  best_value: 0.1
 
 
 grad_clip:
