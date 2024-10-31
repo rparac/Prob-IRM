@@ -7,13 +7,13 @@ cd ..
 # TODO: seeds
 # seeds=(0 100 200 300 400)
 num_agents=(10)
-noise_levels=(1 0.9979081153869629 0.995305061340332 0.9814815521240234)
+noise_levels=(1) # 0.9979081153869629 0.995305061340332 0.9814815521240234)
 
 nodes=2
 ncpus=64
 ram=128
 
-directory="partial_andrew_coffee_mail"
+directory="checkpoint_coffee_mail"
 for num_agent in "${num_agents[@]}"; do
   for noise_level in "${noise_levels[@]}"; do
     name="${directory}_${num_agent}_${noise_level}"
@@ -22,7 +22,7 @@ for num_agent in "${num_agents[@]}"; do
     python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
       ray_tests/hydra_RM_learning_PPO.py env/office-world@env=deliver_coffee_mail run.name=${name} \
         run.use_perfect_rm=True run.num_agents=${num_agent} run.should_tune=True \
-        run.num_env_runners=20 \
+        run.num_env_runners=20 run.tune_config.checkpoint_at_end=True \
         +hyperparams/with_rm=andrew \
         +experiment=vanilla_coffee_symmetric_error x=${noise_level}
   done
