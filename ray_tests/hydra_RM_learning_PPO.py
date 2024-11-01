@@ -193,7 +193,10 @@ def run(cfg: DictConfig) -> int:
     ppo_config = cfg["ppo"]
     algo_config = cfg["algo"]
     model_config = cfg["model"]
-    rm_learner_config = cfg["rm_learner"]
+    rm_learner_config = OmegaConf.to_container(cfg["rm_learner"], resolve=True)
+    if rm_learner_config["base_dir"] is None:
+        rm_learner_config["base_dir"] = run_config["name"]
+
     base_config = create_config(run_config, ppo_config, algo_config, model_config, rm_learner_config)
 
     stop = {

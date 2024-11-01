@@ -4,4 +4,4 @@ ex_penalty_multiplier: 2
 min_penalty: 2
 cross_entropy_threshold: 0.6
 
-base_dir: 'not_categorized'
+base_dir: null
