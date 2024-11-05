@@ -1,5 +1,5 @@
 lr:
-  options: [1e-5, 1e-3]
+  options: [1e-8, 1e-3]
   tune_func: 'loguniform'
   best_value: null
 

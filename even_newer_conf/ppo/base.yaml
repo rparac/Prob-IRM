@@ -47,7 +47,8 @@ vf_loss_coeff:
   best_value: null
 
 entropy_coeff:
-  options: [0.0, 0.01, 0.1, 1]
+  # options: [0.0, 0.01, 0.1, 1]
+  options: [0.1, 1]
   tune_func: 'choice'
   best_value: 0.1
 
