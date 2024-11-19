@@ -13,10 +13,29 @@ fcnet_activation:
   tune_func: 'choice'
   best_value: null
 
+fcnet_weights_initializer:
+  best_value: "orthogonal_"
+
 vf_share_layers:
   options: [ True, False ]
   tune_func: 'choice'
-  best_value: False
+  best_value: True
+
+# Hidden layers for pi and vf networks (after the encoder)
+post_fcnet_hiddens:
+  # Dynamically filled from layer_sizes and num_layers
+  options: null
+  tune_func: 'choice'
+  best_value: null
+
+# Activation function for pi and vf networks (after the encoder)
+post_fcnet_activation:
+  options: [ 'relu', 'tanh', 'elu' ]
+  tune_func: 'choice'
+  best_value: null
+
+post_fcnet_weights_initializer:
+  best_value: "orthogonal_"
 
 # Hyperparameters setup with a fixed structure so they can be easily parsed
 #  - options: arguments of the tune.tune_func

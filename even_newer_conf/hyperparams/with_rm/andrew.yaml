@@ -12,6 +12,12 @@ model:
     #  We use ReLU activations everywhere except within the critic, which use Tanh activations.  fcnet_activations:
     best_value: "relu"
 
+  post_fcnet_hiddens:
+    best_value: []
+
+  post_fcnet_activation:
+    best_value: 'relu'
+
 ppo:
   train_batch_size_per_learner:
     best_value: 32768

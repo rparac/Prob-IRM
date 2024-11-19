@@ -151,6 +151,8 @@ def create_config(
 
     model_config["fcnet_hiddens"]["options"] = [[layer_size] * n_layers for n_layers in model_config["_num_layers"] for
                                                 layer_size in model_config["_layer_sizes"]]
+    model_config["post_fcnet_hiddens"]["options"] = [[layer_size] * n_layers for n_layers in model_config["_num_layers"] for
+                                                layer_size in model_config["_layer_sizes"]]
 
     config.rl_module(
         rl_module_spec=MultiRLModuleSpec(module_specs=module_specs),
