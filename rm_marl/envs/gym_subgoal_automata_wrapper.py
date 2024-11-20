@@ -43,7 +43,7 @@ class GymSubgoalAutomataAdapter(gym.Wrapper):
         obs, info = self.env.reset(**kwargs)
         self.current_step = 0
         if self._render_mode == "human":
-            self.env.render(self._render_mode)
+            self.env.render()
 
         info["is_positive_trace"] = False
         return {self.agent_id: obs}, {}
@@ -52,7 +52,7 @@ class GymSubgoalAutomataAdapter(gym.Wrapper):
         obs, reward, terminated, truncated, info = self.env.step(action[self.agent_id])
         self.current_step += 1
         if self._render_mode == "human":
-            self.env.render(self._render_mode)
+            self.env.render()
 
         # TODO: force negative reward when a plant is reached; this may need to be done through reward shaping or the other env
         if 'n' in info['observations']:
@@ -66,7 +66,7 @@ class GymSubgoalAutomataAdapter(gym.Wrapper):
 
     def render(self, **kwargs):
         if self._render_mode == "rgb_array":
-            return self.env.render(self._render_mode)
+            return self.env.render()
 
     # Converts subgoal automaton to Reward Machine
     def get_perfect_rm(self):
