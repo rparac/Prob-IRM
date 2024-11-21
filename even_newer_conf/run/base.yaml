@@ -31,3 +31,6 @@ wandb:
   run_name: "run"
   key: null
 
+
+# How often should we render episode videos and heatmap
+render_freq: 10

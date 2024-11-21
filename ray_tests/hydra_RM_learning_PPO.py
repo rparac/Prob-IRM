@@ -37,6 +37,7 @@ from ray.tune.schedulers import ASHAScheduler
 from rm_marl.new_stack.algos.algo import PPORMConfig, PPORMLearningConfig
 from rm_marl.new_stack.callbacks.callback_composer import CallbackComposer
 from rm_marl.new_stack.callbacks.env_render_callback import EnvRenderCallback
+from rm_marl.new_stack.callbacks.heatmap_callback import HeatmapCallback
 from rm_marl.new_stack.callbacks.log_original_reward import LogOriginalReward
 from rm_marl.new_stack.callbacks.log_rm_learning import LogRMLearning
 from rm_marl.new_stack.callbacks.store_config import StoreTracesCallback
@@ -68,10 +69,10 @@ def create_config(
         model_config=None,
         rm_learner_config=None,
 ):
-    # Slows down process; add back when debugging
     callbacks = [LogOriginalReward]
     if run_config["wandb"]["key"] is not None:
         callbacks.append(EnvRenderCallback)
+        callbacks.append(HeatmapCallback)
 
     if run_config["recurrent"]:
         config = PPOConfig()
@@ -111,18 +112,18 @@ def create_config(
             # remote_worker_envs=False,
         )
         .evaluation(
-            evaluation_interval=5,  # 10,
+            evaluation_interval=run_config["render_freq"],
             evaluation_duration=1,  # 5
             # Important: Otherwise the evaluation runs in the main thread, which ruins environment ids
             # evaluation_num_env_runners=run_config["num_agents"],
-            evaluation_num_env_runners=1,
+            evaluation_num_env_runners=0,
             evaluation_duration_unit="episodes",
             evaluation_config=PPORMConfig.overrides(
-                entropy_coeff=0.0,
-                explore=False,
-                env_config={
-                    "seed": run_config["seed"],
-                },
+                # entropy_coeff=0.0,
+                # explore=False,
+                # env_config={
+                #     "seed": run_config["seed"],
+                # },
             ),
         )
         .callbacks(
