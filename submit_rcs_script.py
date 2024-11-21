@@ -22,6 +22,7 @@ export PYTHONPATH=$PYTHONPATH:$HOME/rm-marl/src
 """
 import os
 import shutil
+import socket
 import stat
 import subprocess
 import sys
@@ -44,29 +45,8 @@ module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
 cd ${HOME}/rm-marl
 conda activate rm_marl
 """
-# might be needed
-# pip install scikit-learn==1.4.2
 
-pbs_script_gpu2 = f"""#!/bin/bash
-#PBS -l walltime=24:00:00
-#PBS -l select=1:ncpus=4:mem=100Gb:ngpus=1
-
-eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
-
-export PATH=$PATH:/gpfs/home/rp218/bin
-export PYTHONPATH=$PYTHONPATH:/gpfs/home/rp218/rm-marl
-
-module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
-
-
-cd $HOME/rm-marl
-conda activate new
-conda install -c git
-pip install -r to_install.txt
-"""
-
-
-def get_pbs_script_base(experiment_directory: str, nodes, ncpus, ram):
+def get_pbs_script_base(nodes, ncpus, ram):
     # return pbs_script_gpu2
 
     return f"""#!/bin/bash
@@ -76,7 +56,7 @@ def get_pbs_script_base(experiment_directory: str, nodes, ncpus, ram):
 eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
 
 # export PATH=$PATH:/gpfs/home/rp218/bin
-export RAY_RESULTS_DIR=/gpfs/home/rp218/ray_results
+# export RAY_RESULTS_DIR=/gpfs/home/rp218/ray_results
 # export PYTHONPATH=$PYTHONPATH:$HOME/rm-marl
 # 
 # export LD_LIBRARY_PATH=$HOME/bin:$LD_LIBRARY_PATH
@@ -84,7 +64,7 @@ export RAY_RESULTS_DIR=/gpfs/home/rp218/ray_results
 # export LD_LIBRARY_PATH=$HOME/lib64/graphviz:$LD_LIBRARY_PATH
 
 # Hacky solution for linking libpython3.10 - not sure why conda doesn't do it automatically
-export LD_LIBRARY_PATH=$HOME/miniconda3/envs/new/lib:$LD_LIBRARY_PATH
+# export LD_LIBRARY_PATH=$HOME/miniconda3/envs/new/lib:$LD_LIBRARY_PATH
 
 
 cd $HOME/rm-marl
@@ -124,11 +104,17 @@ def run_pbs(args, name, experiment_directory, nodes, ncpus, ram):
         os.makedirs(f"{script_directory}/{experiment_directory}")
 
     with open(pbs_out, 'w') as f:
-        f.write(get_pbs_script_base(experiment_directory, nodes, ncpus, ram))
+        f.write(get_pbs_script_base(nodes, ncpus, ram))
         f.write('\n')
         f.write(python_run)
 
-    result = subprocess.run(['qsub', '-q', 'hx', pbs_out], stdout=subprocess.PIPE, text=True)
+    hostname = socket.gethostname()
+
+    if "hx1" in hostname:
+        cmd = ['qsub', '-q', 'hx', pbs_out]
+    else:
+        cmd = ['qsub', pbs_out]
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, text=True)
     print(result.stdout)
     print("Successfully ran all the scripts")
 
