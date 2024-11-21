@@ -14,9 +14,9 @@ model:
   post_fcnet_hiddens:
     best_value: []
   fcnet_weights_initializer:
-    best_value: null
+    best_value: "kaiming_uniform_"
   post_fcnet_weights_initializer:
-    best_value: null
+    best_value: "kaiming_uniform_"
 
 ppo:
   mini_batch_size_per_learner:
