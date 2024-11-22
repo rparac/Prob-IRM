@@ -211,10 +211,9 @@ class HeatmapCallback(DefaultCallbacks):
     @staticmethod
     def _get_agents_position(episode, env):
         results = {}
-        for i, sa_episode in enumerate(
-                ConnectorV2.single_agent_episode_iterator([episode], agents_that_stepped_only=True)):
+        for sa_episode in ConnectorV2.single_agent_episode_iterator([episode], agents_that_stepped_only=True):
             # if not sa_episode.is_done:
-            results[i] = HeatmapCallback._get_yx_pos(sa_episode, env)
+            results[sa_episode.agent_id] = HeatmapCallback._get_yx_pos(sa_episode, env)
         return results
 
     @staticmethod
