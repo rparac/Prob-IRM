@@ -70,7 +70,8 @@ def create_config(
         rm_learner_config=None,
 ):
     callbacks = [LogOriginalReward]
-    if run_config["wandb"]["key"] is not None:
+    use_wandb = run_config["wandb"]["key"] is not None
+    if use_wandb:
         callbacks.append(EnvRenderCallback)
         callbacks.append(HeatmapCallback)
 
@@ -127,7 +128,7 @@ def create_config(
             ),
         )
         .callbacks(
-            partial(CallbackComposer, callbacks, stop_iters=run_config["stop_iters"]),
+            partial(CallbackComposer, callbacks, stop_iters=run_config["stop_iters"], use_wandb=use_wandb),
         )
         .debugging(seed=run_config["seed"], log_level="WARN")
     )

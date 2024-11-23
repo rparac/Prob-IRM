@@ -12,10 +12,11 @@ from pdf2image import convert_from_path as read_pdf_image
 
 
 class LogRMLearning(DefaultCallbacks):
-    def __init__(self, rm_learner_actor: str = None, stop_iters: int = 0, **kwargs):
+    def __init__(self, rm_learner_actor: str = None, stop_iters: int = 0, use_wandb: bool = False, **kwargs):
         self._rm_learner = ray.get_actor(rm_learner_actor)
         self._stop_iters = stop_iters
         self._iters_done = 0
+        self._use_wandb = use_wandb
 
     def on_train_result(
             self,
@@ -64,7 +65,10 @@ class LogRMLearning(DefaultCallbacks):
 
         for i, rm_plot_entry in enumerate(sorted_plot_entries):
             plot_image = read_pdf_image(rm_plot_entry.path)[0]
-            plot_rgb_array = np.transpose(np.asarray(plot_image), axes=[2, 0, 1])
+            
+            plot_rgb_array = np.asarray(plot_image)
+            if not self._use_wandb:
+                plot_rgb_array = np.transpose(plot_rgb_array, axes=[2, 0, 1])
 
             metrics_logger.log_value(
                 key=f"rm/plot/{i}",
