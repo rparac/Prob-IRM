@@ -190,6 +190,7 @@ def run(cfg: DictConfig) -> int:
     env_config["seed"] = run_config["seed"]
     # TODO: check if we can move this directly
     env_config["use_rs"] = run_config["use_rs"]
+    env_config["rs_discount"] = run_config["rs_discount"]
     register_env("env", make_multi_agent_with_rm(hydra_env_creator(env_config)))
     # register_env("env", hydra_env_creator(env_config))
 
