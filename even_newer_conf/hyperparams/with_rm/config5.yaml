@@ -38,4 +38,4 @@ ppo:
   num_sgd_iter:
     best_value: 9
   entropy_coeff:
-    best_value: 0.1
+    best_value: 1
