@@ -36,6 +36,19 @@ class LogOriginalReward(DefaultCallbacks):
             policies: Optional[Dict[PolicyID, Policy]] = None,
             **kwargs,
     ) -> None:
+        if env_runner.worker_index == 0:
+            for i, sa_episode in enumerate(ConnectorV2.single_agent_episode_iterator([episode], agents_that_stepped_only=False)):
+                original_reward = sa_episode.get_return()
+                # We only log the reward that happened in this evaluation episode
+                metrics_logger.log_value(
+                    f"fixed_agent_episode_return_mean/{i}",
+                    value=original_reward,
+                    reduce='mean',
+                    # clear_on_reduce=True,
+                    window=1,
+                )
+
+
         single_agent_rewards = []
         for i, sa_episode in enumerate(
                 ConnectorV2.single_agent_episode_iterator([episode], agents_that_stepped_only=False)):
