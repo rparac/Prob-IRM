@@ -24,7 +24,7 @@ def hydra_env_creator(env_config):
         # env = gym.make("CartPole-v1")
         env = gym.make(env_config["name"], render_mode=env_config["render_mode"],
                        params={"generation": "random", "environment_seed": env_config["seed"] + curr_id,
-                               "hide_state_variables": True})
+                               "hide_state_variables": True, "num_plants": 1})
         env = NewGymSubgoalAutomataAdapter(env, max_episode_length=250)  # type: ignore
         # raise RuntimeError(env.observation_space.shape)
 
