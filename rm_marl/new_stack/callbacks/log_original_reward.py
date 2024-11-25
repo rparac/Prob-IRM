@@ -57,8 +57,9 @@ class LogOriginalReward(DefaultCallbacks):
                 # No need to report if reward shaping is not used
                 if "original_reward" not in info:
                     return
-
-                original_reward += info["original_reward"]
+                # Akin to previous paper we assume steping on plant gets reward 0 for logging
+                rew = max(info["original_reward"], 0)
+                original_reward += rew
             single_agent_rewards.append(original_reward)
 
             metrics_logger.log_value(
