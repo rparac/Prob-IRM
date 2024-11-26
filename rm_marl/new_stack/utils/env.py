@@ -25,7 +25,7 @@ def hydra_env_creator(env_config):
         env = gym.make(env_config["name"], render_mode=env_config["render_mode"],
                        params={"generation": "random", "environment_seed": env_config["seed"] + curr_id,
                                "hide_state_variables": True, "num_plants": 1})
-        env = NewGymSubgoalAutomataAdapter(env, max_episode_length=250)  # type: ignore
+        env = NewGymSubgoalAutomataAdapter(env, max_episode_length=env_config["max_episode_length"])  # type: ignore
         # raise RuntimeError(env.observation_space.shape)
 
         labeling_funs = [label_factory(env) for label_factory in env_config["label_factories"]]
