@@ -163,6 +163,11 @@ class OfficeWorldOfficeLabelingFunctionWrapper(OfficeWorldAbstractLabelingFuncti
 
 
 class OfficeWorldPlantLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+
+    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+                 sensor_false_confidence: float, seed: int = 0):
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+
     def get_label(self):
         return 'n'  # plant
 
