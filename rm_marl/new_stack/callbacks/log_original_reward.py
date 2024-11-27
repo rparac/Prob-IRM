@@ -41,7 +41,7 @@ class LogOriginalReward(DefaultCallbacks):
                 original_reward = sa_episode.get_return()
                 # We only log the reward that happened in this evaluation episode
                 metrics_logger.log_value(
-                    f"fixed_agent_episode_return_mean/{i}",
+                    f"fixed_agent_episode_return/{i}",
                     value=original_reward,
                     reduce='mean',
                     # clear_on_reduce=True,
