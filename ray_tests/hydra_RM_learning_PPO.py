@@ -128,7 +128,7 @@ def create_config(
             ),
         )
         .callbacks(
-            partial(CallbackComposer, callbacks, stop_iters=run_config["stop_iters"], use_wandb=use_wandb),
+            partial(CallbackComposer, callbacks, stop_iters=run_config["stop_iters"]),
         )
         .debugging(seed=run_config["seed"], log_level="WARN")
     )
