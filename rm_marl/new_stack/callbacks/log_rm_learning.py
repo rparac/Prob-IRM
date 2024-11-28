@@ -63,6 +63,7 @@ class LogRMLearning(DefaultCallbacks):
         )
 
         for i, rm_plot_entry in enumerate(sorted_plot_entries):
+            print("Saving image")
             plot_image = read_pdf_image(rm_plot_entry.path)[0]
             plot_rgb_array = np.asarray(plot_image)
 

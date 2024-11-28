@@ -8,7 +8,7 @@ cd ..
 # seeds=(0 100 200 300 400)
 # num_agents=(10)
 # use_rm_options=(False True)
-use_rm_options=(True False) 
+use_rm_options=(False) # (True) # False) 
 noise_levels=(1 0.9979081153869629 0.995305061340332 0.9814815521240234)
 
 nodes=2
@@ -19,7 +19,8 @@ directory="deliver_coffee"
 for use_rm in "${use_rm_options[@]}"; do
   for noise_level in "${noise_levels[@]}"; do
     #name="${directory}_${use_rm}_${noise_level}"
-    name=${directory}_$([ "$use_rm" = True ] && echo "perfect_rm" || echo "rm_learning")_${noise_level}
+    run_subdirectory=${directory}_$([ "$use_rm" = True ] && echo "perfect_rm" || echo "rm_learning")
+    name=${run_subdirectory}_${noise_level}
 
     # run noise on all three
     # python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} ray_tests/simple_test.py
@@ -37,4 +38,6 @@ for use_rm in "${use_rm_options[@]}"; do
   done
 done
 
+	# run.wandb.project=${run_subdirectory} \
+	# run.wandb.run_name=${noise_level} \ - with  just this it failed
 # Running on login.hx1.hpc.ic.ac.uk
