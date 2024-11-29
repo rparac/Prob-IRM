@@ -24,17 +24,19 @@ They may be needed if we are not getting good enough results
 import random
 from functools import partial
 
+import os
 import hydra
 import numpy as np
+from ray import tune
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from ray.air.constants import TRAINING_ITERATION
-from ray.rllib.algorithms import PPOConfig
+from ray.rllib.algorithms import PPOConfig, PPO
 from ray.rllib.core.rl_module import RLModuleSpec, MultiRLModuleSpec
 from ray.tune.registry import register_env
 from ray.tune.schedulers import ASHAScheduler
 
-from rm_marl.new_stack.algos.algo import PPORMConfig, PPORMLearningConfig
+from rm_marl.new_stack.algos.algo import PPORMConfig, PPORMLearningConfig 
 from rm_marl.new_stack.callbacks.callback_composer import CallbackComposer
 from rm_marl.new_stack.callbacks.env_render_callback import EnvRenderCallback
 from rm_marl.new_stack.callbacks.heatmap_callback import HeatmapCallback
@@ -43,23 +45,8 @@ from rm_marl.new_stack.callbacks.log_rm_learning import LogRMLearning
 from rm_marl.new_stack.callbacks.store_config import StoreTracesCallback
 from rm_marl.new_stack.env.multi_env_with_rm import make_multi_agent_with_rm
 from rm_marl.new_stack.utils.env import hydra_env_creator
-from rm_marl.new_stack.utils.hydra import from_hydra_config
-from rm_marl.new_stack.utils.run import simplified_custom_run_rllib_example_script_experiment
-
-
-# Hacky solution. In the ideal world we could just set one value and use $ interpolation for the rest
-# Hydra doesn't support overriding multiple values at once with optuna
-#  We override values that should be overriden with this function
-def _manual_value_override(cfg):
-    if 'manual_overrides' not in cfg:
-        return
-
-    override_values = cfg['manual_overrides']
-
-    for override_value in override_values:
-        if override_value in cfg["env"]["overridable"]:
-            command = f"cfg.{override_value} = {cfg['x']}"
-            exec(command)
+from rm_marl.new_stack.utils.hydra import from_hydra_config, manual_value_override
+from rm_marl.new_stack.utils.run import simplified_custom_run_rllib_example_script_experiment, continue_training
 
 
 def create_config(
@@ -168,7 +155,7 @@ def create_config(
 
 @hydra.main(version_base=None, config_path="../even_newer_conf", config_name="config")
 def run(cfg: DictConfig) -> int:
-    _manual_value_override(cfg)
+    manual_value_override(cfg)
 
     run_config = cfg['run']
     print(run_config)
@@ -176,31 +163,13 @@ def run(cfg: DictConfig) -> int:
     np.random.seed(run_config["seed"])
     random.seed(run_config["seed"])
 
-    env_config = cfg["env"]
-    label_factories = [instantiate(label_factory_conf) for label_factory_conf in env_config["core_label_factories"]]
-
-    if not env_config["use_restricted_observables"]:
-        noisy_label_factories = [instantiate(label_factory_conf) for label_factory_conf in
-                                 env_config["noise_label_factories"]]
-        label_factories.extend(noisy_label_factories)
-    print(env_config)
-    env_config = OmegaConf.to_container(env_config, resolve=True)
-    env_config["label_factories"] = label_factories
-    # TODO: set to 6 for now; change to run_config["seed"] later
-    env_config["seed"] = run_config["seed"]
-    # TODO: check if we can move this directly
-    env_config["use_rs"] = run_config["use_rs"]
-    env_config["rs_discount"] = run_config["rs_discount"]
+    env_config = setup_env_config(cfg["env"], run_config)
     register_env("env", make_multi_agent_with_rm(hydra_env_creator(env_config)))
-    # register_env("env", hydra_env_creator(env_config))
 
-    # We can only render on wandb; turn on rendering if the key exists
     ppo_config = cfg["ppo"]
     algo_config = cfg["algo"]
     model_config = cfg["model"]
-    rm_learner_config = OmegaConf.to_container(cfg["rm_learner"], resolve=True)
-    if rm_learner_config["base_dir"] is None:
-        rm_learner_config["base_dir"] = run_config["name"]
+    rm_learner_config = setup_rm_learner_config(cfg["rm_learner"], run_config)
 
     base_config = create_config(run_config, ppo_config, algo_config, model_config, rm_learner_config)
 
@@ -213,9 +182,35 @@ def run(cfg: DictConfig) -> int:
                               grace_period=min(scheuduler_conf["min_grace_period"], run_config["stop_iters"]),
                               max_t=run_config["stop_iters"])
 
-    simplified_custom_run_rllib_example_script_experiment(base_config, run_config, stop=stop, scheduler=scheduler)
+    if run_config["continue_training"]:
+        continue_training(run_config)
+    else:
+        simplified_custom_run_rllib_example_script_experiment(base_config, run_config, stop=stop, scheduler=scheduler)
 
     return 0
+
+
+def setup_rm_learner_config(rm_learner_config, run_config):
+    rm_learner_config = OmegaConf.to_container(rm_learner_config, resolve=True)
+    if rm_learner_config["base_dir"] is None:
+        rm_learner_config["base_dir"] = run_config["name"]
+    return rm_learner_config
+
+def setup_env_config(env_config, run_config):
+    label_factories = [instantiate(label_factory_conf) for label_factory_conf in env_config["core_label_factories"]]
+
+    if not env_config["use_restricted_observables"]:
+        noisy_label_factories = [instantiate(label_factory_conf) for label_factory_conf in
+                                 env_config["noise_label_factories"]]
+        label_factories.extend(noisy_label_factories)
+    print(env_config)
+    env_config = OmegaConf.to_container(env_config, resolve=True)
+    env_config["label_factories"] = label_factories
+    env_config["seed"] = run_config["seed"]
+    # TODO: check if we can move this directly
+    env_config["use_rs"] = run_config["use_rs"]
+    env_config["rs_discount"] = run_config["rs_discount"]
+    return env_config
 
 
 if __name__ == "__main__":

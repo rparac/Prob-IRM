@@ -32,3 +32,18 @@ def from_hydra_config(conf):
             new_config[k] = _to_tune(v)
 
     return new_config
+
+
+# Hacky solution. In the ideal world we could just set one value and use $ interpolation for the rest
+# Hydra doesn't support overriding multiple values at once with optuna
+#  We override values that should be overriden with this function
+def manual_value_override(cfg):
+    if 'manual_overrides' not in cfg:
+        return
+
+    override_values = cfg['manual_overrides']
+
+    for override_value in override_values:
+        if override_value in cfg["env"]["overridable"]:
+            command = f"cfg.{override_value} = {cfg['x']}"
+            exec(command)

@@ -11,6 +11,7 @@ use_perfect_rm: True
 use_rs: True
 rs_discount: 1
 
+continue_training: False
 
 # TODO: add checkpoint
 

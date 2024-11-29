@@ -32,6 +32,9 @@ from ray.tune.logger import NoopLogger
 
 if TYPE_CHECKING:
     from ray.rllib.algorithms import Algorithm, AlgorithmConfig
+from ray.rllib.algorithms import PPO
+
+from rm_marl.new_stack.algos.algo import PPORM, PPORMLearning
 
 jax, _ = try_import_jax()
 tf1, tf, tfv = try_import_tf()
@@ -39,6 +42,31 @@ torch, _ = try_import_torch()
 
 logger = logging.getLogger(__name__)
 
+
+def continue_training(run_config):
+    storage_dir = str(os.environ["RAY_RESULTS_DIR"])
+    experiment_dir = f"{storage_dir}/{run_config['name']}"
+
+    previous_experiments = os.listdir(experiment_dir)    
+    experiment_dir = f"{experiment_dir}/{max(previous_experiments)}"
+
+    if run_config["recurrent"]:
+        trainable = PPO
+    elif run_config["use_perfect_rm"]:
+        trainable = PPORM
+    else:
+        trainable = PPORMLearning
+
+    start_time = time.time()
+    tuner = tune.Tuner.restore(
+        path=experiment_dir,
+        trainable=trainable,
+    )
+    results = tuner.fit()
+    time_taken = time.time() - start_time
+    print(f"Time taken is {time_taken}")
+    ray.shutdown()
+    return results
 
 def simplified_custom_run_rllib_example_script_experiment(
         base_config: "AlgorithmConfig",
