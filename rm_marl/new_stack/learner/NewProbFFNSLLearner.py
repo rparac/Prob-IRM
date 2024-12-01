@@ -3,6 +3,7 @@ import itertools
 import os
 import random
 import datetime as dt
+import joblib
 from typing import List, Dict
 
 import numpy as np
@@ -26,6 +27,7 @@ from rm_marl.utils.logging import getLogger
 LOGGER = getLogger(__name__)
 
 
+
 # TODO: implement new API
 @ray.remote
 class NewProbFFNSLLearner:
@@ -40,6 +42,8 @@ class NewProbFFNSLLearner:
     def __init__(self, starting_rm, actor_name, edge_cost, n_phi_cost, ex_penalty_multiplier, min_penalty,
                  cross_entropy_threshold, base_dir):
         self.examples = MultiISAExampleContainer(min_penalty)
+
+        self.actor_name = actor_name
 
         # Minimum is 3 states (accepting, rejecting, u0)
         self.rm_num_states = 8
@@ -86,13 +90,15 @@ class NewProbFFNSLLearner:
 
         self.curr_rm = starting_rm
 
-        # log_id = uuid.uuid4()
+        self._base_dir = base_dir
+        self._log_folder = None
+        random.seed(0)
+
+    def _create_dir(self):
         log_id = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        self._log_folder = f'{os.getcwd()}/logs/{base_dir}/{log_id}-{actor_name}'
+        self._log_folder = f'{os.getcwd()}/logs/{self._base_dir}/{log_id}-{self.actor_name}'
         os.makedirs(self._log_folder, exist_ok=True)
-
-        random.seed(0)
 
     def log_folder(self):
         return self._log_folder
@@ -105,6 +111,9 @@ class NewProbFFNSLLearner:
 
         if not self._should_relearn_rm() and not self.overriden_with_debugger:
             return None
+
+        if self._log_folder is None:
+            self._create_dir()
 
         candidate_rm = self._update_reward_machine(curr_rm)
         if candidate_rm:
@@ -348,3 +357,12 @@ class NewProbFFNSLLearner:
             if random.random() <= prob:
                 true_elems.append(label)
         return true_elems
+
+    # Used for serialization
+    def get_state_dict(self):
+        return self.__dict__
+
+    def set_state_dict(self, d):
+        self.__dict__ = d
+        print(f"Log folder is {self.log_folder()}")
+

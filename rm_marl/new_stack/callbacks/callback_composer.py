@@ -7,6 +7,12 @@ class CallbackComposer(DefaultCallbacks):
         # Ray requires passing classes instead of objects, so we keep the design consistent
         self.callbacks = [_cls(**kwargs) for _cls in callbacks_cls]
 
+    def set_rm_learner(self, actor_name):
+        for callback in self.callbacks:
+            if hasattr(callback, 'set_rm_learner'):
+                callback.set_rm_learner(actor_name)
+
+
     def on_algorithm_init(self, **kwargs) -> None:
         """Callback run when a new Algorithm instance has finished setup."""
         for callback in self.callbacks:

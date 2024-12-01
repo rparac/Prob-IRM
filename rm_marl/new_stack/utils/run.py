@@ -30,6 +30,8 @@ from ray.rllib.utils.typing import ResultDict
 from ray.tune import CLIReporter
 from ray.tune.logger import NoopLogger
 
+from rm_marl.new_stack.tuner_callbacks.save_actor import SaveActorCallback
+
 if TYPE_CHECKING:
     from ray.rllib.algorithms import Algorithm, AlgorithmConfig
 from ray.rllib.algorithms import PPO
@@ -173,6 +175,9 @@ def simplified_custom_run_rllib_example_script_experiment(
                 **({"name": wandb_args["run_name"]}),
             )
         )
+    tune_callbacks.append(
+        SaveActorCallback()
+    )
 
     # Auto-configure a CLIReporter (to log the results to the console).
     # Use better ProgressReporter for multi-agent cases: List individual policy rewards.

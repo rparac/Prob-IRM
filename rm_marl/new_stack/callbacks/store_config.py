@@ -18,6 +18,13 @@ from rm_marl.rm_learning.trace_tracker import TraceTracker
 class StoreTracesCallback(DefaultCallbacks):
     def __init__(self, rm_learner_actor: str = None, **kwargs):
         self._rm_learner = ray.get_actor(rm_learner_actor)
+        print(f"Got actor {rm_learner_actor}")
+
+
+    def set_rm_learner(self, rm_learner_actor):
+        print(f"New RM learner set to {rm_learner_actor}")
+        self._rm_learner = ray.get_actor(rm_learner_actor)
+
 
     def on_episode_end(
             self,

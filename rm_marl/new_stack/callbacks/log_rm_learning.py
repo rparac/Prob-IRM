@@ -20,6 +20,11 @@ class LogRMLearning(DefaultCallbacks):
         # We cannot do both at the same time unfortunately.
         self._use_wandb = use_wandb
 
+    def set_rm_learner(self, rm_learner_actor):
+        print(f"New RM learner set to {rm_learner_actor}")
+        self._rm_learner = ray.get_actor(rm_learner_actor)
+
+
     def on_train_result(
             self,
             *,

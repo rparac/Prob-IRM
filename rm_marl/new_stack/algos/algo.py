@@ -1,4 +1,6 @@
+import pickle
 import uuid
+import os
 from functools import partial
 from typing import Optional
 
@@ -8,6 +10,7 @@ from ray import tune
 from ray.rllib.algorithms import PPOConfig, AlgorithmConfig, PPO, Algorithm
 from ray.rllib.utils import override
 from ray.rllib.utils.annotations import PublicAPI
+from ray.rllib.utils.checkpoints import Checkpointable
 from ray.rllib.utils.from_config import NotProvided
 from ray.rllib.utils.serialization import space_from_dict, space_to_dict
 from ray.rllib.utils.typing import ResultDict, EnvConfigDict
@@ -17,6 +20,7 @@ from rm_marl.new_stack.learner.NewProbFFNSLLearner import NewProbFFNSLLearner
 from rm_marl.new_stack.utils.env import GET_PERFECT_RM
 from rm_marl.reward_machine import RewardMachine
 
+save_name = "ilasp_learner.pkl"
 
 # TODO: automatically set the connectors that are required
 class PPORMConfig(PPOConfig):
@@ -90,18 +94,49 @@ class PPORMLearningConfig(PPOConfig):
 class PPORMLearning(PPO):
 
     def setup(self, config: AlgorithmConfig) -> None:
-        rm = RewardMachineAgent.default_rm()
         actor_name = str(uuid.uuid4())
+        print(f"Actor name is {actor_name}")
+
+        rm = RewardMachineAgent.default_rm()
         kwargs = {"rm_learner_actor": actor_name}
+
         self.config._is_frozen = False
         self.config.callbacks_class = partial(self.config.callbacks_class, **kwargs)
         self.config._is_frozen = True
 
         self._rm_learner = (NewProbFFNSLLearner.options(name=actor_name)  # type: ignore
                             .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
-        print(actor_name)
-        # raise RuntimeError(actor_name)
         super().setup(config)
+
+    @override(Checkpointable)
+    def restore_from_path(self, path, *args, **kwargs):
+        super().restore_from_path(path, *args, **kwargs)
+
+        # storage_dir = str(os.environ["RAY_RESULTS_DIR"])
+        # name = config.rm_learner_params["base_dir"]
+        # experiment_dir = os.path.join(storage_dir, name)
+
+        # previous_experiments = os.listdir(experiment_dir)    
+        # experiment_dir = os.path.join(experiment_dir, max(previous_experiments))
+
+        experiment_file = os.path.join(path, save_name)
+        print(experiment_file)
+        with open(experiment_file, "rb") as f:
+            state = pickle.load(f)
+        actor_name = state["actor_name"]
+        print(f"Old name is {actor_name}")
+
+        self.config._is_frozen = False
+        self.config.callbacks_class = partial(self.config.callbacks_class, **kwargs)
+        self.config._is_frozen = True
+
+        rm = RewardMachineAgent.default_rm()
+        self._rm_learner = (NewProbFFNSLLearner.options(name=actor_name)  # type: ignore
+                            .remote(rm, actor_name, restoring=True, **self.config.rm_learner_params))  # type: ignore
+        self._rm_learner.set_state_dict.remote(state)
+
+        self.callbacks.set_rm_learner(actor_name)
+
 
     @classmethod
     @override(Algorithm)
