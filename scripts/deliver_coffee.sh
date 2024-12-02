@@ -16,25 +16,27 @@ ncpus=64
 ram=128
 
 directory="deliver_coffee"
-for use_rm in "${use_rm_options[@]}"; do
-  for noise_level in "${noise_levels[@]}"; do
-    #name="${directory}_${use_rm}_${noise_level}"
-    run_subdirectory=${directory}_$([ "$use_rm" = True ] && echo "perfect_rm" || echo "rm_learning")
-    name=${run_subdirectory}_${noise_level}
-
-    # run noise on all three
-    # python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} ray_tests/simple_test.py
-    python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
-      ray_tests/hydra_RM_learning_PPO.py run.name=${name} run.seed=123 \
-        run.use_perfect_rm=${use_rm} run.num_agents=10 run.should_tune=True \
-	run.tune_config.num_samples=1 \
-	run.num_env_runners=20 \
-	run.wandb.key=680ad332869d9761ae2b6bdd70cdbc068674d47b \
-	run.render_freq=20 \
-        +hyperparams/with_rm=config5 \
-        +experiment=vanilla_coffee_symmetric_error x=${noise_level}
-    # python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
-    # ray_tests/hydra_RM_learning_PPO.py run.name=${name} run.use_perfect_rm=True run.num_agents=${num_agent} run.should_tune=True run.num_env_runners=40 run.tune_config.num_samples=200
+for seed in "${seeds[@]}"; do
+  for use_rm in "${use_rm_options[@]}"; do
+    for noise_level in "${noise_levels[@]}"; do
+      #name="${directory}_${use_rm}_${noise_level}"
+      run_subdirectory=${directory}_$([ "$use_rm" = True ] && echo "perfect_rm" || echo "rm_learning")
+      name=${run_subdirectory}_${noise_level}_${seed}
+  
+      # run noise on all three
+      # python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} ray_tests/simple_test.py
+      python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
+        ray_tests/hydra_RM_learning_PPO.py run.name=${name} run.seed=123 \
+          run.use_perfect_rm=${use_rm} run.num_agents=10 run.should_tune=True \
+  	run.tune_config.num_samples=1 \
+  	run.num_env_runners=20 \
+  	run.wandb.key=680ad332869d9761ae2b6bdd70cdbc068674d47b \
+  	run.render_freq=20 \
+          +hyperparams/with_rm=config5 \
+          +experiment=vanilla_coffee_symmetric_error x=${noise_level}
+      # python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
+      # ray_tests/hydra_RM_learning_PPO.py run.name=${name} run.use_perfect_rm=True run.num_agents=${num_agent} run.should_tune=True run.num_env_runners=40 run.tune_config.num_samples=200
+    done
   done
 done
 
