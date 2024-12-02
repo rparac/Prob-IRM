@@ -76,10 +76,14 @@ class LogRMLearning(DefaultCallbacks):
             plot_rgb_array = np.asarray(plot_image)
             if not self._use_wandb:
                 plot_rgb_array = np.transpose(plot_rgb_array, axes=[2, 0, 1])
-
-            metrics_logger.log_value(
-                key=f"rm/plot/{i}",
-                value=plot_rgb_array,
-                reduce=None,
-                clear_on_reduce=True,
-            )
+                metrics_logger.log_value(
+                    key=f"rm/plot/{i}",
+                    value=plot_rgb_array,
+                )
+            else:
+                metrics_logger.log_value(
+                    key=f"rm/plot/{i}",
+                    value=plot_rgb_array,
+                    reduce=None,
+                    clear_on_reduce=True,
+                )
