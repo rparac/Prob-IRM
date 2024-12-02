@@ -13,8 +13,6 @@ rs_discount: 1
 
 continue_training: False
 
-# TODO: add checkpoint
-
 should_tune: True
 
 tune_config:

@@ -12,7 +12,7 @@ from rm_marl.new_stack.env.rm_wrapper import RMWrapper
 from rm_marl.reward_machine import RewardMachine
 
 GET_PERFECT_RM = "perfect"
-NO_RM = "none"
+GET_DEFAULT_RM = "default_rm"
 
 
 def hydra_env_creator(env_config):
@@ -35,13 +35,13 @@ def hydra_env_creator(env_config):
         env = gym.experimental.wrappers.DtypeObservationV0(env, **{"dtype": np.float32})
         rm = _env_ctx.get("rm", None)
 
-        if rm == NO_RM:
+        if rm is None: 
             env = AugmentLabelsWrapper(env)
             return env
 
         if rm == GET_PERFECT_RM:
             rm = env.get_perfect_rm()
-        elif rm is None:
+        elif rm == GET_DEFAULT_RM:
             rm = RewardMachineAgent.default_rm()
         elif isinstance(rm, RewardMachine):
             rm = rm

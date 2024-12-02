@@ -17,7 +17,7 @@ from ray.rllib.utils.typing import ResultDict, EnvConfigDict
 
 from rm_marl.agent import RewardMachineAgent
 from rm_marl.new_stack.learner.NewProbFFNSLLearner import NewProbFFNSLLearner
-from rm_marl.new_stack.utils.env import GET_PERFECT_RM
+from rm_marl.new_stack.utils.env import GET_PERFECT_RM, GET_DEFAULT_RM
 from rm_marl.reward_machine import RewardMachine
 
 save_name = "ilasp_learner.pkl"
@@ -68,6 +68,16 @@ class PPORMLearningConfig(PPOConfig):
     def actor_name(self, actor_name: str):
         self._actor_name = actor_name
         return self
+
+    def environment(
+            self,
+            *,
+            env_config: Optional[EnvConfigDict] = NotProvided,
+            **kwargs
+    ) -> "AlgorithmConfig":
+        new_env_config = env_config or {}
+        new_env_config["rm"] = GET_DEFAULT_RM
+        return super().environment(env_config=new_env_config, **kwargs)
 
     def rm_learner(self,
                    edge_cost=NotProvided,
