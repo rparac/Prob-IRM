@@ -36,7 +36,8 @@ from ray.rllib.core.rl_module import RLModuleSpec, MultiRLModuleSpec
 from ray.tune.registry import register_env
 from ray.tune.schedulers import ASHAScheduler
 
-from rm_marl.new_stack.algos.algo import PPORMConfig, PPORMLearningConfig 
+from rm_marl.new_stack.algos.algo import PPORMConfig, PPORMLearningConfig
+from rm_marl.new_stack.callbacks.minimize_logs import MinimizeLogs
 from rm_marl.new_stack.callbacks.callback_composer import CallbackComposer
 from rm_marl.new_stack.callbacks.crash_after_n_iters import CrashAfterNIters
 from rm_marl.new_stack.callbacks.env_render_callback import EnvRenderCallback
@@ -75,6 +76,10 @@ def create_config(
         config.rm_learner(
             **rm_learner_config,
         )
+
+    # We append the log filtering callback last to make sure it sees what the others do
+    if run_config['minimize_logs']:
+        callbacks.append(MinimizeLogs)
 
     config = (
         config.environment(

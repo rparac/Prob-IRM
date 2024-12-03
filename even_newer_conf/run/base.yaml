@@ -15,6 +15,8 @@ continue_training: False
 
 should_tune: True
 
+minimize_logs: False
+
 tune_config:
   num_samples: 1
   verbose: 2
