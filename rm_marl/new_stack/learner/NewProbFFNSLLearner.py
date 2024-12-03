@@ -29,7 +29,8 @@ LOGGER = getLogger(__name__)
 
 
 # TODO: implement new API
-@ray.remote(num_cpus=4)
+# TODO: more cpus for this actor. The problem is the placement group allocation at the moment
+@ray.remote(num_cpus=1)
 class NewProbFFNSLLearner:
     """
     # edge_cost - ILASP penalty for using the ed predicate

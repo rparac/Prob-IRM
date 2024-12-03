@@ -114,6 +114,13 @@ class PPORMLearning(PPO):
         self.config.callbacks_class = partial(self.config.callbacks_class, **kwargs)
         self.config._is_frozen = True
 
+        # placement_group = ray.util.placement_group(
+        #     bundles=[
+        #         {"CPU": 4},
+        #     ]
+        # )
+        # ray.get(placement_group.ready())
+
         self._rm_learner = (NewProbFFNSLLearner.options(name=actor_name)  # type: ignore
                             .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
         super().setup(config)
