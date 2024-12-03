@@ -29,7 +29,7 @@ LOGGER = getLogger(__name__)
 
 
 # TODO: implement new API
-@ray.remote
+@ray.remote(num_cpus=4)
 class NewProbFFNSLLearner:
     """
     # edge_cost - ILASP penalty for using the ed predicate
