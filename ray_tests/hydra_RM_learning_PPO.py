@@ -38,6 +38,7 @@ from ray.tune.schedulers import ASHAScheduler
 
 from rm_marl.new_stack.algos.algo import PPORMConfig, PPORMLearningConfig 
 from rm_marl.new_stack.callbacks.callback_composer import CallbackComposer
+from rm_marl.new_stack.callbacks.crash_after_n_iters import CrashAfterNIters
 from rm_marl.new_stack.callbacks.env_render_callback import EnvRenderCallback
 from rm_marl.new_stack.callbacks.heatmap_callback import HeatmapCallback
 from rm_marl.new_stack.callbacks.log_original_reward import LogOriginalReward
@@ -57,6 +58,7 @@ def create_config(
         rm_learner_config=None,
 ):
     callbacks = [LogOriginalReward]
+    callbacks.append(CrashAfterNIters)
     use_wandb = run_config["wandb"]["key"] is not None
     if use_wandb:
         callbacks.append(EnvRenderCallback)
@@ -115,7 +117,8 @@ def create_config(
             ),
         )
         .callbacks(
-            partial(CallbackComposer, callbacks, stop_iters=run_config["stop_iters"], use_wandb=use_wandb),
+            partial(CallbackComposer, callbacks, stop_iters=run_config["stop_iters"], use_wandb=use_wandb, 
+                    crash_iter=run_config["crash_iter"]),
         )
         .debugging(seed=run_config["seed"], log_level="WARN")
     )
