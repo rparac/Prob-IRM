@@ -6,7 +6,7 @@ use_rm_options=(True False)
 noise_levels=(1 0.9989626407623291 0.997668981552124 0.9907407760620117)
 
 nodes=2
-ncpus=128
+ncpus=64
 ram=256
 
 directory="long_visit_abcd_a"
@@ -21,7 +21,9 @@ for seed in "${seeds[@]}"; do
           run.seed=${seed} \
           rm_learner.ex_penalty_multiplier=8 \
           rm_learner.min_penalty=8 \
-          env.max_episode_length=10000 \
+          env.max_episode_length=1000 \
+	  run.crash_iters=501 \
+	  run.tune_config.checkpoint_freq=100 \
           run.use_perfect_rm=${use_rm} run.num_agents=10 run.should_tune=True \
   	      run.tune_config.num_samples=1 \
           run.num_env_runners=50 run.stop_iters=10000 \
