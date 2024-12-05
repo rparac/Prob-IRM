@@ -11,6 +11,9 @@ save_name = "ilasp_learner.pkl"
 class SaveActorCallback(Callback):
 
     def on_trial_save(self, iteration, trials, trial, **info):
+        if not hasattr(trial.temporary_state.ray_actor, 'get_rm_learner'):
+            return super().on_trial_save(iteration, trials, trial, **info)
+
         checkpoint_path = trial.checkpoint.path
         rm_learner_actor = ray.get(trial.temporary_state.ray_actor.get_rm_learner.remote())        
         state = ray.get(rm_learner_actor.get_state_dict.remote())

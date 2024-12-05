@@ -63,7 +63,7 @@ def continue_training(run_config):
     tuner = tune.Tuner.restore(
         path=experiment_dir,
         trainable=trainable,
-        restart_errored=True,
+        resume_errored=True,
     )
     results = tuner.fit()
     time_taken = time.time() - start_time
