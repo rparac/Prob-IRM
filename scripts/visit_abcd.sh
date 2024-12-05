@@ -27,6 +27,7 @@ for seed in "${seeds[@]}"; do
           run.use_perfect_rm=${use_rm} run.num_agents=10 run.should_tune=True \
   	      run.tune_config.num_samples=1 \
           run.num_env_runners=50 run.stop_iters=10000 \
+	  run.render_freq=10000 \
           +hyperparams/with_rm=configabcd \
           +experiment=vanilla_a_symmetric_error x=${noise_level} 
     done
