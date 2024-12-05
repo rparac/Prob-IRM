@@ -15,12 +15,12 @@ ram=128
 directory="rs_deliver_coffee"
 for use_rs in "${use_rs_options[@]}"; do
   for noise_level in "${noise_levels[@]}"; do
-    for seed in "${seeds}"; do
+    for seed in "${seeds[@]}"; do
 
       #name="${directory}_${use_rm}_${noise_level}"
       run_subdirectory=${directory}_$([ "$use_rs" = True ] && echo "with_shaping" || echo "no_shaping")
       name=${run_subdirectory}_${noise_level}_${seed}
-  
+
       # run noise on all three
       # python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} ray_tests/simple_test.py
       python submit_rcs_old_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
