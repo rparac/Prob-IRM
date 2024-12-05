@@ -231,11 +231,13 @@ class ISAExampleContainer:
 
 
 class MultiISAExampleContainer:
-    def __init__(self, ilasp_filter_threshold):
+    def __init__(self, ilasp_filter_threshold, should_rebalance):
         self._ilasp_filter_threshold = ilasp_filter_threshold
         self._goal_examples = ISAExampleContainer(ilasp_filter_threshold)
         self._dend_examples = ISAExampleContainer(ilasp_filter_threshold)
         self._inc_examples = ISAExampleContainer(ilasp_filter_threshold)
+
+        self._should_rebalance = should_rebalance
 
     def merge(self, ex_container: ISAExampleContainer, ex_type: ISAILASPExample.ExType):
         if ex_type == ISAILASPExample.ExType.GOAL:
@@ -274,12 +276,37 @@ class MultiISAExampleContainer:
         new_inc_rest.merge(self._inc_examples)
         # self.merge(new_inc, ISAILASPExample.ExType.INCOMPLETE)
 
+        if not self._should_rebalance:
+            return self._generate_goal_dend_inc_no_rebalancing(total_ex_sum, new_inc_pos, new_inc_rest)
+
         gl = self._goal_examples.as_list_reweighted(total_ex_sum)
         de = self._dend_examples.as_list_reweighted(total_ex_sum)
         # inc = new_inc.as_list_reweighted(10 * total_ex_sum)
         inc = new_inc_rest.as_list_reweighted(total_ex_sum)
         pos_inc = new_inc_pos.as_list_reweighted(total_ex_sum)
         return gl, de, inc + pos_inc
+
+    def _generate_goal_dend_inc_no_rebalancing(self, total_ex_sum: int, new_inc_pos, new_inc_rest) -> \
+            (List[ISAILASPExample], List[ISAILASPExample], List[ISAILASPExample]):
+        """ Rescale the examples without reblanacing classes"""
+
+        target_example_sum = 5 * total_ex_sum 
+
+        gl_sum = sum(self._goal_examples.storage.values()) 
+        de_sum = sum(self._dend_examples.storage.values())
+        new_rest_sum = sum(new_inc_rest.storage.values())
+        new_inc_sum = sum(new_inc_pos.storage.values())
+
+        all_sums = sum([gl_sum, de_sum, new_inc_sum, new_rest_sum])
+
+        gl = self._goal_examples.as_list_reweighted(int(round(target_example_sum * gl_sum / all_sums)))
+        de = self._dend_examples.as_list_reweighted(int(round(target_example_sum * de_sum / all_sums)))
+        # inc = new_inc.as_list_reweighted(10 * total_ex_sum)
+        inc = new_inc_rest.as_list_reweighted(int(round(target_example_sum * new_rest_sum / all_sums)))
+        pos_inc = new_inc_pos.as_list_reweighted(int(round(target_example_sum * new_inc_sum / all_sums)))
+
+        return gl, de, inc + pos_inc
+
 
 
 # Lifts the example representation from Daniel's work to ISAILASPExample

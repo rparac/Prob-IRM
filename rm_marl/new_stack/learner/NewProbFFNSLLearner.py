@@ -41,8 +41,8 @@ class NewProbFFNSLLearner:
     """
 
     def __init__(self, starting_rm, actor_name, edge_cost, n_phi_cost, ex_penalty_multiplier, min_penalty,
-                 cross_entropy_threshold, base_dir):
-        self.examples = MultiISAExampleContainer(min_penalty)
+                 cross_entropy_threshold, rebalance_classes, base_dir):
+        self.examples = MultiISAExampleContainer(min_penalty, rebalance_classes)
 
         self.actor_name = actor_name
 
@@ -82,8 +82,7 @@ class NewProbFFNSLLearner:
         self.ex_penalty_multipler = ex_penalty_multiplier
 
         # Number of ILASP examples
-        # TODO: debugging; return to 100
-        self.I = 1  # 100
+        self.I = 100
         # ILASP example counter
         self.ex_counter = 0
 

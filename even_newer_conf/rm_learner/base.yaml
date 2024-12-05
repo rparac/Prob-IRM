@@ -5,3 +5,6 @@ min_penalty: 2
 cross_entropy_threshold: 0.6
 
 base_dir: null
+
+# Whether we should rebalance classes during RM learning
+rebalance_classes: True
