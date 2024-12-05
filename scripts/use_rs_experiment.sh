@@ -4,9 +4,9 @@
 
 cd ..
 
-seeds=(0) #  100 200 300 400)
+seeds=(0 100 200 300 400)
 use_rs_options=(False True)
-noise_levels=(1 0.9979081153869629 0.995305061340332 0.9814815521240234)
+noise_levels=(1 0.9989626407623291 0.997668981552124 0.9907407760620117)
 
 nodes=1
 ncpus=64
@@ -23,20 +23,20 @@ for use_rs in "${use_rs_options[@]}"; do
   
       # run noise on all three
       # python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} ray_tests/simple_test.py
-      python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
+      python submit_rcs_old_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
         ray_tests/hydra_RM_learning_PPO.py run.name=${name} run.seed=${seed} \
           run.use_perfect_rm=False run.num_agents=10 run.should_tune=True \
 	  run.use_rs=${use_rs} \
           run.tune_config.num_samples=1 \
-  	  run.num_env_runners=20 \
-  	  run.wandb.key=680ad332869d9761ae2b6bdd70cdbc068674d47b \
-          run.render_freq=50 \
-          +hyperparams/with_rm=config5 \
-          +experiment=vanilla_coffee_symmetric_error x=${noise_level}
+  	  run.num_env_runners=50 \
+          run.render_freq=10000000 \
+          +hyperparams/with_rm=configabcd \
+          +experiment=vanilla_all_symmetric_error x=${noise_level}
       # python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
       # ray_tests/hydra_RM_learning_PPO.py run.name=${name} run.use_perfect_rm=True run.num_agents=${num_agent} run.should_tune=True run.num_env_runners=40 run.tune_config.num_samples=200
     done
   done
 done
+# run.wandb.key=680ad332869d9761ae2b6bdd70cdbc068674d47b \
 # Running on cx3
 
