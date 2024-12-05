@@ -1,8 +1,8 @@
 #!/bin/bash
 cd ..
 
-seeds=(0 100 200 300 400)
-use_rm_options=(True) # False)
+seeds=(0) # 100 200 300 400)
+use_rm_options=(False) # (True False)
 noise_levels=(1 0.9989626407623291 0.997668981552124 0.9907407760620117)
 
 nodes=2
@@ -22,7 +22,7 @@ for seed in "${seeds[@]}"; do
           rm_learner.ex_penalty_multiplier=8 \
           rm_learner.min_penalty=8 \
           env.max_episode_length=1000 \
-	  run.crash_iter=501 \
+	  run.crash_iters=501 \
 	  run.tune_config.checkpoint_freq=100 \
           run.use_perfect_rm=${use_rm} run.num_agents=10 run.should_tune=True \
   	      run.tune_config.num_samples=1 \
