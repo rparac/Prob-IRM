@@ -131,15 +131,6 @@ class PPORMLearning(PPO):
 
     @override(Checkpointable)
     def restore_from_path(self, path, *args, **kwargs):
-        super().restore_from_path(path, *args, **kwargs)
-
-        # storage_dir = str(os.environ["RAY_RESULTS_DIR"])
-        # name = config.rm_learner_params["base_dir"]
-        # experiment_dir = os.path.join(storage_dir, name)
-
-        # previous_experiments = os.listdir(experiment_dir)    
-        # experiment_dir = os.path.join(experiment_dir, max(previous_experiments))
-
         experiment_file = os.path.join(path, save_name)
         print(experiment_file)
         with open(experiment_file, "rb") as f:
@@ -158,6 +149,13 @@ class PPORMLearning(PPO):
 
         self.callbacks.set_rm_learner(actor_name)
 
+        rm = ray.get(self._rm_learner.get_curr_rm.remote())
+        self.set_rm(rm)
+
+        super().restore_from_path(path, *args, **kwargs)
+
+    def get_rm_learner(self):
+        return self._rm_learner
 
     @classmethod
     @override(Algorithm)

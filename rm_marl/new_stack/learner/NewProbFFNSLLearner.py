@@ -94,6 +94,9 @@ class NewProbFFNSLLearner:
         self._log_folder = None
         random.seed(0)
 
+    def get_curr_rm(self):
+        return self.curr_rm
+
     def _create_dir(self):
         log_id = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
