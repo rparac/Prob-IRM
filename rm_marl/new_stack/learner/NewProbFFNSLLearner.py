@@ -315,6 +315,10 @@ class NewProbFFNSLLearner:
         return {
             "cross_entropy": avg_cross_entropy,
             "last_relearning_trace_num": self.last_relearning_trace_num,
+            "num_pos_traces": len(self._seen_positive_traces),
+            "num_neg_traces": len(self._seen_negative_traces),
+            "num_incomplete_traces": len(self._seen_incomplete_traces),
+            "warmup_wait": self.min_rm_num_episodes,
         }
 
     # TODO: remove duplicatios
