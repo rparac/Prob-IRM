@@ -41,8 +41,9 @@ class NewProbFFNSLLearner:
     """
 
     def __init__(self, starting_rm, actor_name, edge_cost, n_phi_cost, ex_penalty_multiplier, min_penalty,
-                 cross_entropy_threshold, rebalance_classes, base_dir):
-        self.examples = MultiISAExampleContainer(min_penalty, rebalance_classes)
+                 cross_entropy_threshold, rebalance_classes, new_inc_examples, base_dir):
+        self._new_inc_examples = new_inc_examples
+        self.examples = MultiISAExampleContainer(min_penalty, rebalance_classes, new_inc_examples)
 
         self.actor_name = actor_name
 
@@ -337,7 +338,7 @@ class NewProbFFNSLLearner:
             context = self.create_example_context(trace)
             penalty = 1
             last_predicate = LastPredicate(len(trace.trace) - 1)
-            ex = ISAILASPExample(ex_id, penalty, ex_type, context, last_predicate)
+            ex = ISAILASPExample(ex_id, penalty, ex_type, context, last_predicate, new_inc_example=self._new_inc_examples)
             # penalty_threshold=self.ilasp_penalty_threshold)
             ex.compact_observations()
             sol.add(ex)

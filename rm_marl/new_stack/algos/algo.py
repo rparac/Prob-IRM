@@ -62,6 +62,7 @@ class PPORMLearningConfig(PPOConfig):
             "cross_entropy_threshold": 0.5,
             "base_dir": "not_categorized",
             "rebalance_classes": True,
+            "new_inc_examples": True,
         }
 
         super().__init__(algo_class or PPORMLearning)
@@ -88,6 +89,7 @@ class PPORMLearningConfig(PPOConfig):
                    cross_entropy_threshold=NotProvided,
                    base_dir=NotProvided,
                    rebalance_classes=NotProvided,
+                   new_inc_examples=NotProvided,
                    ):
         if edge_cost is not NotProvided:
             self.rm_learner_params["edge_cost"] = edge_cost
@@ -103,6 +105,8 @@ class PPORMLearningConfig(PPOConfig):
             self.rm_learner_params["base_dir"] = base_dir
         if rebalance_classes is not NotProvided:
             self.rm_learner_params["rebalance_classes"] = rebalance_classes
+        if new_inc_examples is not NotProvided:
+            self.rm_learner_params["new_inc_examples"] = new_inc_examples
 
 
 class PPORMLearning(PPO):
@@ -150,6 +154,7 @@ class PPORMLearning(PPO):
         self.callbacks.set_rm_learner(actor_name)
 
         rm = ray.get(self._rm_learner.get_curr_rm.remote())
+        print(f"Setting rm to {rm}")
         self.set_rm(rm)
 
         super().restore_from_path(path, *args, **kwargs)

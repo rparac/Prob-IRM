@@ -8,3 +8,5 @@ base_dir: null
 
 # Whether we should rebalance classes during RM learning
 rebalance_classes: True
+
+new_inc_examples: True

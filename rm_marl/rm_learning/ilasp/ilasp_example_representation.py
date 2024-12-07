@@ -64,7 +64,8 @@ class ISAILASPExample:
     def __init__(self, ex_id: str, ex_penalty: Optional[float], example_type: ExType,
                  observable_context: List[ObservablePredicate],
                  last_predicate: Optional[LastPredicate], is_positive: bool = True,
-                 penalty_threshold: int = 1):
+                 penalty_threshold: int = 1,
+                 new_inc_example: bool = False):
         self.ex_id = ex_id
         self.penalty = ex_penalty
         self.example_type = example_type
@@ -76,6 +77,7 @@ class ISAILASPExample:
         self.penalty_rounding_scale = 1  # 10
 
         self.penalty_threshold = penalty_threshold
+        self.new_inc_example = new_inc_example
 
     def __eq__(self, other):
         if not isinstance(other, ISAILASPExample):
@@ -110,10 +112,18 @@ class ISAILASPExample:
     def is_active(self):
         return self.penalty is None or round(self.penalty * self.penalty_rounding_scale) >= self.penalty_threshold
 
+    def _new_inc_encoding(self):
+        # st(T+1, u_acc) should be caused by the last atom
+        return ":- last(T), T1 <= T, st(T1, u_acc)."
+
     def __repr__(self):
         context_str = '  '.join([elem.as_predicate_str() for elem in self.observable_context])
         if self.last_predicate:
             context_str += f'\n  {self.last_predicate.as_predicate_str()}'
+        if self.example_type == ISAILASPExample.ExType.GOAL and self.new_inc_example:
+            context_str += f'\n  {self._new_inc_encoding()}'
+            
+
         prefix = "pos" if self.is_positive else "neg"
         penalty_rounded = round(self.penalty * self.penalty_rounding_scale) if self.penalty else None
         return f"#{prefix}({self.ex_id}{'' if penalty_rounded is None else f'@{penalty_rounded}'}, " \
@@ -231,13 +241,14 @@ class ISAExampleContainer:
 
 
 class MultiISAExampleContainer:
-    def __init__(self, ilasp_filter_threshold, should_rebalance):
+    def __init__(self, ilasp_filter_threshold, should_rebalance, new_inc_examples):
         self._ilasp_filter_threshold = ilasp_filter_threshold
         self._goal_examples = ISAExampleContainer(ilasp_filter_threshold)
         self._dend_examples = ISAExampleContainer(ilasp_filter_threshold)
         self._inc_examples = ISAExampleContainer(ilasp_filter_threshold)
 
         self._should_rebalance = should_rebalance
+        self._new_inc_examples = new_inc_examples
 
     def merge(self, ex_container: ISAExampleContainer, ex_type: ISAILASPExample.ExType):
         if ex_type == ISAILASPExample.ExType.GOAL:
@@ -256,9 +267,12 @@ class MultiISAExampleContainer:
         # Sorting is important for reproducibility (sets are not)
         return list(sorted(out))
 
-    def generate_incomplete_examples(self, only_positive=False):
-        _examples = [self._goal_examples] if only_positive else [self._dend_examples,
-                                                                 self._inc_examples]
+    def generate_incomplete_examples(self, only_positive=False, both=False):
+        if not both:
+            _examples = [self._goal_examples] if only_positive else [self._dend_examples,
+                                                                    self._inc_examples]
+        else:
+            _examples = [self._goal_examples, self._dend_examples, self._inc_examples]
         out = ISAExampleContainer(self._ilasp_filter_threshold)
         for ex_container in _examples:
             ex_container.fix_penalties()
@@ -269,8 +283,13 @@ class MultiISAExampleContainer:
 
     def generate_goal_dend_inc(self, total_ex_sum: int) -> \
             (List[ISAILASPExample], List[ISAILASPExample], List[ISAILASPExample]):
-        new_inc_pos = self.generate_incomplete_examples(only_positive=True)
-        new_inc_rest = self.generate_incomplete_examples(only_positive=False)
+
+        if not self._new_inc_examples:
+            new_inc_pos = self.generate_incomplete_examples(only_positive=True)
+            new_inc_rest = self.generate_incomplete_examples(only_positive=False)
+        else:
+            new_inc_rest = self.generate_incomplete_examples(both=True)
+
 
         # new_inc = self.generate_incomplete_examples()
         new_inc_rest.merge(self._inc_examples)
@@ -283,7 +302,9 @@ class MultiISAExampleContainer:
         de = self._dend_examples.as_list_reweighted(total_ex_sum)
         # inc = new_inc.as_list_reweighted(10 * total_ex_sum)
         inc = new_inc_rest.as_list_reweighted(total_ex_sum)
-        pos_inc = new_inc_pos.as_list_reweighted(total_ex_sum)
+        pos_inc = []
+        if not self._new_inc_examples:
+            pos_inc = new_inc_pos.as_list_reweighted(total_ex_sum)
         return gl, de, inc + pos_inc
 
     def _generate_goal_dend_inc_no_rebalancing(self, total_ex_sum: int, new_inc_pos, new_inc_rest) -> \
