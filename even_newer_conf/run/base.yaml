@@ -11,6 +11,9 @@ use_perfect_rm: True
 use_rs: True
 rs_discount: 1
 
+use_thresholding: False
+labelling_threshold: 0.5
+
 continue_training: False
 
 should_tune: True

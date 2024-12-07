@@ -7,6 +7,7 @@ from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelingF
     OfficeWorldPlantLabelingFunctionWrapper, OfficeWorldCoffeeLabelingFunctionWrapper
 from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
 from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer, ProbabilisticRewardShaping, RewardMachineWrapper
+from rm_marl.envs.wrappers import LabelThresholding
 from rm_marl.new_stack.env.augment_labels_wrapper import AugmentLabelsWrapper
 from rm_marl.new_stack.env.rm_wrapper import RMWrapper
 from rm_marl.reward_machine import RewardMachine
@@ -31,6 +32,10 @@ def hydra_env_creator(env_config):
         labeling_funs = [label_factory(env) for label_factory in env_config["label_factories"]]
 
         env = NoisyLabelingFunctionComposer(labeling_funs)
+
+        if env_config['use_thresholding']:
+            env = LabelThresholding(env, env_config['labelling_threshold'])
+
         env = gym.wrappers.FlattenObservation(env)
         env = gym.experimental.wrappers.DtypeObservationV0(env, **{"dtype": np.float32})
         rm = _env_ctx.get("rm", None)

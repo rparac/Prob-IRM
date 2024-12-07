@@ -218,6 +218,8 @@ def setup_env_config(env_config, run_config):
     # TODO: check if we can move this directly
     env_config["use_rs"] = run_config["use_rs"]
     env_config["rs_discount"] = run_config["rs_discount"]
+    env_config["use_thresholding"] = run_config["use_thresholding"]
+    env_config["labelling_threshold"] = run_config["labelling_threshold"]
     return env_config
 
 
