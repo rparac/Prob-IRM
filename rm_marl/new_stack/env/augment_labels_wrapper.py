@@ -15,9 +15,9 @@ class AugmentLabelsWrapper(gymnasium.Wrapper):
         super().__init__(env)
 
         # We assume NoisyLabelingFunctionComposer is used before this component
-        assert hasattr(env, "label_funs")
+        assert hasattr(env.unwrapped, "label_funs")
 
-        num_labels = len(env.label_funs)
+        num_labels = len(env.unwrapped.label_funs)
 
         self.observation_space = gymnasium.spaces.Box(
             low=env.observation_space.low[0], high=env.observation_space.high[0],  # type: ignore
