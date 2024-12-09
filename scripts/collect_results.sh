@@ -103,15 +103,15 @@ fetch_results_using_password()
     csv_file_relatives+=(${csv_file#"$remote_results_dir/"})
   done
 
-  remote_tmp_archive_results="${remote_results_dir}/__tmp_results.tar.gz"
-  local_tmp_archive_results="${LOCAL_RESULTS_DIR}/__tmp_results.tar.gz"
+  archive_results_file="__tmp_results.tar.gz"
 
-  ssh "${ssh_endpoint}" tar -c -z -f "${remote_tmp_archive_results}" "${csv_file_relatives[@]}"
-  scp "${ssh_endpoint}":"${remote_tmp_archive_results}" "${LOCAL_RESULTS_DIR}"
-  ssh "${ssh_endpoint}" rm "${remote_tmp_archive_results}"
+  ssh "${ssh_endpoint}" "cd ${remote_results_dir} && tar -c -z -f ${archive_results_file} ${csv_file_relatives[@]}"
+  scp "${ssh_endpoint}":"${remote_results_dir}/${archive_results_file}" "${LOCAL_RESULTS_DIR}"
+  ssh "${ssh_endpoint}" "cd ${remote_results_dir} && rm ${archive_results_file}"
 
-  tar -x -f "${local_tmp_archive_results}"
-  rm "${local_tmp_archive_results}"
+  cd ${LOCAL_RESULTS_DIR}
+  tar -x -f "${archive_results_file}"
+  rm "${archive_results_file}"
 
 }
 
