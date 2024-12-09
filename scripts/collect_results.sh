@@ -15,7 +15,7 @@ usage_info()
 
 usage()
 {
-    exec 1>2   # Send standard output to standard error
+    exec 1>&2   # Send standard output to standard error
     usage_info
     exit 1
 }
