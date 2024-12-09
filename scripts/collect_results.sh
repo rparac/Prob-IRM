@@ -139,6 +139,11 @@ fetch_results()
 
     echo "[.] Found ${#results_files[@]} CSV result files to fetch"
 
+    if (( "${#results_files[@]}" == 0 )); then
+      echo '[!] Nothing to do, quitting'
+      exit 0
+    fi
+
     if [[ "${SSH_USE_PASSWORD}" == '!true!' ]]; then
       fetch_results_using_password
     else
