@@ -148,7 +148,7 @@ class PPORMLearning(PPO):
 
         rm = RewardMachineAgent.default_rm()
         self._rm_learner = (NewProbFFNSLLearner.options(name=actor_name)  # type: ignore
-                            .remote(rm, actor_name, restoring=True, **self.config.rm_learner_params))  # type: ignore
+                            .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
         self._rm_learner.set_state_dict.remote(state)
 
         self.callbacks.set_rm_learner(actor_name)
