@@ -98,13 +98,14 @@ fetch_results_passwordless()
 fetch_results_using_password()
 {
 
-  remote_tmp_zipped_results="${remote_results_dir}/__tmp_results.zip"
-  local_tmp_zipped_results="${LOCAL_RESULTS_DIR}/__tmp_results.zip"
+  remote_tmp_archive_results="${remote_results_dir}/__tmp_results.tar.gz"
+  local_tmp_archive_results="${LOCAL_RESULTS_DIR}/__tmp_results.tar.gz"
 
-  ssh "${ssh_endpoint}" zip -r "${remote_tmp_zipped_results}" "${results_files[@]}"
-  scp "${ssh_endpoint}":"${remote_tmp_zipped_results}" "${LOCAL_RESULTS_DIR}"
+  ssh "${ssh_endpoint}" tar -c -z -f "${remote_tmp_archive_results}" "${results_files[@]}"
+  scp "${ssh_endpoint}":"${remote_tmp_archive_results}" "${LOCAL_RESULTS_DIR}"
+  ssh "${ssh_endpoint}" rm "${remote_tmp_archive_results}"
 
-  unzip "${local_tmp_zipped_results}"
+  tar -x -f "${local_tmp_archive_results}"
 
 }
 
