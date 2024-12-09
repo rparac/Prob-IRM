@@ -7,7 +7,6 @@ from ray.rllib import BaseEnv, Policy
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.connectors.connector_v2 import ConnectorV2
 from ray.rllib.core.rl_module import RLModule
-from ray.rllib.evaluation import Episode
 from ray.rllib.evaluation.episode_v2 import EpisodeV2
 from ray.rllib.utils.metrics.metrics_logger import MetricsLogger
 from ray.rllib.utils.typing import EpisodeType, PolicyID
@@ -29,7 +28,7 @@ class StoreTracesCallback(DefaultCallbacks):
     def on_episode_end(
             self,
             *,
-            episode: Union[EpisodeType, Episode, EpisodeV2],
+            episode: Union[EpisodeType, EpisodeV2],
             env_runner: Optional["EnvRunner"] = None,
             metrics_logger: Optional[MetricsLogger] = None,
             env: Optional[gym.Env] = None,

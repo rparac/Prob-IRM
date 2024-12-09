@@ -21,8 +21,8 @@ model:
     best_value: "orthogonal_"
 
 ppo:
-  mini_batch_size_per_learner:
-    best_value: 1024 # 8192
+  minibatch_size:
+    best_value: 8192
   lambda_:
     best_value: 0.95
   vf_loss_coeff:
@@ -37,7 +37,7 @@ ppo:
     best_value: 0.01
   kl_coeff:
     best_value: 0.2
-  num_sgd_iter:
+  num_epochs:
     best_value: 13
   entropy_coeff:
     best_value: 0.1

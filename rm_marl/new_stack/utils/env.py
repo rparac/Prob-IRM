@@ -37,7 +37,7 @@ def hydra_env_creator(env_config):
             env = LabelThresholding(env, env_config['labelling_threshold'])
 
         env = gym.wrappers.FlattenObservation(env)
-        env = gym.experimental.wrappers.DtypeObservationV0(env, **{"dtype": np.float32})
+        env = gym.wrappers.DtypeObservation(env, dtype=np.float32)
         rm = _env_ctx.get("rm", None)
 
         if rm is None: 

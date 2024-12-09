@@ -33,9 +33,9 @@ class NewGymSubgoalAutomataAdapter(gym.Wrapper):
 
         self.env = env
         if use_restricted_observables:
-            self.observables = self.env.get_restricted_observables()
+            self.observables = self.env.unwrapped.get_restricted_observables()
         else:
-            self.observables = self.env.get_observables()  # self.env.get_restricted_observables()
+            self.observables = self.env.unwrapped.get_observables()  # self.env.get_restricted_observables()
         self.max_episode_length = max_episode_length
         self.current_step = 0
 
@@ -77,7 +77,7 @@ class NewGymSubgoalAutomataAdapter(gym.Wrapper):
 
     # Converts subgoal automaton to Reward Machine
     def get_perfect_rm(self):
-        subgoal_automaton = self.env.get_automaton()
+        subgoal_automaton = self.env.unwrapped.get_automaton()
 
         rm = RewardMachine()
         rm.add_states(subgoal_automaton.states)

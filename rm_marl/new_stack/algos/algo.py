@@ -172,8 +172,6 @@ class PPORMLearning(PPO):
         # Execute a training step for the underlying agents
         results = super().training_step()
 
-        # TODO: currently trying to relearn every iteration; we may want to
-        #   reduce the frequency
         result_ref = self._rm_learner.relearn_rm.remote()
         new_rm = ray.get(result_ref)
         if new_rm:
@@ -185,17 +183,17 @@ class PPORMLearning(PPO):
     @PublicAPI
     def get_action_space(self) -> gym.Space:
         def _get_action_space(w):
-            env = w.env
+            env = w.env.unwrapped
             # `env` is a gymnasium.vector.Env.
             if hasattr(env, "single_action_space") and isinstance(
                     env.single_action_space, gym.Space
             ):
                 return space_to_dict(env.single_action_space)
             # `env` is a gymnasium.Env.
-            elif hasattr(env, "action_space") and isinstance(
-                    env.action_space, gym.Space
+            elif hasattr(env, "action_spaces") and isinstance(
+                    env.action_spaces, gym.Space
             ):
-                return space_to_dict(env.action_space)
+                return space_to_dict(env.action_spaces)
 
             return None
 
@@ -205,16 +203,16 @@ class PPORMLearning(PPO):
     @PublicAPI
     def get_obs_space(self) -> gym.Space:
         def _get_obs_space(w):
-            env = w.env
+            env = w.env.unwrapped
             if hasattr(env, "single_observation_space") and isinstance(
                     env.single_observation_space, gym.Space
             ):
                 return space_to_dict(env.single_observation_space)
             # `env` is a gymnasium.Env.
-            elif hasattr(env, "observation_space") and isinstance(
-                    env.observation_space, gym.Space
+            elif hasattr(env, "observation_spaces") and isinstance(
+                    env.observation_spaces, gym.Space
             ):
-                return space_to_dict(env.observation_space)
+                return space_to_dict(env.observation_spaces)
 
             return None
 
@@ -253,7 +251,7 @@ class PPORMLearning(PPO):
         def _reset_worker(w):
             _update_config(w)
 
-            w._env_to_module = w.config.build_env_to_module_connector(w.env)
+            w._env_to_module = w.config.build_env_to_module_connector(w.env.unwrapped)
             w._cached_to_module = None
 
             w.make_env()
@@ -265,7 +263,8 @@ class PPORMLearning(PPO):
                     for pid in range(num_agents)
                 }
             ).build()
-            w._module_to_env = w.config.build_module_to_env_connector(w.env)
+
+            w._module_to_env = w.config.build_module_to_env_connector(w.env.unwrapped)
             w._needs_initial_reset = True
 
         # self.env_runner.env.single_observation_space = obs_spaces
@@ -290,7 +289,7 @@ class PPORMLearning(PPO):
     @PublicAPI
     def set_rm(self, rm: RewardMachine) -> None:
         def _set_rm(w):
-            w.env.update_rm(rm)
+            w.env.unwrapped.update_rm(rm)
 
         self.env_runner_group.foreach_worker(_set_rm)
 

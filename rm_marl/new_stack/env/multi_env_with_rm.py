@@ -26,7 +26,7 @@ def make_multi_agent_with_rm(
             if config is None:
                 config = {}
             num = config.pop("num_agents", 1)
-            self.num_agents = num
+            self._num_agents = num
             if isinstance(env_name_or_creator, str):
                 self.envs = [gym.make(env_name_or_creator) for _ in range(num)]
             else:
@@ -37,24 +37,23 @@ def make_multi_agent_with_rm(
                 # self.envs = [env_name_or_creator(config) for _ in range(num)]
             self.terminateds = set()
             self.truncateds = set()
-            self.observation_space = self._build_observation_space()
-            self._obs_space_in_preferred_format = True
-            self.action_space = gym.spaces.Dict(
+            self.observation_spaces = self._build_observation_space()
+            self.action_spaces = gym.spaces.Dict(
                 {i: self.envs[i].action_space for i in range(num)}
             )
-            self._action_space_in_preferred_format = True
-            self._agent_ids = set(range(num))
+            self.agents = list(range(num))
+            self.possible_agents = self.agents.copy()
 
         def _build_observation_space(self):
             return gym.spaces.Dict(
-                {i: self.envs[i].observation_space for i in range(self.num_agents)}
+                {i: self.envs[i].observation_space for i in range(self._num_agents)}
             )
 
         def update_rm(self, rm: RewardMachine):
             for env in self.envs:
                 env.update_rm(rm)
 
-            self.observation_space = self._build_observation_space()
+            self.observation_spaces = self._build_observation_space()
 
         @override(MultiAgentEnv)
         def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):

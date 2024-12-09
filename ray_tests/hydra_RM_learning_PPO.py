@@ -152,10 +152,11 @@ def create_config(
                                                 layer_size in model_config["_layer_sizes"]]
 
     config.rl_module(
-        rl_module_spec=MultiRLModuleSpec(module_specs=module_specs),
+        rl_module_spec=MultiRLModuleSpec(rl_module_specs=module_specs),
         # IMPORTANT: the model config dict needs to be defined here; it gets ignored if defined for individual policies.
         #   Noticed when resetting workers
-        model_config_dict=from_hydra_config(model_config)
+        # model_config_dict=from_hydra_config(model_config)
+        model_config=from_hydra_config(model_config)
     )
 
     return config
