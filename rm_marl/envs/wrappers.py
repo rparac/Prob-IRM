@@ -90,7 +90,7 @@ class LabelThresholding(gym.Wrapper):
     def _apply_thresholding(self, labels):
         thresholded_labels = {}
         for label, confidence in labels.items():
-            thresholded_labels[label] = 1 if confidence >= self._threshold else 0
+            thresholded_labels[label] = 1.0 if confidence >= self._threshold else 0.0
 
         return thresholded_labels
 
