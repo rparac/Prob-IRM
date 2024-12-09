@@ -111,10 +111,9 @@ fetch_results_using_password()
   ssh "${ssh_endpoint}" rm "${remote_tmp_archive_results}"
 
   tar -x -f "${local_tmp_archive_results}"
-  mv
+  rm "${local_tmp_archive_results}"
 
-
-}}
+}
 
 fetch_results()
 {
