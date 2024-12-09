@@ -15,15 +15,22 @@ class AugmentLabelsWrapper(gymnasium.Wrapper):
         super().__init__(env)
 
         # We assume NoisyLabelingFunctionComposer is used before this component
-        assert hasattr(env.unwrapped, "label_funs")
+        assert self._recursively_find_gymnasium_attr(env, "label_funs") is not None
 
-        num_labels = len(env.unwrapped.label_funs)
+        num_labels = len(self._recursively_find_gymnasium_attr(env, "label_funs"))
 
         self.observation_space = gymnasium.spaces.Box(
             low=env.observation_space.low[0], high=env.observation_space.high[0],  # type: ignore
             dtype=env.observation_space.dtype,
             shape=(env.observation_space.shape[0] + num_labels,)
         )
+
+    def _recursively_find_gymnasium_attr(self, env, attr):
+        while hasattr(env, 'env'):
+            if hasattr(env, attr):
+                return getattr(env, attr)
+            env = env.env
+        return None
 
     @staticmethod
     def _augment_obs_with_labels(obs, info):

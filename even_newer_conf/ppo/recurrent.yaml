@@ -1,5 +1,5 @@
 defaults:
   - base
 
-mini_batch_size_per_learner:
+minibatch_size:
   options: [ 300, 400, 500 ]
