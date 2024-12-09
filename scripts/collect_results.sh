@@ -10,7 +10,7 @@ usage_info()
 {
     echo "Usage: $arg0 [{-f|--from} user@host:/path/to/results] [{-t|--to} local/path/to/results]   \\"
     echo "       $blnk [{-s|--subset} results/subfolder] ...                                        \\"
-    echo "       $blnk [{-p|--password} path/to/password/script]"
+    echo "       $blnk [{-p|--use-password}"
 }
 
 usage()
@@ -34,7 +34,7 @@ help()
     echo "  {--to} local/path/to/results                -- Local folder to store fetched results"
     echo "  {-s|--subset} results/subfolder             -- Limit the fetched results to the specified subset of results"
     echo "                                                   NB: Can be passed multiple times to expand the subset"
-    echo "  {-p|--password} path/to/password/script     -- Password to use for SSH connections"
+    echo "  {-p|--use-password}                         -- If provided, assume password is required for access on remote host"
     exit 0
 }
 
@@ -42,7 +42,7 @@ parse_flags()
 {
 
     RESULTS_SUBSETS=()
-    SSH_PASSWORD_SCRIPT='!none!'
+    SSH_USE_PASSWORD='!false!'
 
     while test $# -gt 0
     do
@@ -64,9 +64,8 @@ parse_flags()
             shift;;
         (-p|--password)
             shift
-            [ $# = 0 ] && error "Missing path to password-yielding script: --password path/to/password/script"
-            SSH_PASSWORD_SCRIPT="$1"
-            shift;;
+            SSH_USE_PASSWORD="!true!"
+            ;;
         (-h|--help)
             help;;
         (*) usage;;
@@ -79,6 +78,36 @@ parse_flags()
 
 }
 
+fetch_results_passwordless()
+{
+
+  for csv_file in "${results_files[@]}"; do
+
+    csv_parent_directory=$(dirname "${csv_file}")
+    local_csv_parent_directory=${csv_parent_directory#"$remote_results_dir"}
+    local_folder="${LOCAL_RESULTS_DIR}${local_csv_parent_directory}"
+
+    mkdir -p "${local_folder}"
+    echo "      --> Fetching ${local_folder}"
+    scp "${ssh_endpoint}:${csv_file}" "${local_folder}" 2>/dev/null
+
+  done
+
+}
+
+fetch_results_using_password()
+{
+
+  remote_tmp_zipped_results="${remote_results_dir}/__tmp_results.zip"
+  local_tmp_zipped_results="${LOCAL_RESULTS_DIR}/__tmp_results.zip"
+
+  ssh "${ssh_endpoint}" zip -r "${remote_tmp_zipped_results}" "${results_files[@]}"
+  scp "${ssh_endpoint}":"${remote_tmp_zipped_results}" "${LOCAL_RESULTS_DIR}"
+
+  unzip "${local_tmp_zipped_results}"
+
+}
+
 fetch_results()
 {
 
@@ -86,16 +115,6 @@ fetch_results()
 
   ssh_endpoint="${_split[0]}"
   remote_results_dir="${_split[1]}"
-
-  if [[ "${SSH_PASSWORD}" != '!none!' ]]; then
-
-    export DISPLAY
-    DISPLAY=dummy
-
-    export SSH_ASKPASS="${SSH_PASSWORD_SCRIPT}"
-    setsid ssh "${ssh_endpoint}"
-
-  fi
 
   for subset in "${RESULTS_SUBSETS[@]}"; do
 
@@ -106,6 +125,8 @@ fetch_results()
       echo "    --> Fetching results for subset: ${subset}"
     fi
 
+    echo '[.] Discovering results file on remote host...'
+
     find_output=$(ssh "${ssh_endpoint}" find "${remote_results_dir}/${subset}" -type f -name 'progress.csv' 2>/dev/null)
 
     # find exit code 1: file not found
@@ -115,17 +136,13 @@ fetch_results()
 
     read -r -a results_files -d '\n' <<< "${find_output}"
 
-    for csv_file in "${results_files[@]}"; do
+    echo "[.] Found ${#results_files[@]} CSV result files to fetch"
 
-      csv_parent_directory=$(dirname "${csv_file}")
-      local_csv_parent_directory=${csv_parent_directory#"$remote_results_dir"}
-      local_folder="${LOCAL_RESULTS_DIR}${local_csv_parent_directory}"
-
-      mkdir -p "${local_folder}"
-      echo "      --> ${local_folder}"
-      scp "${ssh_endpoint}:${csv_file}" "${local_folder}" 2>/dev/null
-
-    done
+    if [[ "${SSH_USE_PASSWORD}" == '!true!' ]]; then
+      fetch_results_using_password
+    else
+      fetch_results_passwordless
+    fi
 
   done
 
