@@ -62,7 +62,7 @@ parse_flags()
             [ $# = 0 ] && error "Missing subset of results to collect: --subset results/subfolder"
             RESULTS_SUBSETS+=("$1")
             shift;;
-        (-p|--password)
+        (-p|--use-password)
             shift
             SSH_USE_PASSWORD="!true!"
             ;;
@@ -153,5 +153,6 @@ parse_flags "$@"
 echo "[*] Fetching results from: $REMOTE_RESULTS_DIR"
 echo "[*] Storing results in: $LOCAL_RESULTS_DIR"
 echo "[*] Requested results subset: ${RESULTS_SUBSETS[*]}"
+echo "[*] Use password auth: ${SSH_USE_PASSWORD}"
 
 fetch_results
