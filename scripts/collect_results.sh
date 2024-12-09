@@ -98,16 +98,23 @@ fetch_results_passwordless()
 fetch_results_using_password()
 {
 
+  csv_file_relatives=()
+  for csv_file in "${results_files[@]}"; do
+    csv_file_relatives+=(${csv_file#"$remote_results_dir"})
+  done
+
   remote_tmp_archive_results="${remote_results_dir}/__tmp_results.tar.gz"
   local_tmp_archive_results="${LOCAL_RESULTS_DIR}/__tmp_results.tar.gz"
 
-  ssh "${ssh_endpoint}" tar -c -z -f "${remote_tmp_archive_results}" "${results_files[@]}"
+  ssh "${ssh_endpoint}" tar -c -z -f "${remote_tmp_archive_results}" "${csv_file_relatives[@]}"
   scp "${ssh_endpoint}":"${remote_tmp_archive_results}" "${LOCAL_RESULTS_DIR}"
   ssh "${ssh_endpoint}" rm "${remote_tmp_archive_results}"
 
   tar -x -f "${local_tmp_archive_results}"
+  mv
 
-}
+
+}}
 
 fetch_results()
 {
