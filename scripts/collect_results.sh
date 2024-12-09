@@ -105,11 +105,16 @@ fetch_results_using_password()
 
   archive_results_file="__tmp_results.tar.gz"
 
-  ssh "${ssh_endpoint}" "cd ${remote_results_dir} && tar -c -z -f ${archive_results_file} ${csv_file_relatives[@]}"
-  scp "${ssh_endpoint}":"${remote_results_dir}/${archive_results_file}" "${LOCAL_RESULTS_DIR}"
+  echo '[.] Creating archive file on remote endpoint'
+  ssh "${ssh_endpoint}" "cd ${remote_results_dir} && tar -c -z -f ${archive_results_file} ${csv_file_relatives[*]}"
+
+  echo '[.] Retrieving archived results from remote endpoint'
+  scp "${ssh_endpoint}:${remote_results_dir}/${archive_results_file}" "${LOCAL_RESULTS_DIR}"
+
+  echo '[.] Cleanup archived results from remote endpoint'
   ssh "${ssh_endpoint}" "cd ${remote_results_dir} && rm ${archive_results_file}"
 
-  cd ${LOCAL_RESULTS_DIR}
+  cd "${LOCAL_RESULTS_DIR}" || error "Could not cd into local results folder: ${LOCAL_RESULTS_DIR}"
   tar -x -f "${archive_results_file}"
   rm "${archive_results_file}"
 
