@@ -10,4 +10,4 @@ lstm_cell_size:
   best_value: null
 
 max_seq_len:
-  best_value: 200
+  best_value: 250

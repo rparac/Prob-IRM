@@ -1,29 +1,30 @@
-
 # @package _global_
 algo:
   lr:
-    best_value: 5.02900368295996e-05
+    best_value: 0.00015320184123405613
 model:
   fcnet_hiddens:
-    best_value: [ 64, 64, 64, 64 ]
+    best_value: [64, 64, 64, 64]
   fcnet_activation:
     best_value: "relu"
   lstm_cell_size:
     best_value: 32
+  max_seq_len:
+    best_value: 250
   vf_share_layers:
-    best_value: False
+    best_value: True
   post_fcnet_activation:
     best_value: "relu"
   post_fcnet_hiddens:
     best_value: []
   fcnet_weights_initializer:
-    best_value: "kaiming_uniform_"
+    best_value: "orthogonal_" 
   post_fcnet_weights_initializer:
-    best_value: "kaiming_uniform_"
+    best_value: "orthogonal_"
 
 ppo:
-  mini_batch_size_per_learner:
-    best_value: 1024
+  minibatch_size:
+    best_value: 8192
   lambda_:
     best_value: 0.95
   vf_loss_coeff:
@@ -38,7 +39,10 @@ ppo:
     best_value: 0.01
   kl_coeff:
     best_value: 0.2
-  num_sgd_iter:
-    best_value: 9
+  num_epochs:
+    best_value: 13
   entropy_coeff:
-    best_value: 0.1 
+    best_value: 0.1
+
+
+# Same as configabcd just with shorter length for shorter tasks

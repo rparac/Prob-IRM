@@ -9,6 +9,8 @@ model:
     best_value: "relu"
   lstm_cell_size:
     best_value: 32
+  max_seq_len:
+    best_value: 500
   vf_share_layers:
     best_value: True
   post_fcnet_activation:
