@@ -35,6 +35,7 @@ help()
     echo "  {-s|--subset} results/subfolder             -- Limit the fetched results to the specified subset of results"
     echo "                                                   NB: Can be passed multiple times to expand the subset"
     echo "  {-p|--use-password}                         -- If provided, assume password is required for access on remote host"
+    echo "  {-u|--unzip}                                -- If provided, unzips and removes the downloaded tar folder"
     exit 0
 }
 
@@ -43,6 +44,7 @@ parse_flags()
 
     RESULTS_SUBSETS=()
     SSH_USE_PASSWORD='!false!'
+    UNZIP='!false!'
 
     while test $# -gt 0
     do
@@ -65,6 +67,10 @@ parse_flags()
         (-p|--use-password)
             shift
             SSH_USE_PASSWORD="!true!"
+            ;;
+        (-u|--unzip)
+            shift
+            UNZIP="!true!"
             ;;
         (-h|--help)
             help;;
@@ -103,23 +109,26 @@ fetch_results_using_password()
     csv_file_relatives+=(${csv_file#"$remote_results_dir/"})
   done
 
-  archive_results_file="__tmp_results.tar.gz"
+  archive_results_file="zipped_results.tar.gz"
 
   mkdir -p "${LOCAL_RESULTS_DIR}"
 
+
   echo '[.] Creating archive file on remote endpoint'
-  ssh "${ssh_endpoint}" "cd ${remote_results_dir} && tar -c -z -f ${archive_results_file} ${csv_file_relatives[*]}"
+  sshpass -p "${PASSWORD}" ssh "${ssh_endpoint}" "cd ${remote_results_dir} && tar -c -z -f ${archive_results_file} ${csv_file_relatives[*]}"
 
   echo '[.] Retrieving archived results from remote endpoint'
-  scp "${ssh_endpoint}:${remote_results_dir}/${archive_results_file}" "${LOCAL_RESULTS_DIR}"
+  sshpass -p "${PASSWORD}" scp "${ssh_endpoint}:${remote_results_dir}/${archive_results_file}" "${LOCAL_RESULTS_DIR}"
 
   echo '[.] Cleanup archived results from remote endpoint'
-  ssh "${ssh_endpoint}" "cd ${remote_results_dir} && rm ${archive_results_file}"
+  sshpass -p "${PASSWORD}" ssh "${ssh_endpoint}" "cd ${remote_results_dir} && rm ${archive_results_file}"
 
-  cd "${LOCAL_RESULTS_DIR}" || error "Could not cd into local results folder: ${LOCAL_RESULTS_DIR}"
-  tar -x -f "${archive_results_file}"
-  rm "${archive_results_file}"
 
+  if [[ "${UNZIP}" == '!true!' ]]; then
+    cd "${LOCAL_RESULTS_DIR}" || error "Could not cd into local results folder: ${LOCAL_RESULTS_DIR}"
+    tar -x -f "${archive_results_file}"
+    rm "${archive_results_file}"
+  fi
 }
 
 fetch_results()
@@ -129,6 +138,17 @@ fetch_results()
 
   ssh_endpoint="${_split[0]}"
   remote_results_dir="${_split[1]}"
+
+  if [[ "${SSH_USE_PASSWORD}" == '!true!' ]]; then
+    # Prompt the user for a password
+    echo "Enter your password:"
+    read -s PASSWORD
+    echo '[.] Verifying password'
+    if ! sshpass -p "$PASSWORD" ssh "${ssh_endpoint}" exit 0; then
+      echo "Password is incorrect."
+      exit 1
+    fi
+  fi
 
   for subset in "${RESULTS_SUBSETS[@]}"; do
 
@@ -140,7 +160,11 @@ fetch_results()
     fi
 
     echo '[.] Discovering results file on remote host...'
-    find_output=$(ssh "${ssh_endpoint}" find "${remote_results_dir}/${subset}" -type f -name 'progress.csv' 2>/dev/null)
+    if [[ "${SSH_USE_PASSWORD}" == '!true!' ]]; then
+      find_output=$(sshpass -p "$PASSWORD" ssh "${ssh_endpoint}" find "${remote_results_dir}/${subset}" -type f -name 'progress.csv' 2>/dev/null)
+    else
+      find_output=$(ssh "${ssh_endpoint}" find "${remote_results_dir}/${subset}" -type f -name 'progress.csv' 2>/dev/null)
+    fi
 
     # find exit code 1: file not found
     if (( $? == 1)); then
@@ -171,6 +195,7 @@ parse_flags "$@"
 echo "[*] Fetching results from: $REMOTE_RESULTS_DIR"
 echo "[*] Storing results in: $LOCAL_RESULTS_DIR"
 echo "[*] Requested results subset: ${RESULTS_SUBSETS[*]}"
-echo "[*] Use password auth: ${SSH_USE_PASSWORD}"
+echo "[*] Use password auth: ${SSH_USE_PASSWORD}" 
+echo "[*] Unzip folder locally: ${UNZIP}"
 
 fetch_results
