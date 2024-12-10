@@ -105,6 +105,8 @@ fetch_results_using_password()
 
   archive_results_file="__tmp_results.tar.gz"
 
+  mkdir -p "${LOCAL_RESULTS_DIR}"
+
   echo '[.] Creating archive file on remote endpoint'
   ssh "${ssh_endpoint}" "cd ${remote_results_dir} && tar -c -z -f ${archive_results_file} ${csv_file_relatives[*]}"
 
@@ -138,12 +140,11 @@ fetch_results()
     fi
 
     echo '[.] Discovering results file on remote host...'
-
     find_output=$(ssh "${ssh_endpoint}" find "${remote_results_dir}/${subset}" -type f -name 'progress.csv' 2>/dev/null)
 
     # find exit code 1: file not found
     if (( $? == 1)); then
-      error "Remote results folder not found: ${remote_results_dir}"
+      error "Remote results folder not found: ${remote_results_dir}/${subset}"
     fi
 
     read -r -a results_files -d '\n' <<< "${find_output}"
