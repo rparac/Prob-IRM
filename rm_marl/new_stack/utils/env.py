@@ -10,6 +10,7 @@ from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer, ProbabilisticRe
 from rm_marl.envs.wrappers import LabelThresholding
 from rm_marl.new_stack.env.augment_labels_wrapper import AugmentLabelsWrapper
 from rm_marl.new_stack.env.rm_wrapper import RMWrapper
+from rm_marl.new_stack.utils.gymnasium import gym_getattr
 from rm_marl.reward_machine import RewardMachine
 
 GET_PERFECT_RM = "perfect"
@@ -45,7 +46,7 @@ def hydra_env_creator(env_config):
             return env
 
         if rm == GET_PERFECT_RM:
-            rm = env.get_perfect_rm()
+            rm = gym_getattr(env, 'get_perfect_rm')()
         elif rm == GET_DEFAULT_RM:
             rm = RewardMachineAgent.default_rm()
         elif isinstance(rm, RewardMachine):
