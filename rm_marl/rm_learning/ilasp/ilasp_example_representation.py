@@ -112,16 +112,22 @@ class ISAILASPExample:
     def is_active(self):
         return self.penalty is None or round(self.penalty * self.penalty_rounding_scale) >= self.penalty_threshold
 
-    def _new_inc_encoding(self):
+    def _new_inc_encoding_acc(self):
         # st(T+1, u_acc) should be caused by the last atom
         return ":- last(T), T1 <= T, st(T1, u_acc)."
+
+    def _new_inc_encoding_rej(self):
+        # st(T+1, u_acc) should be caused by the last atom
+        return ":- last(T), T1 <= T, st(T1, u_rej)."
 
     def __repr__(self):
         context_str = '  '.join([elem.as_predicate_str() for elem in self.observable_context])
         if self.last_predicate:
             context_str += f'\n  {self.last_predicate.as_predicate_str()}'
         if self.example_type == ISAILASPExample.ExType.GOAL and self.new_inc_example:
-            context_str += f'\n  {self._new_inc_encoding()}'
+            context_str += f'\n  {self._new_inc_encoding_acc()}'
+        if self.example_type == ISAILASPExample.ExType.DEND and self.new_inc_example:
+            context_str += f'\n  {self._new_inc_encoding_rej()}'
             
 
         prefix = "pos" if self.is_positive else "neg"
