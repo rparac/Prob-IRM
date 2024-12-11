@@ -1,3 +1,5 @@
+import sys
+import time
 import pickle
 import uuid
 import os
@@ -172,8 +174,12 @@ class PPORMLearning(PPO):
         # Execute a training step for the underlying agents
         results = super().training_step()
 
+        
+        curr_time = time.time()
         result_ref = self._rm_learner.relearn_rm.remote()
         new_rm = ray.get(result_ref)
+        end_time = time.time()
+        print(f"It took {end_time - curr_time} to check if it should relearn RM", file=sys.stderr)
         if new_rm:
             self.set_rm(new_rm)  # type: ignore
             self.reset_policies(new_rm)
