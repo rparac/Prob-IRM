@@ -1,19 +1,13 @@
-import copy
 import itertools
 import os
 import random
 import datetime as dt
-import joblib
 from typing import List, Dict
 
 import numpy as np
 import ray
-from ray import tune
-from ray.train.context import TrainContext
 from sklearn.metrics import log_loss
 
-from rm_marl.reward_machine import RewardMachine
-from rm_marl.rm_learning import RMLearner
 from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample, MultiISAExampleContainer, \
     ISAExampleContainer, LastPredicate, ObservablePredicate
 from rm_marl.rm_learning.ilasp.task_generator import generate_ilasp_task
@@ -83,7 +77,8 @@ class NewProbFFNSLLearner:
         self.ex_penalty_multipler = ex_penalty_multiplier
 
         # Number of ILASP examples
-        self.I = 100
+        # self.I = 100
+        self.I = 10
         # ILASP example counter
         self.ex_counter = 0
 
@@ -157,11 +152,11 @@ class NewProbFFNSLLearner:
     def _store_trace(self, trace):
         if trace.is_complete:
             if trace.is_positive:
-                self._seen_positive_traces.append(copy.deepcopy(trace))
+                self._seen_positive_traces.append(trace)
             else:
-                self._seen_negative_traces.append(copy.deepcopy(trace))
+                self._seen_negative_traces.append(trace)
         else:
-            self._seen_incomplete_traces.append(copy.deepcopy(trace))
+            self._seen_incomplete_traces.append(trace)
 
     def _update_reward_machine(self, curr_rm):
         self.rm_learning_counter += 1
@@ -323,7 +318,7 @@ class NewProbFFNSLLearner:
         }
 
     # TODO: remove duplicatios
-    def create_examples_from(self, trace: TraceTracker) -> (ISAExampleContainer, ISAILASPExample.ExType):
+    def create_examples_from(self, trace: TraceTracker) -> tuple[ISAExampleContainer, ISAILASPExample.ExType]:
         if trace.is_complete:
             if trace.is_positive:
                 ex_type = ISAILASPExample.ExType.GOAL
@@ -362,7 +357,7 @@ class NewProbFFNSLLearner:
     def _sample_dict(self, labels: Dict[str, float]) -> List[str]:
         true_elems = []
         for label, prob in labels.items():
-            if random.random() <= prob:
+            if prob > 0 and random.random() <= prob:
                 true_elems.append(label)
         return true_elems
 
