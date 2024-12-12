@@ -40,7 +40,7 @@ wandb:
 
 
 # How often should we render episode videos and heatmap
-render_freq: 10
+render_freq: 10000000
 
 # Intentionally crashes after this many iters (useful if we want to extend training and use checkpointing)
 crash_iter: 100000
