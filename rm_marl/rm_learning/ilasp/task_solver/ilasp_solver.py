@@ -57,5 +57,13 @@ def solve_ilasp_task(ilasp_problem_filename, output_filename, version="2", max_b
         if operation == ILASP_OPERATION_SEARCH_SPACE:
             arguments.append("-s")
 
-        return_code = subprocess.call(arguments, stdout=f)
-        return return_code != TIMEOUT_ERROR_CODE
+        # return_code = subprocess.call(arguments, stdout=f)
+        # return return_code != TIMEOUT_ERROR_CODE
+        try:
+            result = subprocess.run(
+                arguments, stdout=f,
+                timeout=timeout,
+            )
+            return True
+        except subprocess.TimeoutExpired as e:
+            return False

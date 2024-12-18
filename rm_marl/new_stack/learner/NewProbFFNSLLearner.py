@@ -209,15 +209,16 @@ class NewProbFFNSLLearner:
                 self.min_rm_num_episodes *= 2
                 return None
         else:
-            raise RuntimeError(
-                "Error: Couldn't find an automaton within the specified timeout!"
-            )
+            # Can't solve in specified time
+            LOGGER.debug(f"ILASP task timeout")
+            self.min_rm_num_episodes *= 2
+            return None
 
     def _solve_ilasp_task(self, ilasp_task_filename, ilasp_solution_filename):
         return solve_ilasp_task(
             ilasp_task_filename,
             ilasp_solution_filename,
-            timeout=60 * 10,
+            timeout=60 * 60, # 60 minutes * 60 seconds
             version="2",
             max_body_literals=1,
             binary_folder_name=None,
