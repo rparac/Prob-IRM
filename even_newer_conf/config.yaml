@@ -1,7 +1,8 @@
 defaults:
   # Look up the base file in env/office-world, naming the key as agent
   # This also makes the env/office-world the base directory for the env part of configuration (desirable)
-  - env/office-world@env: deliver_coffee
+  # - env/office-world@env: deliver_coffee
+  - env/water-world@env: red_green
 #  - env/office-world@env: deliver_coffee_mail
   - run: base
   - rm_learner: base

@@ -211,3 +211,54 @@ class OfficeWorldDLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWra
 
     def get_label(self):
         return "d"
+
+
+
+class WaterWorldRedLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+                 sensor_false_confidence: float, seed: int = 0):
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+
+    def get_label(self):
+        return "r"
+
+class WaterWorldGreenLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+                 sensor_false_confidence: float, seed: int = 0):
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+
+    def get_label(self):
+        return "g"
+
+class WaterWorldCyanLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+                 sensor_false_confidence: float, seed: int = 0):
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+
+    def get_label(self):
+        return "c"
+
+class WaterWorldBlueLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+                 sensor_false_confidence: float, seed: int = 0):
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+
+    def get_label(self):
+        return "b"
+
+
+class WaterWorldYellowLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+                 sensor_false_confidence: float, seed: int = 0):
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+
+    def get_label(self):
+        return "y"
+
+class WaterWorldMagentaLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
+    def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
+                 sensor_false_confidence: float, seed: int = 0):
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+
+    def get_label(self):
+        return "m"

@@ -82,8 +82,10 @@ class NewGymSubgoalAutomataAdapter(gym.Wrapper):
         rm = RewardMachine()
         rm.add_states(subgoal_automaton.states)
         rm.set_u0(subgoal_automaton.initial_state)
-        rm.set_uacc(subgoal_automaton.accept_state)
-        rm.set_urej(subgoal_automaton.reject_state)
+        if subgoal_automaton.accept_state is not None:
+            rm.set_uacc(subgoal_automaton.accept_state)
+        if subgoal_automaton.reject_state is not None:
+            rm.set_urej(subgoal_automaton.reject_state)
 
         for from_state, l_cond_to_state in subgoal_automaton.edges.items():
             for conditions, to_state in l_cond_to_state:
