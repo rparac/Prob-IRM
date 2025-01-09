@@ -7,7 +7,7 @@ defaults:
   - yellow_label_factory: perfect
 
 name: ???
-render_mode: None
+render_mode: 'rgb_array'
 max_episode_length: 150
 
 use_restricted_observables: true

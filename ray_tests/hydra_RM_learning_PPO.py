@@ -63,7 +63,7 @@ def create_config(
     use_wandb = run_config["wandb"]["key"] is not None
     if use_wandb:
         callbacks.append(EnvRenderCallback)
-        callbacks.append(HeatmapCallback)
+        # callbacks.append(HeatmapCallback)
 
     if run_config["recurrent"]:
         config = PPOConfig()
