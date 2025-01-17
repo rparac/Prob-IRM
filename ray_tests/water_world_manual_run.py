@@ -12,7 +12,7 @@ seed = 0
 
 
 env = gym.make("gym_subgoal_automata:WaterWorldRedGreen-v0",
-               params={"generation": "random", "environment_seed": 125, "hide_state_variables": True},
+               params={"generation": "random", "environment_seed": 127, "hide_state_variables": True},
                render_mode="human",
                )
 env = NewGymSubgoalAutomataAdapter(env, max_episode_length=250)  # type: ignore

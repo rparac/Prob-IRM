@@ -195,8 +195,8 @@ class HeatmapCallback(DefaultCallbacks):
         ):
             return
 
-        width = env.env.envs[0].width
-        height = env.env.envs[0].height
+        width = env.envs[0].unwrapped.width
+        height = env.envs[0].unwrapped.height
 
         # Get all pacman y/x-positions from the episode.
         for i in range(len(self._episode_start_position)):
@@ -218,8 +218,8 @@ class HeatmapCallback(DefaultCallbacks):
 
     @staticmethod
     def _get_yx_pos(sa_episode, env):
-        width = env.env.envs[0].width
-        height = env.env.envs[0].height
+        width = env.envs[0].unwrapped.width
+        height = env.envs[0].unwrapped.height
 
         curr_state = sa_episode.get_observations(-1)
         idx = np.argmax(curr_state[:width * height])

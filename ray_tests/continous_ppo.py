@@ -25,18 +25,23 @@ from rm_marl.new_stack.callbacks.store_config import StoreTracesCallback
 from rm_marl.new_stack.env.multi_env_with_rm import make_multi_agent_with_rm
 from rm_marl.new_stack.utils.env import hydra_env_creator
 from rm_marl.new_stack.utils.hydra import from_hydra_config, manual_value_override
-from rm_marl.new_stack.utils.run import simplified_custom_run_rllib_example_script_experiment, continue_training
+from rm_marl.new_stack.utils.run import (
+    simplified_custom_run_rllib_example_script_experiment,
+    continue_training,
+)
 
 
 from ray.rllib.algorithms import PPOConfig, PPO
 from ray.rllib.core.rl_module import RLModuleSpec, MultiRLModuleSpec
 from ray.tune.schedulers import ASHAScheduler
 
-stop_iters = 100
+stop_iters = 1000
 run_config = {
     "should_tune": True,
     "wandb": {
-        "key": None,
+        "project": "Continous-PPO",
+        "run_name": "run",
+        "key": "680ad332869d9761ae2b6bdd70cdbc068674d47b",
     },
     "name": "test_continous",
     "tune_config": {
@@ -44,8 +49,9 @@ run_config = {
         "verbose": 2,
         "checkpoint_freq": 0,
         "checkpoint_at_end": False,
-    }
+    },
 }
+
 
 def create_config():
     # n_timesteps
@@ -64,12 +70,28 @@ def create_config():
     )
     config.environment(
         env="MountainCarContinuous-v0",
+        env_config={
+            "render_mode": "rgb_array",
+        }
     )
     config.env_runners(
+        # num_env_runners=0,
         num_envs_per_env_runner=1,
-        rollout_fragment_length=8,
+        # rollout_fragment_length=8,
         observation_filter="MeanStdFilter",
     )
+    # config.evaluation(
+    #     evaluation_interval=100,
+    #     evaluation_duration=1,
+    #     # Important: Otherwise the evaluation runs in the main thread, which ruins environment ids
+    #     # evaluation_num_env_runners=run_config["num_agents"],
+    #     evaluation_num_env_runners=0,
+    #     evaluation_duration_unit="episodes",
+    # )
+    config.debugging(logger_config={
+        "type": tune.logger.NoopLogger,
+    })
+    config.callbacks(EnvRenderCallback)
     # config.rollouts(
     # num_envs_per_worker=1,
     # timesteps_per_iteration=20000,
@@ -85,15 +107,14 @@ def create_config():
     )
     return config
 
+
 def run():
     print("hello world")
 
-
     config = create_config()
 
-
     scheduler = ASHAScheduler(
-        metric="env_runners/episode_return_mean",
+        # metric="env_runners/episode_return_mean",
         mode="max",
         grace_period=15,
         max_t=stop_iters,
@@ -101,7 +122,9 @@ def run():
     stop = {
         TRAINING_ITERATION: stop_iters,
     }
-    simplified_custom_run_rllib_example_script_experiment(config, run_config, stop=stop, scheduler=scheduler)
+    simplified_custom_run_rllib_example_script_experiment(
+        config, run_config, stop=stop, scheduler=scheduler
+    )
 
 
 if __name__ == "__main__":
