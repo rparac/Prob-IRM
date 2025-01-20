@@ -6,7 +6,7 @@ cd ..
 
 seeds=(0) # 100 200 300 400)
 use_rm_options=(True False)
-noise_levels=(1 0.9979081153869629 0.995305061340332 0.9814815521240234)
+noise_levels=(1 0.9990105628967285) #  1 0.9990105628967285
 
 nodes=2
 ncpus=32
@@ -23,7 +23,7 @@ for seed in "${seeds[@]}"; do
       # run noise on all three
       # python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} ray_tests/simple_test.py
       python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
-        ray_tests/hydra_RM_learning_PPO.py env/water-world@env=red_green run.name=${name} \
+        ray_tests/hydra_RM_learning_PPO.py env/water-world@env=red_green_blue run.name=${name} \
 	  run.seed=${seed} \
           rm_learner.ex_penalty_multiplier=8 \
           rm_learner.min_penalty=4 \
@@ -33,7 +33,7 @@ for seed in "${seeds[@]}"; do
           run.wandb.key=680ad332869d9761ae2b6bdd70cdbc068674d47b \
 	  run.render_freq=500 \
           +hyperparams/with_rm=configabcd \
-          +experiment=vanilla_coffee_symmetric_error x=${noise_level} 
+          +experiment=vanilla_red_symmetric_error x=${noise_level} 
     done
   done
 done

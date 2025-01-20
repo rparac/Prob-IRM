@@ -9,6 +9,7 @@ env = gym.make("gym_subgoal_automata:OfficeWorldDeliverCoffee-v0",
 env = DanielGymAdapter(env)
 """
 import abc
+import math
 from typing import Union
 
 import gymnasium as gym
@@ -213,11 +214,13 @@ class OfficeWorldDLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWra
         return "d"
 
 
+# 2 balls * (area of circle - radius=15) / area of screen (dimx=400)
+WATERWORLD_DEFAULT_PRIOR = 2 * ((15 * 15) * math.pi) / (400 * 400)
 
 class WaterWorldRedLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
     def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
                  sensor_false_confidence: float, seed: int = 0):
-        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=WATERWORLD_DEFAULT_PRIOR)
 
     def get_label(self):
         return "r"
@@ -225,7 +228,7 @@ class WaterWorldRedLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWr
 class WaterWorldGreenLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
     def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
                  sensor_false_confidence: float, seed: int = 0):
-        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=WATERWORLD_DEFAULT_PRIOR)
 
     def get_label(self):
         return "g"
@@ -233,7 +236,7 @@ class WaterWorldGreenLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunction
 class WaterWorldCyanLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
     def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
                  sensor_false_confidence: float, seed: int = 0):
-        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=WATERWORLD_DEFAULT_PRIOR)
 
     def get_label(self):
         return "c"
@@ -241,7 +244,7 @@ class WaterWorldCyanLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionW
 class WaterWorldBlueLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
     def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
                  sensor_false_confidence: float, seed: int = 0):
-        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=WATERWORLD_DEFAULT_PRIOR)
 
     def get_label(self):
         return "b"
@@ -250,7 +253,7 @@ class WaterWorldBlueLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionW
 class WaterWorldYellowLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
     def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
                  sensor_false_confidence: float, seed: int = 0):
-        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=WATERWORLD_DEFAULT_PRIOR)
 
     def get_label(self):
         return "y"
@@ -258,7 +261,7 @@ class WaterWorldYellowLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctio
 class WaterWorldMagentaLabelingFunctionWrapper(OfficeWorldAbstractLabelingFunctionWrapper):
     def __init__(self, env: GymSubgoalAutomataAdapter, sensor_true_confidence: float,
                  sensor_false_confidence: float, seed: int = 0):
-        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=1 / (12 * 9))
+        super().__init__(env, sensor_true_confidence, sensor_false_confidence, seed, value_true_prior=WATERWORLD_DEFAULT_PRIOR)
 
     def get_label(self):
         return "m"
