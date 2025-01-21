@@ -1,0 +1,16 @@
+defaults:
+  - base
+
+name: "gym_subgoal_automata:WaterWorldRedGreenBlueCyan-v0"
+
+core_label_factories:
+  # Inserts the configuration of coffee, office and plant label factories
+  # This setup allows modifying the values of label factories individually while accessing them through this variable
+  - ${env.red_label_factory}
+  - ${env.green_label_factory}
+  - ${env.blue_label_factory}
+  - ${env.cyan_label_factory}
+
+noise_label_factories:
+  - ${env.magenta_label_factory}
+  - ${env.yellow_label_factory}

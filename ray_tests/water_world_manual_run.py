@@ -11,7 +11,7 @@ import random
 seed = 0
 
 
-env = gym.make("gym_subgoal_automata:WaterWorldRedGreenBlue-v0",
+env = gym.make("gym_subgoal_automata:WaterWorldRedGreenBlueCyan-v0",
                params={"generation": "random", "environment_seed": 127, "hide_state_variables": True},
                render_mode="human",
                )
