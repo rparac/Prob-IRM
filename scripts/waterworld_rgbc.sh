@@ -4,10 +4,9 @@
 
 cd ..
 
-seeds=(0) # 100 200 300 400)
-use_rm_options=(True)
-# noise_levels=(1 0.9990105628967285) #  1 0.9990105628967285
-noise_levels=(1 0.9911642074584961)
+seeds=(0 100 200 300 400)
+use_rm_options=(True False)
+noise_levels=(1 0.9990105628967285 0.9977762699127197 0.9911642074584961)
 
 nodes=2
 ncpus=32
@@ -31,9 +30,8 @@ for seed in "${seeds[@]}"; do
           rm_learner.min_penalty=4 \
           run.use_perfect_rm=${use_rm} run.num_agents=1 run.should_tune=True \
   	      run.tune_config.num_samples=1 \
-          run.num_env_runners=30 run.stop_iters=40000 \
-          run.wandb.key=680ad332869d9761ae2b6bdd70cdbc068674d47b \
-	  run.render_freq=1000 \
+          run.num_env_runners=30 run.stop_iters=100000 \
+	  run.tune_config.checkpoint_freq=5000 \
           +hyperparams/with_rm=configabcd \
           +experiment=vanilla_red_symmetric_error x=${noise_level} 
     done
