@@ -107,6 +107,9 @@ class FixedSizeDict:
     def values(self):
         return self.store.values()
 
+    def keys(self):
+        return self.store.keys()
+
     def __len__(self):
         return len(self.store)
 
