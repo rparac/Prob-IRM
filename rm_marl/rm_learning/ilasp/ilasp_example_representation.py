@@ -4,6 +4,8 @@ import enum
 import itertools
 from typing import Optional, List, Set, Type, Dict, Union
 
+from rm_marl.utils.memory import FixedSizeDict
+
 
 class ILASPTerm(abc.ABC):
     @abc.abstractmethod
@@ -200,7 +202,9 @@ class ISAILASPExample:
 
 class ISAExampleContainer:
     def __init__(self, ilasp_filter_threshold=None):
-        self.storage: Dict[ISAILASPExample, float] = {}
+        # Previous storage
+        # self.storage: Dict[ISAILASPExample, float] = {}
+        self.storage = FixedSizeDict(max_size=10000000)
 
         self._ilasp_filter_threshold = ilasp_filter_threshold
 
