@@ -204,7 +204,7 @@ class ISAExampleContainer:
     def __init__(self, ilasp_filter_threshold=None):
         # Previous storage
         # self.storage: Dict[ISAILASPExample, float] = {}
-        self.storage = FixedSizeDict(max_size=10000000)
+        self.storage = FixedSizeDict(max_size=100000)
 
         self._ilasp_filter_threshold = ilasp_filter_threshold
 
