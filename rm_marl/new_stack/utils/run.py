@@ -49,6 +49,9 @@ def continue_training(run_config):
     storage_dir = str(os.environ["RAY_RESULTS_DIR"])
     experiment_dir = f"{storage_dir}/{run_config['name']}"
 
+    if not os.path.isdir(experiment_dir):
+        return None
+
     previous_experiments = os.listdir(experiment_dir)    
     experiment_dir = f"{experiment_dir}/{max(previous_experiments)}"
 

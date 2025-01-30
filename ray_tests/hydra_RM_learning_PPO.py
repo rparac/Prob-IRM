@@ -191,9 +191,11 @@ def run(cfg: DictConfig) -> int:
                               grace_period=min(scheuduler_conf["min_grace_period"], run_config["stop_iters"]),
                               max_t=run_config["stop_iters"])
 
+    result = None
     if run_config["continue_training"]:
-        continue_training(run_config)
-    else:
+        result = continue_training(run_config)
+
+    if result is None:
         simplified_custom_run_rllib_example_script_experiment(base_config, run_config, stop=stop, scheduler=scheduler)
 
     return 0
