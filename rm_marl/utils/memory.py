@@ -96,10 +96,13 @@ class FixedSizeDict:
         self.data.append(key)
         self.store[key] = value
 
-    def __getitem__(self, key, default=None):
-        if default:
+    def get(self, key, default=None):
+        if default is not None:
             return self.store.get(key, default)
         return self.store.get(key)
+
+    def __getitem__(self, key, default=None):
+        return self.get(key, default)
 
     def items(self):
         return self.store.items()
