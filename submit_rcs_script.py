@@ -46,12 +46,16 @@ cd ${HOME}/rm-marl
 conda activate rm_marl
 """
 
-def get_pbs_script_base(nodes, ncpus, ram):
+def get_pbs_script_base(nodes, ncpus, ram, previous_job):
     # return pbs_script_gpu2
+    prev_job_str = ""
+    if previous_job is not None:
+        prev_job_str = f"#PBS -W depend=afterany:{previous_job}"
 
     return f"""#!/bin/bash
 #PBS -l walltime=24:00:00
 #PBS -l select={nodes}:ncpus={ncpus}:mem={ram}Gb
+{prev_job_str}
 
 eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
 
@@ -95,28 +99,32 @@ sleep 10
 """
 
 
-def run_pbs(args, name, experiment_directory, nodes, ncpus, ram):
-    python_run = f"python {' '.join(args)}"
+def run_pbs(args, name, experiment_directory, nodes, ncpus, ram, repeat):
+    previous_job = None
+    for i in range(repeat):
+        python_run = f"python {' '.join(args)}"
 
-    # generate scripts
-    pbs_out = f"{script_directory}/{experiment_directory}/{name}.pbs"
-    if not os.path.exists(f"{script_directory}/{experiment_directory}"):
-        os.makedirs(f"{script_directory}/{experiment_directory}")
+        # generate scripts
+        pbs_out = f"{script_directory}/{experiment_directory}/{name}_{i}.pbs"
+        if not os.path.exists(f"{script_directory}/{experiment_directory}"):
+            os.makedirs(f"{script_directory}/{experiment_directory}")
 
-    with open(pbs_out, 'w') as f:
-        f.write(get_pbs_script_base(nodes, ncpus, ram))
-        f.write('\n')
-        f.write(python_run)
+        with open(pbs_out, 'w') as f:
+            f.write(get_pbs_script_base(nodes, ncpus, ram, previous_job))
+            f.write('\n')
+            f.write(python_run)
 
-    hostname = socket.gethostname()
+        hostname = socket.gethostname()
 
-    if "hx1" in hostname:
-        cmd = ['qsub', '-q', 'hx', pbs_out]
-    else:
-        cmd = ['qsub', pbs_out]
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, text=True)
-    print(result.stdout)
-    print("Successfully ran all the scripts")
+        if "hx1" in hostname:
+            cmd = ['qsub', '-q', 'hx', pbs_out]
+        else:
+            cmd = ['qsub', pbs_out]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, text=True)
+        job_id = result.stdout.strip()
+        print(job_id)
+        previous_job = job_id
+        print("Successfully ran all the scripts")
 
 
 if __name__ == "__main__":
@@ -126,7 +134,9 @@ if __name__ == "__main__":
     _ram = int(arguments[3])
     directory = arguments[5]
     name = arguments[5]
-    args = arguments[6:]
+    # How many time we should submit the same job that depends on the previous job
+    _repeat = arguments[6]
+    args = arguments[7:]
 
     os.makedirs(script_directory, exist_ok=True)
-    run_pbs(args, name, directory, _nodes, _ncpus, _ram)
+    run_pbs(args, name, directory, _nodes, _ncpus, _ram, _repeat)
