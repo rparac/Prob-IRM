@@ -135,7 +135,7 @@ if __name__ == "__main__":
     directory = arguments[5]
     name = arguments[5]
     # How many time we should submit the same job that depends on the previous job
-    _repeat = arguments[6]
+    _repeat = int(arguments[6])
     args = arguments[7:]
 
     os.makedirs(script_directory, exist_ok=True)
