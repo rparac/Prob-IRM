@@ -2,7 +2,7 @@ import itertools
 import os
 import random
 import datetime as dt
-from typing import List, Dict
+from typing import Iterator, List, Dict
 
 import numpy as np
 import ray
@@ -24,7 +24,7 @@ LOGGER = getLogger(__name__)
 
 # TODO: implement new API
 # TODO: more cpus for this actor. The problem is the placement group allocation at the moment
-@ray.remote
+# @ray.remote
 class NewProbFFNSLLearner:
     """
     # edge_cost - ILASP penalty for using the ed predicate
@@ -35,7 +35,7 @@ class NewProbFFNSLLearner:
     """
 
     def __init__(self, starting_rm, actor_name, edge_cost, n_phi_cost, ex_penalty_multiplier, min_penalty,
-                 cross_entropy_threshold, rebalance_classes, new_inc_examples, base_dir):
+                 cross_entropy_threshold, replay_experience, rebalance_classes, new_inc_examples, base_dir):
         self._new_inc_examples = new_inc_examples
         self.examples = MultiISAExampleContainer(min_penalty, rebalance_classes, new_inc_examples)
 
@@ -65,9 +65,14 @@ class NewProbFFNSLLearner:
         # variable to track if infinity cross entropy is recorded
         self._inf_cross_entropy_recorded = False
 
-        self._seen_positive_traces: List[TraceTracker] = []
-        self._seen_negative_traces: List[TraceTracker] = []
-        self._seen_incomplete_traces: List[TraceTracker] = []
+        self.replay_experience = replay_experience
+        if replay_experience:
+            self._seen_positive_traces: List[TraceTracker] = []
+            self._seen_negative_traces: List[TraceTracker] = []
+            self._seen_incomplete_traces: List[TraceTracker] = []
+        self._num_pos_traces = 0
+        self._num_neg_traces = 0
+        self._num_inc_traces = 0
 
         # Filename of the currently used ILASP solution
         self._curr_ilasp_solution_filename = None
@@ -116,7 +121,12 @@ class NewProbFFNSLLearner:
 
         candidate_rm = self._update_reward_machine(curr_rm)
         if candidate_rm:
-            self._initialize_trace_counters(candidate_rm)
+            if self.replay_experience:
+                self._initialize_trace_counters(candidate_rm)
+            else:
+                self._num_pos_traces = 0
+                self._num_neg_traces = 0
+                self._num_inc_traces = 0
             self.curr_rm = candidate_rm
         return candidate_rm
 
@@ -152,16 +162,24 @@ class NewProbFFNSLLearner:
     def _store_trace(self, trace):
         if trace.is_complete:
             if trace.is_positive:
-                self._seen_positive_traces.append(trace)
+                self._num_pos_traces += 1
+                if self.replay_experience:
+                    self._seen_positive_traces.append(trace)
             else:
-                self._seen_negative_traces.append(trace)
+                self._num_neg_traces += 1
+                if self.replay_experience:
+                    self._seen_negative_traces.append(trace)
         else:
-            self._seen_incomplete_traces.append(trace)
+            self._num_inc_traces += 1
+            if self.replay_experience:
+                self._seen_incomplete_traces.append(trace)
 
     def _update_reward_machine(self, curr_rm):
         self.rm_learning_counter += 1
-        self.last_relearning_trace_num = len(self._seen_positive_traces) + len(self._seen_negative_traces) + len(
-            self._seen_incomplete_traces)
+        if self.replay_experience:
+            self.last_relearning_trace_num = len(self._seen_positive_traces) + len(self._seen_negative_traces) + len(self._seen_incomplete_traces) 
+        else:
+            self.last_relearning_trace_num += self._num_pos_traces + self._num_neg_traces + self._num_inc_traces
 
         ilasp_task_filename = os.path.join(
             self._log_folder, f"task_{self.rm_learning_counter}"
@@ -312,9 +330,9 @@ class NewProbFFNSLLearner:
         return {
             "cross_entropy": avg_cross_entropy,
             "last_relearning_trace_num": self.last_relearning_trace_num,
-            "num_pos_traces": len(self._seen_positive_traces),
-            "num_neg_traces": len(self._seen_negative_traces),
-            "num_incomplete_traces": len(self._seen_incomplete_traces),
+            "num_pos_traces": len(self._seen_positive_traces) if self.replay_experience else self._num_pos_traces,
+            "num_neg_traces": len(self._seen_negative_traces) if self.replay_experience else self._num_neg_traces,
+            "num_incomplete_traces": len(self._seen_incomplete_traces) if self.replay_experience else self._num_inc_traces,
             "warmup_wait": self.min_rm_num_episodes,
         }
 
@@ -345,22 +363,31 @@ class NewProbFFNSLLearner:
     # TODO: this method is called often so it might need to be sped up
     def create_example_context(self, trace: TraceTracker) -> List[ObservablePredicate]:
         # Create context
-        sol = []
-        for time_step, labels in enumerate(trace.trace):
-            true_labels = self._sample_dict(labels)
-            predicates = [ObservablePredicate(label, time_step) for label in true_labels]
-            sol.extend(predicates)
+        # sol = []
+
+        sol = list(itertools.chain.from_iterable(
+            (ObservablePredicate(label, time_step) for label in self._sample_dict(labels))
+            for time_step, labels in enumerate(trace.trace)
+        ))
+
+        # for time_step, labels in enumerate(trace.trace):
+        #     true_labels = self._sample_dict(labels)
+        #     predicates = [ObservablePredicate(label, time_step) for label in true_labels]
+        #     sol.extend(predicates)
         return sol
 
     # TODO: this method is called often so it might need to be sped up
     # labels - dictionary of labels paired with their probability
     # returns: keys which are considered as true
-    def _sample_dict(self, labels: Dict[str, float]) -> List[str]:
-        true_elems = []
-        for label, prob in labels.items():
-            if prob > 0 and random.random() <= prob:
-                true_elems.append(label)
-        return true_elems
+    def _sample_dict(self, labels: Dict[str, float]) -> Iterator[str]:
+        return [label for label, prob in labels.items() if prob > 0 and random.random() <= prob]
+
+
+        # true_elems = []
+        # for label, prob in labels.items():
+        #     if prob > 0 and random.random() <= prob:
+        #         true_elems.append(label)
+        # return true_elems
 
     # Used for serialization
     def get_state_dict(self):

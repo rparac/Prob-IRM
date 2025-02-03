@@ -62,7 +62,8 @@ def create_config(
     callbacks.append(CrashAfterNIters)
     use_wandb = run_config["wandb"]["key"] is not None
     if use_wandb:
-        callbacks.append(EnvRenderCallback)
+        pass
+        # callbacks.append(EnvRenderCallback)
         # callbacks.append(HeatmapCallback)
 
     if run_config["recurrent"]:

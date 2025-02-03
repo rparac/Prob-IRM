@@ -103,7 +103,9 @@ def simplified_custom_run_rllib_example_script_experiment(
         results.
     """
     # Initialize Ray.
+    print("here",flush=True)
     ray.init()
+    print("here",flush=True)
 
     config = base_config
 

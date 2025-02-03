@@ -65,6 +65,7 @@ class PPORMLearningConfig(PPOConfig):
             "base_dir": "not_categorized",
             "rebalance_classes": True,
             "new_inc_examples": True,
+            "replay_experience": True,
         }
 
         super().__init__(algo_class or PPORMLearning)
@@ -92,6 +93,7 @@ class PPORMLearningConfig(PPOConfig):
                    base_dir=NotProvided,
                    rebalance_classes=NotProvided,
                    new_inc_examples=NotProvided,
+                   replay_experience=NotProvided,
                    ):
         if edge_cost is not NotProvided:
             self.rm_learner_params["edge_cost"] = edge_cost
@@ -109,6 +111,8 @@ class PPORMLearningConfig(PPOConfig):
             self.rm_learner_params["rebalance_classes"] = rebalance_classes
         if new_inc_examples is not NotProvided:
             self.rm_learner_params["new_inc_examples"] = new_inc_examples
+        if replay_experience is not NotProvided:
+            self.rm_learner_params["replay_experience"] = new_inc_examples
 
 
 class PPORMLearning(PPO):
