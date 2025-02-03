@@ -130,10 +130,7 @@ class RewardMachine:
 
                 dot.edge(str(from_state), str(to_state), str(condition))
 
-        with open(file_name, 'w') as f:
-            f.write("This is a solution\n")
-
-        # dot.render(file_name)
+        dot.render(file_name)
 
     def to_idx(self, state_name: str) -> int:
         try:
