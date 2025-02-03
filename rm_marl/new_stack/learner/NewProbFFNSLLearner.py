@@ -363,31 +363,23 @@ class NewProbFFNSLLearner:
     # TODO: this method is called often so it might need to be sped up
     def create_example_context(self, trace: TraceTracker) -> List[ObservablePredicate]:
         # Create context
-        # sol = []
+        sol = []
 
-        sol = list(itertools.chain.from_iterable(
-            (ObservablePredicate(label, time_step) for label in self._sample_dict(labels))
-            for time_step, labels in enumerate(trace.trace)
-        ))
-
-        # for time_step, labels in enumerate(trace.trace):
-        #     true_labels = self._sample_dict(labels)
-        #     predicates = [ObservablePredicate(label, time_step) for label in true_labels]
-        #     sol.extend(predicates)
+        for time_step, labels in enumerate(trace.trace):
+            true_labels = self._sample_dict(labels)
+            predicates = [ObservablePredicate(label, time_step) for label in true_labels]
+            sol.extend(predicates)
         return sol
 
     # TODO: this method is called often so it might need to be sped up
     # labels - dictionary of labels paired with their probability
     # returns: keys which are considered as true
     def _sample_dict(self, labels: Dict[str, float]) -> Iterator[str]:
-        return [label for label, prob in labels.items() if prob > 0 and random.random() <= prob]
-
-
-        # true_elems = []
-        # for label, prob in labels.items():
-        #     if prob > 0 and random.random() <= prob:
-        #         true_elems.append(label)
-        # return true_elems
+        true_elems = []
+        for label, prob in labels.items():
+            if prob > 0 and random.random() <= prob:
+                true_elems.append(label)
+        return true_elems
 
     # Used for serialization
     def get_state_dict(self):

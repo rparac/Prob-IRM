@@ -1587,7 +1587,7 @@ for x in t1:
     trace.update(x, False, False)
 
 # a.update_examples(trace)
-cProfile.run("for _ in range(10000): a.update_examples(trace)", sort='cumtime')
+cProfile.run("for _ in range(3000): a.update_examples(trace)", sort='cumtime')
 # out = p.update_examples.remote(trace)
 # ray.get(out)
 # cProfile.run("for _ in range(10000): ex1(trace)")
