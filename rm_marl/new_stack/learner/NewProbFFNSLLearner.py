@@ -346,10 +346,13 @@ class NewProbFFNSLLearner:
         else:
             ex_type = ISAILASPExample.ExType.INCOMPLETE
 
+        ctxs = self.create_multiple_example_contexts(trace, self.I)
+
         sol = ISAExampleContainer()
         for i in range(self.I):
             ex_id = f"ex_{self.ex_counter}"
-            context = self.create_example_context(trace)
+            # context = self.create_example_context(trace)
+            context = ctxs[i]
             penalty = 1
             last_predicate = LastPredicate(len(trace.trace) - 1)
             ex = ISAILASPExample(ex_id, penalty, ex_type, context, last_predicate, new_inc_example=self._new_inc_examples)
@@ -360,7 +363,31 @@ class NewProbFFNSLLearner:
         return sol, ex_type
         # return sol.as_list()
 
-    # TODO: this method is called often so it might need to be sped up
+    # This method has the same functionality as create_example_context but done in bulk. 
+    #   This choice is made for optimization purposes.
+    def create_multiple_example_contexts(self, trace: TraceTracker, n) -> List[List[ObservablePredicate]]:
+        # Create context
+        all_labels = list(trace.trace[0].keys())
+        num_labels = len(all_labels)
+
+        sol = np.zeros((len(trace.trace), num_labels, n))
+
+        for time_step, labels in enumerate(trace.trace):
+            for i, (label, prob) in enumerate(labels.items()):
+                if prob > 0:
+                    sol[time_step,i,:] = np.random.rand(n) <= prob
+
+        ret = [[] for _ in range(n)]
+
+        for time_step in range(len(trace.trace)):
+            for j in range(num_labels):
+                for k in range(n):
+                    if sol[time_step,j,k] != 0:
+                        label = all_labels[j] 
+                        ret[k].append(ObservablePredicate(label, time_step))
+
+        return ret
+
     def create_example_context(self, trace: TraceTracker) -> List[ObservablePredicate]:
         # Create context
         sol = []
@@ -371,7 +398,7 @@ class NewProbFFNSLLearner:
             sol.extend(predicates)
         return sol
 
-    # TODO: this method is called often so it might need to be sped up
+    # This method is inlined in create example context for speed up
     # labels - dictionary of labels paired with their probability
     # returns: keys which are considered as true
     def _sample_dict(self, labels: Dict[str, float]) -> Iterator[str]:
