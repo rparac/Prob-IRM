@@ -66,6 +66,7 @@ class PPORMLearningConfig(PPOConfig):
             "rebalance_classes": True,
             "new_inc_examples": True,
             "replay_experience": True,
+            "max_container_size": None,
         }
 
         super().__init__(algo_class or PPORMLearning)
@@ -94,6 +95,7 @@ class PPORMLearningConfig(PPOConfig):
                    rebalance_classes=NotProvided,
                    new_inc_examples=NotProvided,
                    replay_experience=NotProvided,
+                   max_container_size=NotProvided,
                    ):
         if edge_cost is not NotProvided:
             self.rm_learner_params["edge_cost"] = edge_cost
@@ -113,6 +115,8 @@ class PPORMLearningConfig(PPOConfig):
             self.rm_learner_params["new_inc_examples"] = new_inc_examples
         if replay_experience is not NotProvided:
             self.rm_learner_params["replay_experience"] = new_inc_examples
+        if max_container_size is not NotProvided:
+            self.rm_learner_params["max_container_size"] = max_container_size 
 
 
 class PPORMLearning(PPO):

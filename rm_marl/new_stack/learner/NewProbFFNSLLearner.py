@@ -35,9 +35,9 @@ class NewProbFFNSLLearner:
     """
 
     def __init__(self, starting_rm, actor_name, edge_cost, n_phi_cost, ex_penalty_multiplier, min_penalty,
-                 cross_entropy_threshold, replay_experience, rebalance_classes, new_inc_examples, base_dir):
+                 cross_entropy_threshold, replay_experience, rebalance_classes, max_container_size, new_inc_examples, base_dir):
         self._new_inc_examples = new_inc_examples
-        self.examples = MultiISAExampleContainer(min_penalty, rebalance_classes, new_inc_examples)
+        self.examples = MultiISAExampleContainer(min_penalty, rebalance_classes, new_inc_examples, max_container_size)
 
         self.actor_name = actor_name
 

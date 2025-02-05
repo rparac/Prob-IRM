@@ -201,10 +201,13 @@ class ISAILASPExample:
 
 
 class ISAExampleContainer:
-    def __init__(self, ilasp_filter_threshold=None):
+    def __init__(self, ilasp_filter_threshold=None, max_container_size=None):
         # Previous storage
-        self.storage: Dict[ISAILASPExample, float] = {}
-        # self.storage = FixedSizeDict(max_size=10000)
+        if max_container_size is None:
+            self.storage: Dict[ISAILASPExample, float] = {}
+        else:
+            # 1000000
+            self.storage = FixedSizeDict(max_size=max_container_size)
 
         self._ilasp_filter_threshold = ilasp_filter_threshold
 
@@ -251,11 +254,11 @@ class ISAExampleContainer:
 
 
 class MultiISAExampleContainer:
-    def __init__(self, ilasp_filter_threshold, should_rebalance, new_inc_examples):
+    def __init__(self, ilasp_filter_threshold, should_rebalance, new_inc_examples, max_container_size):
         self._ilasp_filter_threshold = ilasp_filter_threshold
-        self._goal_examples = ISAExampleContainer(ilasp_filter_threshold)
-        self._dend_examples = ISAExampleContainer(ilasp_filter_threshold)
-        self._inc_examples = ISAExampleContainer(ilasp_filter_threshold)
+        self._goal_examples = ISAExampleContainer(ilasp_filter_threshold, max_container_size)
+        self._dend_examples = ISAExampleContainer(ilasp_filter_threshold, max_container_size)
+        self._inc_examples = ISAExampleContainer(ilasp_filter_threshold, max_container_size)
 
         self._should_rebalance = should_rebalance
         self._new_inc_examples = new_inc_examples
