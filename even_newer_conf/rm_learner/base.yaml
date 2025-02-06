@@ -14,4 +14,4 @@ new_inc_examples: True
 # Wherther we should replay experiences; generally useful but can require a lot of RAM
 replay_experience: True 
 
-max_container_size: None
+max_container_size: null
