@@ -7,6 +7,7 @@ from typing import Iterator, List, Dict
 import numpy as np
 import ray
 from sklearn.metrics import log_loss
+from pympler import asizeof
 
 from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample, MultiISAExampleContainer, \
     ISAExampleContainer, LastPredicate, ObservablePredicate
@@ -95,6 +96,9 @@ class NewProbFFNSLLearner:
         self._log_folder = None
         random.seed(0)
 
+        self._record_memory_every = 100
+        self._curr_memory_step = 0
+
     def get_curr_rm(self):
         return self.curr_rm
 
@@ -112,6 +116,12 @@ class NewProbFFNSLLearner:
 
     def relearn_rm(self):
         curr_rm = self.curr_rm
+
+        self._curr_memory_step += 1
+        if self._curr_memory_step >= self._record_memory_every:
+            print(f"The size of examples is {asizeof(self.examples)}")
+            print(f"The size of the whole object is {self}")
+            self._curr_memory_step = 0
 
         if not self._should_relearn_rm() and not self.overriden_with_debugger:
             return None
