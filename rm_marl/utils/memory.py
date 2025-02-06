@@ -85,16 +85,19 @@ class FixedSizeDict:
         self.store = {}      # Maps keys to values
 
     def __setitem__(self, key, value):
-        if key in self.store:
-            # Remove key from deque to update its order
-            self.data.remove(key)
-        elif len(self.data) >= self.max_size:
-            # Remove the oldest key-value pair
-            oldest_key = self.data.popleft()
-            del self.store[oldest_key]
-        # Add the new key-value pair
-        self.data.append(key)
-        self.store[key] = value
+        try:
+            if key in self.store:
+                # Remove key from deque to update its order
+                self.data.remove(key)
+            elif len(self.data) >= self.max_size:
+                # Remove the oldest key-value pair
+                oldest_key = self.data.popleft()
+                del self.store[oldest_key]
+            # Add the new key-value pair
+            self.data.append(key)
+            self.store[key] = value
+        except TypeError:
+            raise RuntimeError(self.data, self.max_size, type(self.data), type(self.max_size))
 
     def get(self, key, default=None):
         if default is not None:
