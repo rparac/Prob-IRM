@@ -119,8 +119,8 @@ class NewProbFFNSLLearner:
 
         self._curr_memory_step += 1
         if self._curr_memory_step >= self._record_memory_every:
-            print(f"The size of examples is {asizeof(self.examples)}")
-            print(f"The size of the whole object is {self}")
+            print(f"The size of examples is {asizeof.asizeof(self.examples) / (1024 ** 3)} Gb")
+            print(f"The size of the whole object is {asizeof.asizeof(self)/ (1024 ** 3)} Gb")
             self._curr_memory_step = 0
 
         if not self._should_relearn_rm() and not self.overriden_with_debugger:
