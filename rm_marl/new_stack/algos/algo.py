@@ -63,9 +63,9 @@ class PPORMLearningConfig(PPOConfig):
             "min_penalty": 1,
             "cross_entropy_threshold": 0.5,
             "base_dir": "not_categorized",
+            "replay_experience": True,
             "rebalance_classes": True,
             "new_inc_examples": True,
-            "replay_experience": True,
             "max_container_size": None,
         }
 
@@ -114,7 +114,7 @@ class PPORMLearningConfig(PPOConfig):
         if new_inc_examples is not NotProvided:
             self.rm_learner_params["new_inc_examples"] = new_inc_examples
         if replay_experience is not NotProvided:
-            self.rm_learner_params["replay_experience"] = new_inc_examples
+            self.rm_learner_params["replay_experience"] = replay_experience
         if max_container_size is not NotProvided:
             self.rm_learner_params["max_container_size"] = max_container_size 
 

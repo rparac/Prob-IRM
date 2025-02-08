@@ -1,3 +1,4 @@
+import copy
 import itertools
 import os
 import random
@@ -114,14 +115,21 @@ class NewProbFFNSLLearner:
     def get_rm(self):
         return self.curr_rm
 
+    def _print_memory_report(self):
+        # for attr_name, attr_value in self.__dict__.items():
+        #     attr_size = asizeof.asizeof(attr_value) / (1024 ** 3)
+        #     print(f"Memory usage of '{attr_name}': {attr_size} GB")
+
+        print(f"The size of examples is {asizeof.asizeof(self.examples) / (1024 ** 3)} Gb")
+        print(f"The size of the whole object is {asizeof.asizeof(self)/ (1024 ** 3)} Gb")
+        self._curr_memory_step = 0
+
     def relearn_rm(self):
         curr_rm = self.curr_rm
 
         self._curr_memory_step += 1
         if self._curr_memory_step >= self._record_memory_every:
-            print(f"The size of examples is {asizeof.asizeof(self.examples) / (1024 ** 3)} Gb")
-            print(f"The size of the whole object is {asizeof.asizeof(self)/ (1024 ** 3)} Gb")
-            self._curr_memory_step = 0
+            self._print_memory_report()
 
         if not self._should_relearn_rm() and not self.overriden_with_debugger:
             return None
@@ -174,15 +182,15 @@ class NewProbFFNSLLearner:
             if trace.is_positive:
                 self._num_pos_traces += 1
                 if self.replay_experience:
-                    self._seen_positive_traces.append(trace)
+                    self._seen_positive_traces.append(copy.deepcopy(trace))
             else:
                 self._num_neg_traces += 1
                 if self.replay_experience:
-                    self._seen_negative_traces.append(trace)
+                    self._seen_negative_traces.append(copy.deepcopy(trace))
         else:
             self._num_inc_traces += 1
             if self.replay_experience:
-                self._seen_incomplete_traces.append(trace)
+                self._seen_incomplete_traces.append(copy.deepcopy(trace))
 
     def _update_reward_machine(self, curr_rm):
         self.rm_learning_counter += 1
@@ -281,7 +289,10 @@ class NewProbFFNSLLearner:
         )
 
     def _should_relearn_rm(self) -> bool:
-        if self._num_seen_traces < self.last_relearning_trace_num + self.min_rm_num_episodes:
+        # Num seen traces only contains new traces when we are not replaying experience
+        if not self.replay_experience and self._num_seen_traces < self.min_rm_num_episodes:
+            return False
+        if self.replay_experience and self._num_seen_traces < self.last_relearning_trace_num + self.min_rm_num_episodes:
             return False
 
         condition_satisfied = (
@@ -333,7 +344,9 @@ class NewProbFFNSLLearner:
 
     @property
     def _num_seen_traces(self):
-        return len(self._seen_positive_traces) + len(self._seen_incomplete_traces) + len(self._seen_negative_traces)
+        if self.replay_experience:        
+            return len(self._seen_positive_traces) + len(self._seen_incomplete_traces) + len(self._seen_negative_traces)
+        return self._num_pos_traces + self._num_neg_traces + self._num_inc_traces
 
     def get_statistics(self):
         avg_cross_entropy = self._rm_cross_entropy_sum / self._num_seen_traces if self._num_seen_traces > 0 else 0
