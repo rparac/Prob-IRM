@@ -166,6 +166,7 @@ class PPORMLearning(PPO):
         rm = ray.get(self._rm_learner.get_curr_rm.remote())
         print(f"Setting rm to {rm}")
         self.set_rm(rm)
+        self.reset_policies(rm)
 
         super().restore_from_path(path, *args, **kwargs)
 
@@ -239,6 +240,7 @@ class PPORMLearning(PPO):
         act_spaces = self.get_action_space()
 
         def _update_config(w):
+            initially_frozen = w.config._is_frozen
             w.config._is_frozen = False
             w.config._rl_module_spec = None
             # Apply the same observation space to every agent
@@ -260,7 +262,7 @@ class PPORMLearning(PPO):
                 rl_module_spec=rl_module_spec
             )
             w.config.env_config["rm"] = rm
-            w.config._is_frozen = True
+            w.config._is_frozen = initially_frozen
 
         def _reset_worker(w):
             _update_config(w)
