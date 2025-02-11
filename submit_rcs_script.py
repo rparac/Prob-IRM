@@ -53,6 +53,8 @@ def get_pbs_script_base(nodes, ncpus, ram, previous_job, is_hx1):
     if previous_job is not None:
         prev_job_str = f"#PBS -W depend=afterany:{previous_job}"
 
+    # Variables are stored inside an environment on HX1
+    # This approach did not work on CX3, so added here to avoid debugging.
     variable_str = ""
     if not is_hx1:
         variable_str += """
@@ -60,6 +62,10 @@ export PYTHONPATH=$PYTHONPATH:/rds/general/user/rp218/home/rm-marl
 export PATH=$PATH:/rds/general/user/rp218/home/bin
 export RAY_RESULTS_DIR=$EPHEMERAL/ray_results
 """
+    # There are issues installing git on cx3 so we avoid it.
+    # It is absolutely necessary to do on HX1
+    if is_hx1:
+        git_install_str = f"conda install -c conda-forge git"
 
     return f"""#!/bin/bash
 #PBS -l walltime=24:00:00
@@ -89,7 +95,7 @@ echo "Activated environment" >&2
 # echo "Uninstalled pip" >&2
 # conda install pip==21.2.4
 # echo "Installed pip" >&2
-conda install -c conda-forge git
+{git_install_str}
 echo "Installed git" >&2
 # pip install scikit-learn==1.4.2
 # pip install torch==2.3.1
