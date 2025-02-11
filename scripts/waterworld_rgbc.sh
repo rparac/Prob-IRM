@@ -5,7 +5,7 @@
 cd ..
 
 seeds=(0 100 200 300 400)
-use_rm_options=(True False)
+use_rm_options=(True)
 noise_levels=(1 0.9990105628967285 0.9977762699127197 0.9911642074584961)
 
 nodes=2
@@ -22,7 +22,7 @@ for seed in "${seeds[@]}"; do
   
       # run noise on all three
       # python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} ray_tests/simple_test.py
-      python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
+      python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} 5 \
         ray_tests/hydra_RM_learning_PPO.py env/water-world@env=red_green_blue_cyan run.name=${name} \
 	  run.seed=${seed} \
 	  env.use_restricted_observables=false \
@@ -30,8 +30,10 @@ for seed in "${seeds[@]}"; do
           rm_learner.min_penalty=4 \
           run.use_perfect_rm=${use_rm} run.num_agents=1 run.should_tune=True \
   	      run.tune_config.num_samples=1 \
-          run.num_env_runners=30 run.stop_iters=100000 \
-	  run.tune_config.checkpoint_freq=5000 \
+          run.num_env_runners=30 run.stop_iters=50000  \
+	  run.continue_training=true \
+	  run.tune_config.checkpoint_freq=10000 \
+	  run.crash_iter=10000 \
           +hyperparams/with_rm=configabcd \
           +experiment=vanilla_red_symmetric_error x=${noise_level} 
     done
