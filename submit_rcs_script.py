@@ -64,6 +64,7 @@ export RAY_RESULTS_DIR=$EPHEMERAL/ray_results
 """
     # There are issues installing git on cx3 so we avoid it.
     # It is absolutely necessary to do on HX1
+    git_install_str = ""
     if is_hx1:
         git_install_str = f"conda install -c conda-forge git"
 
