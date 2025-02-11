@@ -46,16 +46,26 @@ cd ${HOME}/rm-marl
 conda activate rm_marl
 """
 
-def get_pbs_script_base(nodes, ncpus, ram, previous_job):
+
+def get_pbs_script_base(nodes, ncpus, ram, previous_job, is_hx1):
     # return pbs_script_gpu2
     prev_job_str = ""
     if previous_job is not None:
         prev_job_str = f"#PBS -W depend=afterany:{previous_job}"
 
+    variable_str = ""
+    if not is_hx1:
+        variable_str += """
+export PYTHONPATH=$PYTHONPATH:/rds/general/user/rp218/home/rm-marl
+export PATH=$PATH:/rds/general/user/rp218/home/bin
+export RAY_RESULTS_DIR=$EPHEMERAL/ray_results
+"""
+
     return f"""#!/bin/bash
 #PBS -l walltime=24:00:00
 #PBS -l select={nodes}:ncpus={ncpus}:mem={ram}Gb
 {prev_job_str}
+{variable_str}
 
 eval "$($HOME/miniconda3/bin/conda shell.bash hook)"
 
@@ -100,6 +110,8 @@ sleep 10
 
 
 def run_pbs(args, name, experiment_directory, nodes, ncpus, ram, repeat):
+    hostname = socket.gethostname()
+    is_hx1 = "hx1" in hostname
     previous_job = None
     for i in range(repeat):
         python_run = f"python {' '.join(args)}"
@@ -110,13 +122,12 @@ def run_pbs(args, name, experiment_directory, nodes, ncpus, ram, repeat):
             os.makedirs(f"{script_directory}/{experiment_directory}")
 
         with open(pbs_out, 'w') as f:
-            f.write(get_pbs_script_base(nodes, ncpus, ram, previous_job))
+            f.write(get_pbs_script_base(nodes, ncpus, ram, previous_job, is_hx1))
             f.write('\n')
             f.write(python_run)
 
-        hostname = socket.gethostname()
 
-        if "hx1" in hostname:
+        if is_hx1:
             cmd = ['qsub', '-q', 'hx', pbs_out]
         else:
             cmd = ['qsub', pbs_out]
