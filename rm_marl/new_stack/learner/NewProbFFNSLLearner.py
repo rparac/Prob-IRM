@@ -156,6 +156,10 @@ class NewProbFFNSLLearner:
             curr_state = rm_transitioner.get_next_state(curr_state, labels)
         return curr_state
 
+    def batch_update_examples(self, traces):
+        for trace in traces:
+            self.update_examples(trace)
+
     def update_examples(self, trace):
         if not trace:
             return False

@@ -18,6 +18,7 @@ class StoreTracesCallback(DefaultCallbacks):
     def __init__(self, rm_learner_actor: str = None, **kwargs):
         self._rm_learner = ray.get_actor(rm_learner_actor)
         print(f"Got actor {rm_learner_actor}")
+        self._traces = []
 
 
     def set_rm_learner(self, rm_learner_actor):
@@ -60,4 +61,10 @@ class StoreTracesCallback(DefaultCallbacks):
             for info in sa_episode.get_infos()[1:]:
                 t.update(info["labels"], is_positive, is_complete)
 
-            self._rm_learner.update_examples.remote(t)
+            self._traces.append(t)
+        #     # self._rm_learner.update_examples.remote(t)
+
+
+    def on_sample_end(self, *, env_runner = None, metrics_logger = None, samples, worker = None, **kwargs):
+        self._rm_learner.batch_update_examples.remote(self._traces)
+        self._traces = []
