@@ -224,7 +224,7 @@ def simplified_custom_run_rllib_example_script_experiment(
             checkpoint_config=air.CheckpointConfig(
                 checkpoint_frequency=tune_args["checkpoint_freq"],
                 checkpoint_at_end=tune_args["checkpoint_at_end"],
-                num_to_keep=1,
+                num_to_keep=2,
             ),
             progress_reporter=progress_reporter,
             storage_path=storage_dir,
