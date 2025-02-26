@@ -31,6 +31,9 @@ class NewGymSubgoalAutomataAdapter(gym.Wrapper):
         env.hide_state_variables = True
         super().__init__(env)
 
+        env_name = env.spec.name
+        self._avoid_magenta = "AvoidMagenta" in env_name
+
         self.env = env
         if use_restricted_observables:
             self.observables = self.env.unwrapped.get_restricted_observables()
@@ -62,6 +65,9 @@ class NewGymSubgoalAutomataAdapter(gym.Wrapper):
 
         # TODO: force negative reward when a plant is reached; this may need to be done through reward shaping or the other env
         if 'n' in info['observations']:
+            reward = -1
+        # force negative reward when a magenta is reached
+        if self._avoid_magenta and 'm' in info['observations']:
             reward = -1
 
         if self.max_episode_length and self.current_step >= self.max_episode_length and not terminated:
