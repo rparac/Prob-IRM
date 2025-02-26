@@ -6,7 +6,7 @@ name: "Custom-PPO"
 
 num_env_runners: 1
 
-recurrent: False
+no_rm: False
 use_perfect_rm: True
 use_rs: True
 rs_discount: 1

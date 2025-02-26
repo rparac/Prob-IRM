@@ -55,7 +55,7 @@ def continue_training(run_config):
     previous_experiments = os.listdir(experiment_dir)    
     experiment_dir = f"{experiment_dir}/{max(previous_experiments)}"
 
-    if run_config["recurrent"]:
+    if run_config["no_rm"]:
         trainable = PPO
     elif run_config["use_perfect_rm"]:
         trainable = PPORM

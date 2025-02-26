@@ -66,7 +66,7 @@ def create_config(
         # callbacks.append(EnvRenderCallback)
         # callbacks.append(HeatmapCallback)
 
-    if run_config["recurrent"]:
+    if run_config["no_rm"]:
         config = PPOConfig()
     elif run_config["use_perfect_rm"]:
         config = PPORMConfig()
