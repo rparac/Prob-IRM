@@ -13,7 +13,7 @@ nodes=2
 ncpus=32
 ram=250
 
-directory="waterworld_rgnm_unrestricted"
+directory="waterworld_rg_b_unrestricted"
 for seed in "${seeds[@]}"; do
   for use_rm in "${use_rm_options[@]}"; do
     for noise_level in "${noise_levels[@]}"; do
@@ -24,7 +24,7 @@ for seed in "${seeds[@]}"; do
       # run noise on all three
       # python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} ray_tests/simple_test.py
       python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} 5 \
-        ray_tests/hydra_RM_learning_PPO.py env/water-world@env=red_green_no_magenta run.name=${name} \
+        ray_tests/hydra_RM_learning_PPO.py env/water-world@env=red_green_minus_blue run.name=${name} \
 	  run.seed=${seed} \
 	  env.use_restricted_observables=false \
           rm_learner.ex_penalty_multiplier=8 \
