@@ -46,6 +46,7 @@ from rm_marl.new_stack.callbacks.log_original_reward import LogOriginalReward
 from rm_marl.new_stack.callbacks.log_rm_learning import LogRMLearning
 from rm_marl.new_stack.callbacks.store_config import StoreTracesCallback
 from rm_marl.new_stack.env.multi_env_with_rm import make_multi_agent_with_rm
+from rm_marl.new_stack.networks.recurrent import CustomLSTMModule
 from rm_marl.new_stack.utils.env import hydra_env_creator
 from rm_marl.new_stack.utils.hydra import from_hydra_config, manual_value_override
 from rm_marl.new_stack.utils.run import simplified_custom_run_rllib_example_script_experiment, continue_training
@@ -57,6 +58,7 @@ def create_config(
         algo_config=None,
         model_config=None,
         rm_learner_config=None,
+        num_labels=0,
 ):
     callbacks = [LogOriginalReward]
     callbacks.append(CrashAfterNIters)
@@ -142,22 +144,30 @@ def create_config(
         # Check if policy_states_are_swappable should be true
     )
 
-    module_specs = {
-        f"p{i}": RLModuleSpec()
-        for i in range(run_config["num_agents"])
-    }
-
+    model_config = OmegaConf.to_container(model_config, resolve=True)
     model_config["fcnet_hiddens"]["options"] = [[layer_size] * n_layers for n_layers in model_config["_num_layers"] for
                                                 layer_size in model_config["_layer_sizes"]]
     model_config["post_fcnet_hiddens"]["options"] = [[layer_size] * n_layers for n_layers in model_config["_num_layers"] for
                                                 layer_size in model_config["_layer_sizes"]]
+    model_config["num_labels"] = {
+        "best_value": num_labels,
+    }
+    model_config = from_hydra_config(model_config)
+
+    module_class = CustomLSTMModule if model_config.get("use_lstm", False) else None
+    module_specs = {
+        f"p{i}": RLModuleSpec(
+            module_class=module_class,
+        )
+        for i in range(run_config["num_agents"])
+    }
 
     config.rl_module(
         rl_module_spec=MultiRLModuleSpec(rl_module_specs=module_specs),
         # IMPORTANT: the model config dict needs to be defined here; it gets ignored if defined for individual policies.
         #   Noticed when resetting workers
         # model_config_dict=from_hydra_config(model_config)
-        model_config=from_hydra_config(model_config)
+        model_config=model_config,
     )
 
     return config
@@ -176,12 +186,14 @@ def run(cfg: DictConfig) -> int:
     env_config = setup_env_config(cfg["env"], run_config)
     register_env("env", make_multi_agent_with_rm(hydra_env_creator(env_config)))
 
+    num_labels = len(env_config["label_factories"])
+
     ppo_config = cfg["ppo"]
     algo_config = cfg["algo"]
     model_config = cfg["model"]
     rm_learner_config = setup_rm_learner_config(cfg["rm_learner"], run_config)
 
-    base_config = create_config(run_config, ppo_config, algo_config, model_config, rm_learner_config)
+    base_config = create_config(run_config, ppo_config, algo_config, model_config, rm_learner_config, num_labels)
 
     stop = {
         TRAINING_ITERATION: run_config["stop_iters"],
