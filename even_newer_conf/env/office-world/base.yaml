@@ -6,6 +6,7 @@ defaults:
 name: ???
 render_mode: 'rgb_array'
 max_episode_length: 250
+num_random_seeds: null
 
 use_restricted_observables: true
 

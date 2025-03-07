@@ -11,7 +11,8 @@ env = DanielGymAdapter(env)
 Same as old; just doesn't require agent id
 """
 import abc
-from typing import Union
+import random
+from typing import Optional, Union
 
 import gymnasium as gym
 import gymnasium.spaces
@@ -24,7 +25,8 @@ from rm_marl.reward_machine import RewardMachine
 
 class NewGymSubgoalAutomataAdapter(gym.Wrapper):
     def __init__(self, env: BaseEnv, max_episode_length=None,
-                 use_restricted_observables: bool = True):
+                 use_restricted_observables: bool = True,
+                 num_random_seeds: Optional[int] = None):
 
         # Explicitly returns observables as a part of the observation.
         # We regenerate them in this adapter using the info output.
@@ -42,13 +44,21 @@ class NewGymSubgoalAutomataAdapter(gym.Wrapper):
         self.max_episode_length = max_episode_length
         self.current_step = 0
 
+        self.num_random_seeds = num_random_seeds
+
         # self.observation_space = gymnasium.spaces.Discrete(self.one_env_size * num_agents)
         self.observation_space = env.observation_space
         self.action_space = env.action_space
 
+        random.seed(0)
 
-    def reset(self, **kwargs):
-        obs, info = self.env.reset(**kwargs)
+
+    def reset(self, seed=None, **kwargs):
+        new_seed = seed
+        if self.num_random_seeds is not None:
+            new_seed = random.randint(0, self.num_random_seeds - 1)
+
+        obs, info = self.env.reset(seed=new_seed, **kwargs)
         self.current_step = 0
         if self.render_mode == "human":
             self.env.render()
