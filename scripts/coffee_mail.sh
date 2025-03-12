@@ -4,31 +4,35 @@
 
 cd ..
 
-# TODO: seeds
 # seeds=(0 100 200 300 400)
-num_agents=(10)
-noise_levels=(1 0.9979081153869629 0.995305061340332 0.9814815521240234)
+seeds=(0)
+use_rm_options=(True False) 
+# noise_levels=(1 0.9979081153869629 0.995305061340332 0.9814815521240234)
+noise_levels=(1 0.9814815521240234)
 
 nodes=2
-ncpus=64
-ram=128
+ncpus=32
+ram=250
 
-directory="checkpoint_coffee_mail"
-for num_agent in "${num_agents[@]}"; do
-  for noise_level in "${noise_levels[@]}"; do
-    name="${directory}_${num_agent}_${noise_level}"
-    # run noise on all three
-    # python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} ray_tests/simple_test.py
-    python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
-      ray_tests/hydra_RM_learning_PPO.py env/office-world@env=deliver_coffee_mail run.name=${name} \
-        run.use_perfect_rm=True run.num_agents=${num_agent} run.should_tune=True \
-	run.tune_config.num_samples=1 run.num_env_runners=20 run.tune_config.checkpoint_at_end=True \
-	run.wandb.key=680ad332869d9761ae2b6bdd70cdbc068674d47b \
-	run.render_freq=20 \
-        +hyperparams/with_rm=config5 \
-        +experiment=vanilla_coffee_symmetric_error x=${noise_level}
+directory="coffee_mail"
+for seed in "${seeds[@]}"; do
+  for use_rm in "${use_rm_options[@]}"; do
+    for noise_level in "${noise_levels[@]}"; do
+      #name="${directory}_${use_rm}_${noise_level}"
+      run_subdirectory=${directory}_$([ "$use_rm" = True ] && echo "perfect_rm" || echo "rm_learning")
+      name=${run_subdirectory}_${noise_level}_${seed}
+  
+      python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} 1 \
+        ray_tests/hydra_RM_learning_PPO.py env/office-world@env=deliver_coffee_mail run.name=${name} \
+          run.seed=${seed} \
+          rm_learner.ex_penalty_multiplier=8 \
+          rm_learner.min_penalty=4 \
+          run.use_perfect_rm=${use_rm} run.num_agents=10 \
+          run.num_env_runners=30 run.stop_iters=500 \
+          +hyperparams/with_rm=configabcd \
+          +experiment=vanilla_coffee_symmetric_error x=${noise_level} 
+    done
   done
 done
 
 # Running on login.hx1.hpc.ic.ac.uk
-
