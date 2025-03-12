@@ -11,6 +11,7 @@ name: 'gym_subgoal_automata:OfficeWorldPatrolABCD-v0'
 render_mode: 'rgb_array'
 max_episode_length: 500
 use_restricted_observables: true
+num_random_seeds: null
 
 core_label_factories:
   # Inserts the configuration of abcd label factories
