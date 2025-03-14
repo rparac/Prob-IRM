@@ -142,6 +142,8 @@ class NewProbFFNSLLearner:
             if self.replay_experience:
                 self._initialize_trace_counters(candidate_rm)
             else:
+                self._rm_cross_entropy_sum = 0
+                self._inf_cross_entropy_recorded = False
                 self._num_pos_traces = 0
                 self._num_neg_traces = 0
                 self._num_inc_traces = 0
