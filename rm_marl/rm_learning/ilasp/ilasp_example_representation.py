@@ -181,6 +181,12 @@ class ISAILASPExample:
     def generate_incomplete_examples(self) -> List['ISAILASPExample']:
         sols = []
         for i in range(1, len(self.observable_context)):
+            # Edge case: multiple labels in the same time step
+            curr = self.observable_context[i-1]
+            next = self.observable_context[i]
+            if curr.time_step == next.time_step:
+                continue
+
             ex_id = f"{self.ex_id}_inc_{i}"
             sols.append(
                 ISAILASPExample(ex_id, self.penalty, ISAILASPExample.ExType.INCOMPLETE, self.observable_context[:i],
