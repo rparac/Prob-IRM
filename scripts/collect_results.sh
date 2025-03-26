@@ -161,9 +161,9 @@ fetch_results()
 
     echo '[.] Discovering results file on remote host...'
     if [[ "${SSH_USE_PASSWORD}" == '!true!' ]]; then
-      find_output=$(sshpass -p "$PASSWORD" ssh "${ssh_endpoint}" find "${remote_results_dir}/${subset}" -type f -name 'progress.csv' 2>/dev/null)
+      find_output=$(sshpass -p "$PASSWORD" ssh "${ssh_endpoint}" find "${remote_results_dir}/${subset}" -type f -name 'result.json' 2>/dev/null)
     else
-      find_output=$(ssh "${ssh_endpoint}" find "${remote_results_dir}/${subset}" -type f -name 'progress.csv' 2>/dev/null)
+      find_output=$(ssh "${ssh_endpoint}" find "${remote_results_dir}/${subset}" -type f -name 'result.json' 2>/dev/null)
     fi
 
     # find exit code 1: file not found
