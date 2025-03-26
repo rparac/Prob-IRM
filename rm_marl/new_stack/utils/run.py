@@ -103,7 +103,11 @@ def simplified_custom_run_rllib_example_script_experiment(
         results.
     """
     # Initialize Ray.
-    ray.init()
+    ray.init(
+        # runtime_env={
+        #     "env_vars": {"RAY_DEBUG": "1"},
+        # }   
+    )
 
     config = base_config
 

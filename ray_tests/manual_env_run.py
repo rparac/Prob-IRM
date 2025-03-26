@@ -50,8 +50,8 @@ def _create_heatmap(yx_positions, i=0):
 seed = 0
 
 
-env = gym.make("OfficeWorldDeliverCoffee-v0",
-               params={"generation": "random", "environment_seed": 125, "hide_state_variables": True},
+env = gym.make("OfficeWorldPatrolABCD-v0",
+               params={"generation": "random", "environment_seed": 9, "hide_state_variables": True},
                render_mode="human",
                )
 env = NewGymSubgoalAutomataAdapter(env, max_episode_length=250)  # type: ignore
@@ -88,10 +88,10 @@ for i in range(5):
     terminated, truncated = False, False
     num_steps = 0
     while not terminated and not truncated:
-        action = random.randint(0, 3)
-        num_steps += 1
-        # x = input()
-        # action = key_to_act[x]
+        # action = random.randint(0, 3)
+        # num_steps += 1
+        x = input()
+        action = key_to_act[x]
         yx_positions.append(_get_yx_pos(obs))
         obs, reward, terminated, truncated, info = env.step(action)
         env.render()
