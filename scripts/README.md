@@ -1,1 +1,1 @@
-Contains scripts used to run some of the experiments
+Contains scripts used to run experiments on the PBS cluster.

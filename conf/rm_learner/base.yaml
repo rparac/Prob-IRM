@@ -1,0 +1,17 @@
+edge_cost: 2
+n_phi_cost: 1
+ex_penalty_multiplier: 2
+min_penalty: 2
+cross_entropy_threshold: 0.6
+
+base_dir: null
+
+# Whether we should rebalance classes during RM learning
+rebalance_classes: True
+
+new_inc_examples: True
+
+# Wherther we should replay experiences; generally useful but can require a lot of RAM
+replay_experience: True 
+
+max_container_size: null 

@@ -1,0 +1,13 @@
+defaults:
+  - base
+
+use_lstm:
+  best_value: True
+
+lstm_cell_size:
+  options: [ 8, 16, 32 ]
+  tune_func: 'choice'
+  best_value: null
+
+max_seq_len:
+  best_value: 250

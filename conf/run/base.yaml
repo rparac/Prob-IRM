@@ -1,0 +1,46 @@
+stop_iters: 500
+seed: 123
+
+num_agents: 1
+name: "Custom-PPO"
+
+num_env_runners: 1
+
+no_rm: False
+use_perfect_rm: True
+use_rs: True
+rs_discount: 1
+
+use_thresholding: False
+labelling_threshold: 0.5
+
+continue_training: False
+
+should_tune: True
+
+minimize_logs: False
+
+tune_config:
+  num_samples: 1
+  verbose: 2
+  checkpoint_freq: 0
+  checkpoint_at_end: False
+  # TODO: put scheduler method as part of hydra config
+  scheduler:
+    # Warning: original return is not logged if use_rs: False
+    # metric: "env_runners/original_episode_return_mean"
+    metric: "env_runners/episode_return_mean"
+    mode: "max"
+    min_grace_period: 15
+
+wandb:
+  project: "Prob-IRM"
+  run_name: "run"
+  key: null
+
+
+# How often should we render episode videos and heatmap
+render_freq: 10000000
+
+# Intentionally crashes after this many iters (useful if we want to extend training and use checkpointing)
+crash_iter: 100000

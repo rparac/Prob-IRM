@@ -1,0 +1,8 @@
+lr:
+  options: [1e-8, 1e-3]
+  tune_func: 'loguniform'
+  best_value: null
+
+gamma:
+  best_value: 0.99
+

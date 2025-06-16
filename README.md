@@ -1,31 +1,56 @@
-# Prob-IRM
+# Running an experiment on SLURM
 
-This is the source code for the KR2024 paper "Learning Robust Reward Machines from Noisy Labels".
-Please reach out to the main author, Roko Parać (rp218@ic.ac.uk), for any questions regarding this source code or the paper itself.
-
-
-## Dependencies
-
-
-### Setting up a conda environment
+## Setting up a conda environment
 
 Create a conda environment with the required python version
 
 ```
 conda create -n rm_marl python=3.10.12
-conda activate prob-irm
+conda activate rm_marl
 pip install -r requirements.txt
+```
+We also attach `environment.yml` that has been exported directly from `conda`.
+
+My script assumes that this environment will be inside the job
+
+## Installing ILASP and dot
+
+The program relies on ILASP (for automata learning) and dot (for pdf generation).
+I think the support is too slow, so I do everything on my own.
+This is how I bypass the superuser requirements:
+
+### $HOME/bin directory
+The $HOME/bin directory contains the binaries that I need on my PATH, i.e. ILASP and dot.
+
+```
+# in .bashrc
+export PATH=$HOME/bin:$PATH
+```
+
+### $HOME/lib64 folder
+
+Both of these binaries are linking to dynamic dependencies.
+These are contained in the `lib64` folder.
+
+```
+# in .bashrc
+export LD_LIBRARY_PATH=$HOME/bin:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/lib64/graphviz:$LD_LIBRARY_PATH
 ```
 
 ### Installing ILASP
 
-ILASP is used for automata learning. You can install it by adding its binary to the system PATH. Binaries can be found here:
-https://github.com/ilaspltd/ILASP-releases/releases.
-The experiments have been run with v4.4.0
+ILASP binaries can be found here:
+https://github.com/ilaspltd/ILASP-releases/releases
 
-We recommend downloading the binary to $HOME/bin for consistency with this source code.
-This directory can be added to path with the following command:
-```export PATH="$HOME/bin:$PATH"```
+There is one for ubuntu.
+If you have RHEL/Centos, I will send it over since this has not been published anywhere.
+
+The program assumes ILASP binary is copied into the $HOME/bin directory (which I add to the path inside a script).
+
+Its only dependency is libpython3.10 (if I recall correctly), which should be in $PATH because of conda.
+
 
 
 ### Installing dot
@@ -36,32 +61,118 @@ The `dot` on Ubuntu is installed with:
 ```
 sudo apt install graphviz
 ```
-The experiments have been run with version 2.43.0, although a wide variety of versions should probably work since its only purpose was to generate pdfs.
+However, sudo is mostly unavailable on clusters.
+So, I 
+1. Create a local docker container with the same OS as the server
+2. Run the above command inside the container
+3. Copy over the binary (into the `bin/` on the server) and all the installed libraries (into `lib64/` on the server)
 
-
-## Running pre-defined experiments
-
-The `scripts` directory contains the scripts for running all the experiments demonstrated in the paper.
-These have been run on Imperial's RCS (Research Compute Service) cluster. 
-It is setup as a PBS cluster, but we have also attempted to use Condor and SLURM.
-
-To run the standard Deliver Coffee experiment:
+#### Step 1
 ```
-1. cd scripts/
-2. ./deliver_coffee.sh
+FROM redhat/ubi8-minimal:8.6
+CMD ["sleep", "infinity"]
+```
+Here the Dockerfile I have been using. Change the image to whatever the correct distribution.
+
+Run inside the directory with Dockerfile:
+`docker build -t installation .`
+
+Run the container:
+`docker run installation`
+
+In a new terminal, get its id (under CONTAINER_ID tab)
+`docker ps`
+
+Connect to it:
+`docker exec -it <container_id> /bin/bash`
+
+You can now install compabile binaries.
+
+#### Step 2
+Run 
+`apt update && apt install graphviz`
+
+#### Step 3
+Get the required files:
+Run:
+`whereis dot` 
+to fit its location.
+
+Run:
+`ldd <path_to_dot>` 
+to get its depedencies.
+These need to be copied over.
+
+This is an example output on rhel:
+```
+[root@4390bfe09d2b lib64]# ldd /usr/bin/dot
+	linux-vdso.so.1 (0x00007ffc6e2fb000)
+	libgvc.so.6 => /lib64/libgvc.so.6 (0x000074f201774000)
+	libltdl.so.7 => /lib64/libltdl.so.7 (0x000074f20156a000)
+	libxdot.so.4 => /lib64/libxdot.so.4 (0x000074f201364000)
+	libcgraph.so.6 => /lib64/libcgraph.so.6 (0x000074f20114c000)
+	libpathplan.so.4 => /lib64/libpathplan.so.4 (0x000074f200f43000)
+	libexpat.so.1 => /lib64/libexpat.so.1 (0x000074f200d07000)
+	libz.so.1 => /lib64/libz.so.1 (0x000074f200aef000)
+	libm.so.6 => /lib64/libm.so.6 (0x000074f20076d000)
+	libcdt.so.5 => /lib64/libcdt.so.5 (0x000074f200566000)
+	libc.so.6 => /lib64/libc.so.6 (0x000074f2001a1000)
+	libdl.so.2 => /lib64/libdl.so.2 (0x000074f1fff9d000)
+	/lib64/ld-linux-x86-64.so.2 (0x000074f201c1a000)
 ```
 
-## Runnning custom experiments
+These files are symbolic links. We need to copy the actual binary (this will be e.g. `libgvc.so.6.1` - I think it can always be found with `libgvc.so.6.1.*`).
 
-The file `dqrm_coffee_world.py` is the starting point of our program.
-It is set up using Hydra configuration management tool (https://hydra.cc/).
-To see all the available configuration options run:
+Copy all these files to the your machine (outside docker) - I usually make a simple bash script to do so. 
+`e.g. docker cp <container_id>:/lib64/libgvc.so.6.1.*`
+Don't forget the actual binary.
+`e.g. docker cp <container_id>:/usr/bin/dot`
+
+Copy the files to the server
 ```
-python dqrm_coffee_world.py --cfg job
-```
-These can be overriden from the command line, for example to change the number of episodes to 4000:
-```
-python dqrm_coffee_world.py run.total_episodes=4000
+scp <dependency_name> servername:~/lib64/
+scp dot servername:~/bin/
 ```
 
-Please reach out if you are struggling to run an experiment.
+
+Finally, we need to recreate the short names on the server - I also usually make a script for this.
+Need to run for each dependency (inside lib64):
+`ln -s libgvc.so.6 libgvc.so.6.*`
+
+
+## Running pre-setup experiments
+
+The `scripts` directory contains the scripts for the current experiments
+
+`cd scripts/`
+
+See the script that you may want to run, e.g. deliver_coffee.
+
+Replace the `submit_rcs_script.py` (or `submit_rcs_old_script.py`) with `submit_slurm_script.py`.
+
+Run:
+`./deliver_coffee.sh`
+This will launch a SLURM job for every combination of 5 possible seeds and 4 noise levels.
+
+To enable checkpointing, please look at `visit_abcd_all.sh`. The two added parameters are `run.checkpoint_freq=1000 run.restart_from_checkpoint=True`
+The default behaviour continues the most recent run.
+
+
+## Modifying the existing experiment
+
+The main script that I mostly run is `dqrm_coffee_world.py`, which starts the learning process.
+It uses Hydra for configuration management. This allows us to quickly modify the running parameters as command line arguments.
+For example, including when running the script
+`run.checkpoint_freq=1000`
+changes the checkpointing frequency to 1000 episodes.
+
+To obtain parameters that can be modified, run:
+`python dqrm_coffee_world.py --cfg job`
+
+A particularly interesting one may be 
+`run.rm_learner_kws.cross_entropy_threshold=$VALUE`
+because of the recent bug
+
+# Debugging
+
+The `submit_slurm_script.py` is commented. Please look into it if there are any mistakes that I have made.

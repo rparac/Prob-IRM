@@ -1,0 +1,45 @@
+# @package _global_
+algo:
+  lr:
+    best_value: 0.00015320184123405613
+model:
+  fcnet_hiddens:
+    best_value: [64, 64, 64, 64]
+  fcnet_activation:
+    best_value: "relu"
+  lstm_cell_size:
+    best_value: 16
+  max_seq_len:
+    best_value: 500
+  vf_share_layers:
+    best_value: True
+  post_fcnet_activation:
+    best_value: "relu"
+  post_fcnet_hiddens:
+    best_value: []
+  fcnet_weights_initializer:
+    best_value: "orthogonal_" 
+  post_fcnet_weights_initializer:
+    best_value: "orthogonal_"
+
+ppo:
+  minibatch_size:
+    best_value: 8192
+  lambda_:
+    best_value: 0.95
+  vf_loss_coeff:
+    best_value: 0.5
+  grad_clip:
+    best_value: 0.5
+  clip_param:
+    best_value: 0.2
+  vf_clip_param:
+    best_value: 10.0
+  kl_target:
+    best_value: 0.01
+  kl_coeff:
+    best_value: 0.2
+  num_epochs:
+    best_value: 13
+  entropy_coeff:
+    best_value: 0.1

@@ -1,0 +1,43 @@
+_layer_sizes: [ 8, 16, 32, 64, 128 ]
+_num_layers: [ 1, 2, 4 ]
+
+fcnet_hiddens:
+  # Dynamically filled from layer_sizes and num_layers
+  options: null
+  tune_func: 'choice'
+  best_value: null
+
+fcnet_activation:
+  # every architecture, i.e. [[layer_size] * n_layers for n_layers in num_layers for layer_size in layer_sizes]
+  options: [ 'relu', 'tanh', 'elu' ]
+  tune_func: 'choice'
+  best_value: null
+
+fcnet_weights_initializer:
+  best_value: "orthogonal_"
+
+vf_share_layers:
+  options: [ True, False ]
+  tune_func: 'choice'
+  best_value: True
+
+# Hidden layers for pi and vf networks (after the encoder)
+post_fcnet_hiddens:
+  # Dynamically filled from layer_sizes and num_layers
+  options: null
+  tune_func: 'choice'
+  best_value: null
+
+# Activation function for pi and vf networks (after the encoder)
+post_fcnet_activation:
+  options: [ 'relu', 'tanh', 'elu' ]
+  tune_func: 'choice'
+  best_value: null
+
+post_fcnet_weights_initializer:
+  best_value: "orthogonal_"
+
+# Hyperparameters setup with a fixed structure so they can be easily parsed
+#  - options: arguments of the tune.tune_func
+#  - tune_func: use tune.tune_func in the tuning loop
+#  - best_value: value to choose if not tuning

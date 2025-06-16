@@ -11,7 +11,6 @@ class _CustomDefaultDict(dict):
 
 
 class RewardMachine:
-
     ACCEPT_CONDITION = "True"
     REJECT_CONDITION = "False"
 
@@ -26,6 +25,13 @@ class RewardMachine:
         self.u0 = None
         self.uacc = None
         self.urej = None
+
+    @classmethod
+    def default_rm(cls):
+        rm = cls()
+        rm.add_states(["u0"])
+        rm.set_u0("u0")
+        return rm
 
     @staticmethod
     def _transition_constructor():
@@ -68,21 +74,21 @@ class RewardMachine:
             return False
 
         return (
-            set(self.states) == set(__o.states)
-            and self.events == __o.events  # - comparing transitions is enough
-            and self.u0 == __o.u0
-            and self.uacc == __o.uacc
-            and self.urej == __o.urej
-            and set(self.transitions.keys()) == set(__o.transitions.keys())
-            and all(
-                set(self.transitions[k].keys()) == set(__o.transitions[k].keys())
-                for k in self.transitions.keys()
-            )
-            and all(
-                self.transitions[k1][k2] == __o.transitions[k1][k2]
-                for k1 in self.transitions.keys()
-                for k2 in self.transitions[k1].keys()
-            )
+                set(self.states) == set(__o.states)
+                and self.events == __o.events  # - comparing transitions is enough
+                and self.u0 == __o.u0
+                and self.uacc == __o.uacc
+                and self.urej == __o.urej
+                and set(self.transitions.keys()) == set(__o.transitions.keys())
+                and all(
+            set(self.transitions[k].keys()) == set(__o.transitions[k].keys())
+            for k in self.transitions.keys()
+        )
+                and all(
+            self.transitions[k1][k2] == __o.transitions[k1][k2]
+            for k1 in self.transitions.keys()
+            for k2 in self.transitions[k1].keys()
+        )
         )
 
     def set_u0(self, state) -> None:
@@ -183,11 +189,24 @@ class RewardMachine:
                 return -1
         return 0
 
-    def _comput_state_min_distance_matrix(self):
+    def _has_cycles(self, curr_node, visited):
+        successor_states = [self.transitions[curr_node][e] for e in self.transitions[curr_node].keys()]
+        for n_node in successor_states:
+            if n_node in visited:
+                return True
+
+            new_visited = visited.copy()
+            new_visited.add(n_node)
+            if self._has_cycles(n_node, new_visited):
+                return True
+        return False
+
+    def _compute_state_distance_matrix(self, mode='min'):
+        if mode == 'max' and self._has_cycles(self.u0, {self.u0}):
+            raise RuntimeError("Undefined behaviour for cyclic graphs with max distance")
 
         distance_matrix = {}
         for u1 in self.states:
-
             distances = {s: float("inf") for s in self.states}
             distances[u1] = 0
 
@@ -200,27 +219,29 @@ class RewardMachine:
 
                 for u2 in [u for u in successor_states if u not in visited and u is not None]:
                     queue.append((u2, current_distance + 1))
-                    visited.add(u2)
+                    if mode == "min":
+                        # We want to revisit nodes when using a max distance
+                        visited.add(u2)
                     distances[u2] = current_distance + 1
 
             distance_matrix[u1] = distances
 
         return distance_matrix
 
-    def compute_state_pontentials(self):
+    def compute_state_pontentials(self, dist_fn: str):
 
         # An accepting state exist: high-potential = close to accepting state
         if self.uacc is not None:
 
             # First, we need to compute the distance matrix between each pair of states
-            min_distances = self._comput_state_min_distance_matrix()
-            self.state_potentials = {u: len(self.states) - min_distances[u][self.uacc] for u in self.states}
+            distances = self._compute_state_distance_matrix(dist_fn)
+            self.state_potentials = {u: len(self.states) - distances[u][self.uacc] for u in self.states}
 
         # No accepting state but rejecting state exists: high-potential = far from rejecting state
         elif self.urej is not None:
 
-            min_distances = self._comput_state_min_distance_matrix()
-            self.state_potentials = {u: min_distances[u][self.urej] for u in self.states}
+            distances = self._compute_state_distance_matrix(dist_fn)
+            self.state_potentials = {u: distances[u][self.urej] for u in self.states}
 
         # Neither accepting nor rejecting states exist: use zero potentials everywhere
         else:

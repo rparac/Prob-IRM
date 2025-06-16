@@ -1,0 +1,27 @@
+# @package _global_
+
+model:
+  fcnet_hiddens:
+    best_value: [ 64, 64, 64, 64 ]
+
+  fcnet_activation:
+    #  We use ReLU activations everywhere except within the critic, which use Tanh activations.  fcnet_activations:
+    best_value: "relu"
+
+  post_fcnet_hiddens:
+    best_value: []
+
+  post_fcnet_activation:
+    best_value: 'relu'
+
+ppo:
+  train_batch_size_per_learner:
+    best_value: 32768
+  lambda_:
+    best_value: 0.95
+  vf_loss_coeff:
+    best_value: 0.5
+  grad_clip:
+    best_value: 0.5
+  clip_param:
+    best_value: 0.2

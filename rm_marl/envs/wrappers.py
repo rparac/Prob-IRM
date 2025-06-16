@@ -17,7 +17,8 @@ from ..rm_transition.prob_rm_transitioner import ProbRMTransitioner
 # Important: This class needs to be the last one used. This also includes the RecordEpisodeStatisticsWrapper
 class ProbabilisticRewardShaping(gym.Wrapper):
 
-    def __init__(self, env, shaping_rm: RewardMachine, discount_factor: float = 0.99):
+    def __init__(self, env, shaping_rm: RewardMachine, discount_factor: float = 0.99,
+                 dist_fn: str = 'max'):
         super().__init__(env)
 
         self._discount_factor = discount_factor
@@ -26,11 +27,16 @@ class ProbabilisticRewardShaping(gym.Wrapper):
         self._rm_transitioner = None
         self._rm_state_belief = None
 
+        self._dist_fn = dist_fn
+
         self.set_shaping_rm(shaping_rm)
 
     def reset(self, **kwargs):
         self._rm_state_belief = self._rm_transitioner.get_initial_state()
-        return super().reset(**kwargs)
+        obs, info = super().reset(**kwargs)
+        info["shaping_reward"] = 0
+        info["original_reward"] = 0
+        return obs, info
 
     def step(self, action):
         assert self._rm_state_belief is not None, "Environment was not properly reset before step()"
@@ -38,8 +44,8 @@ class ProbabilisticRewardShaping(gym.Wrapper):
         obs, reward, terminated, truncated, info = super().step(action)
 
         assert "labels" in info and type(info["labels"]) == dict, "Unsupported labeling function, list of events needed"
-        assert "rm_state" in info and type(
-            info["rm_state"]) == np.ndarray, "Unsupported env, belief over RM states needed"
+        # assert "rm_state" in info and type(
+        #     info["rm_state"]) == np.ndarray, "Unsupported env, belief over RM states needed"
 
         # Determine additional reward due to reward shaping
         new_rm_state_belief = self._rm_transitioner.get_next_state(self._rm_state_belief, info["labels"])
@@ -48,6 +54,7 @@ class ProbabilisticRewardShaping(gym.Wrapper):
 
         # Provide info relating to the shaped reward
         info["shaping_reward"] = shaping_reward
+        info["original_reward"] = reward
 
         return obs, reward + shaping_reward, terminated, truncated, info
 
@@ -66,7 +73,7 @@ class ProbabilisticRewardShaping(gym.Wrapper):
 
     def set_shaping_rm(self, shaping_rm):
         self._rm = shaping_rm
-        self._rm.compute_state_pontentials()
+        self._rm.compute_state_pontentials(self._dist_fn)
 
         self._rm_transitioner = ProbRMTransitioner(self._rm)
         self._rm_state_belief = None
@@ -83,7 +90,7 @@ class LabelThresholding(gym.Wrapper):
     def _apply_thresholding(self, labels):
         thresholded_labels = {}
         for label, confidence in labels.items():
-            thresholded_labels[label] = 1 if confidence >= self._threshold else 0
+            thresholded_labels[label] = 1.0 if confidence >= self._threshold else 0.0
 
         return thresholded_labels
 
@@ -316,3 +323,22 @@ class RewardMachineWrapper(AutomataWrapper):
 
     def _get_reward(self, reward, u_next):
         return self.reward_function(self.rm_transitioner.rm, self.u, u_next, reward)
+
+
+class DiscreteToBoxObservationWrapper(gym.ObservationWrapper):
+    def __init__(self, env):
+        super(DiscreteToBoxObservationWrapper, self).__init__(env)
+
+        # Check if the original observation space is discrete
+        assert isinstance(env.observation_space, gym.spaces.Discrete), "The observation space must be discrete"
+
+        # Define the new observation space as a Box space with one-hot encoded vectors
+        self.observation_space = gym.spaces.Box(
+            low=0, high=1, shape=(env.observation_space.n,), dtype=np.float32,
+        )
+
+    def observation(self, obs):
+        # Convert the discrete observation into a one-hot encoded vector
+        one_hot_obs = np.zeros(self.observation_space.shape)
+        one_hot_obs[obs] = 1.0
+        return one_hot_obs

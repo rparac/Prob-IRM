@@ -199,4 +199,7 @@ def _generate_bfs_symmetry_breaking_rules_alternative(max_disj_size):
     stmts.append("injected_label_lt(X, Edge1, Edge2, L+1) :- injected_label_lt(X, Edge1, Edge2, L), injected_valid_label(L+1).")
     stmts.append(":- injected_ed_lt(X, Edge1, Edge2), injected_label(X, Edge1, L), not injected_label(X, Edge2, L), not injected_label_lt(X, Edge1, Edge2, L).")
 
+    # use lower node ids first
+    stmts.append(":- injected_used_state_id(_, I), not injected_used_state_id(_, I-1), I>0.")
+
     return generate_injected_block(stmts) + '\n'

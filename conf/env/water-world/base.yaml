@@ -1,0 +1,29 @@
+defaults:
+  - red_label_factory: perfect
+  - green_label_factory: perfect
+  - blue_label_factory: perfect
+  - cyan_label_factory: perfect
+  - magenta_label_factory: perfect
+  - yellow_label_factory: perfect
+
+name: ???
+render_mode: 'rgb_array'
+max_episode_length: 150
+num_random_seeds: null
+
+use_restricted_observables: true
+
+# Variables that can be overriden with Optuna
+overridable:
+  - env.red_label_factory.sensor_true_confidence
+  - env.red_label_factory.sensor_false_confidence
+  - env.green_label_factory.sensor_true_confidence
+  - env.green_label_factory.sensor_false_confidence
+  - env.blue_label_factory.sensor_true_confidence
+  - env.blue_label_factory.sensor_false_confidence
+  - env.cyan_label_factory.sensor_true_confidence
+  - env.cyan_label_factory.sensor_false_confidence
+  - env.magenta_label_factory.sensor_true_confidence
+  - env.magenta_label_factory.sensor_false_confidence
+  - env.yellow_label_factory.sensor_true_confidence
+  - env.yellow_label_factory.sensor_false_confidence

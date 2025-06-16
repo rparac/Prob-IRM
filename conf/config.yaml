@@ -1,0 +1,12 @@
+defaults:
+  # Look up the base file in env/office-world, naming the key as agent
+  # This also makes the env/office-world the base directory for the env part of configuration (desirable)
+  # WARNING: Hydra doesn't support the following override env/office-world@env=deliver_coffee_mail. Only
+  #  allows overriding to environments in office-world subdirectory
+  # - env/water-world@env: red_green
+  - env/office-world@env: deliver_coffee_mail
+  - run: base
+  - rm_learner: base
+  - ppo: base
+  - algo: base
+  - model: base

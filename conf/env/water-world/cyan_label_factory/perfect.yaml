@@ -1,0 +1,5 @@
+defaults:
+  - base
+
+sensor_true_confidence: 1
+sensor_false_confidence: 1

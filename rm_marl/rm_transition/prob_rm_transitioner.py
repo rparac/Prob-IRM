@@ -15,7 +15,7 @@ class ProbRMTransitioner(RMTransitioner):
 
     def get_initial_state(self):
         assert isinstance(self.rm.u0, (str, int))
-        u0 = np.zeros(len(self.rm.states))
+        u0 = np.zeros(len(self.rm.states), dtype=np.float32)
         curr_true_state = self.rm.states.index(self.rm.u0)
         u0[curr_true_state] = 1
 
@@ -27,24 +27,27 @@ class ProbRMTransitioner(RMTransitioner):
 
         # return self.get_next_state_simple(curr_state, event.copy())
 
-        belief_out = np.zeros(curr_state.shape)
+        belief_out = np.zeros(curr_state.shape, dtype=np.float32)
 
         label_probs = event.copy()
         # Adds absorbing state labels
         label_probs["True"] = 1
         label_probs["False"] = 1
 
-        for u_from_idx in range(belief_out.size):
-            u_from = self.rm.states[u_from_idx]
-            transition_prob_sum = 0
-            for transition_labels, u_out in self.rm.transitions[u_from].items():
-                u_out_idx = self.rm.to_idx(u_out)
-                transition_prob = self.compute_transition_probability(transition_labels, label_probs)
-                belief_out[u_out_idx] += transition_prob * curr_state[u_from_idx]
-                transition_prob_sum += transition_prob
-            # The transitions to the same state are not captured with the transitions variable.
-            # So, 1 - transition_prob_sum -> the probability of transitioning to the same state
-            belief_out[u_from_idx] += (1 - transition_prob_sum) * curr_state[u_from_idx]
+        try:
+            for u_from_idx in range(belief_out.size):
+                u_from = self.rm.states[u_from_idx]
+                transition_prob_sum = 0
+                for transition_labels, u_out in self.rm.transitions[u_from].items():
+                    u_out_idx = self.rm.to_idx(u_out)
+                    transition_prob = self.compute_transition_probability(transition_labels, label_probs)
+                    belief_out[u_out_idx] += transition_prob * curr_state[u_from_idx]
+                    transition_prob_sum += transition_prob
+                # The transitions to the same state are not captured with the transitions variable.
+                # So, 1 - transition_prob_sum -> the probability of transitioning to the same state
+                belief_out[u_from_idx] += (1 - transition_prob_sum) * curr_state[u_from_idx]
+        except IndexError:
+            raise RuntimeError(f"belief out is {belief_out}, curr state is {curr_state}")
 
         return belief_out
 

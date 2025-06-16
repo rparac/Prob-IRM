@@ -1,0 +1,67 @@
+train_batch_size_per_learner:
+  best_value: 32768
+
+minibatch_size:
+  options: [1024, 2048, 4096, 8192]
+  tune_func: 'choice'
+  best_value: null
+
+clip_param:
+  options: [0.1, 0.2, 0.3]
+  tune_func: 'choice'
+  best_value: null
+
+# Value function clipping
+#vf_clip_param:
+#  options: [5.0, 3.0]
+#  tune_func: 'uniform'
+#  best_value: null
+
+# We use PPO-Clip version of the algorithm
+use_kl_loss:
+  best_value: False
+
+#kl_target:
+#  options: [0.003, 0.3]
+#  tune_func: 'loguniform'
+#  best_value: null
+#
+#kl_coeff:
+#  options: [0.3, 1]
+#  tune_func: 'uniform'
+#  best_value: null
+
+num_epochs:
+  options: [5, 15]
+  tune_func: 'randint'
+  best_value: null
+
+lambda_:
+  options: [0.9, 1]
+  tune_func: 'uniform'
+  best_value: null
+
+vf_loss_coeff:
+  options: [0.5, 1]
+  tune_func: 'uniform'
+  best_value: null
+
+entropy_coeff:
+  # options: [0.0, 0.01, 0.1, 1]
+  options: [0.1, 1]
+  tune_func: 'choice'
+  best_value: 0.1
+
+
+grad_clip:
+  options: [0.1, 10]
+  tune_func: 'loguniform'
+  best_value: null
+grad_clip_by:
+  best_value: "global_norm"
+
+
+# Hyperparameters setup with a fixed structure so they can be easily parsed
+#  - options: arguments of the tune.tune_func
+#  - tune_func: use tune.tune_func in the tuning loop
+#  - best_value: value to choose if not tuning

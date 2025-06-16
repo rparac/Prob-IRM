@@ -1,0 +1,10 @@
+#!/bin/bash
+
+job_ids=(106548 106549 106550 106551 106552 106553 106554 106555 106556 106557 106558 106559 106560 106561 106562 106563 106564 106565 106566 106567 106568 106569 106570 106571)
+
+
+# Loop through each job ID and cancel it
+for job_id in ${job_ids[@]}; do
+    echo $job_id
+    qdel $job_id
+done
