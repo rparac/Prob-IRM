@@ -134,7 +134,21 @@ def load_results_data(results_base_dir: str, experiment: str, results_format: st
 
                 run_results_df[param_name] = param_value
 
+            # Extend to N
+            extend_to = 500
+            last_row = run_results_df.iloc[[-1]]
+            num_iters = last_row.iloc[0]['training_iteration']
+            if num_iters < extend_to:
+                new_rows = pd.concat([last_row] * (extend_to - num_iters), ignore_index=True)
+                run_results_df = pd.concat([run_results_df, new_rows], ignore_index=True)
+                run_results_df['training_iteration'] = range(1, len(run_results_df)+1)
+
+            # Get first 10000 dataframes
+            run_results_df = run_results_df[:10000]
+
             results_data.append(run_results_df)
+
+
 
     results_df = pd.concat(results_data)
     results_df = results_df.reset_index(drop=True)
@@ -219,8 +233,18 @@ def plot_learning_curves(results_df: pd.DataFrame):
         for i, group_id in enumerate(exp_run_groups):
 
             plt.figure(figsize=(5, 5), dpi=150)
-            plt.suptitle(f'Experiment: {exp}')
-            plt.title(f'{group_id}')
+            # plt.suptitle(f'Experiment: {exp}')
+            title = f'{group_id}'
+            # title = title.split("_")[-1]
+            # title = "_".join(title)
+            # title = "example penalty " + title
+            title = title.replace("rg_b", "rg-b")
+            # title = title.replace("_", " ")
+            title = title.replace("rebalance_classes_", "")
+            title = title.replace("-", " = ")
+            title = title.replace("rs_deliver_coffee_shaping", "use_reward_shaping")
+            # title = "No Shaping"
+            plt.title(title)
 
             group_averages_df = exp_averages_df.loc[group_id]
 
@@ -251,17 +275,31 @@ def plot_learning_curves(results_df: pd.DataFrame):
                     alpha=0.2
                 )
 
-                plt.plot(x_axis, y_axis,
-                         linewidth=1.5,
-                         color=line_colors[j],
-                         label=f'{float(noise_level):.5f}')
+                # Quick and dirty dashed line
+                if False and noise_level == '0.8':
+                    plt.plot(x_axis, y_axis,
+                            linewidth=1.5,
+                            color=line_colors[j],
+                            linestyle='--',
+                            label="None",)
+                            # label=f'{float(noise_level):.1f}')
+                            #  label=f'{float(noise_level):.2f}')
+                            #  label=f'{float(noise_level):.5f}')
+                else:
+                    plt.plot(x_axis, y_axis,
+                            linewidth=1.5,
+                            color=line_colors[j],
+                            label=f'{float(noise_level):.1f}')
+                            #  label=f'{float(noise_level):.2f}')
+                            #  label=f'{float(noise_level):.5f}')
 
                 plt.ylabel(f'Average return')
                 plt.xlabel('Iterations')
                 plt.ylim(-0.05, 1.05)
                 plt.yticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
 
-                plt.legend(title='Noise', loc='lower right')
+                plt.legend(title='Sensor Confidence', loc='lower right')
+                # plt.legend(title='Threshold', loc='lower right')
                 plt.grid(linewidth=0.3)
                 plt.tight_layout()
 
@@ -273,46 +311,94 @@ def plot_learning_curves(results_df: pd.DataFrame):
 if __name__ == '__main__':
 
     csv_results = [
-
-        # Ablations
-        'ablations/noisy_all/all_deliver_coffee',
-        'ablations/reward_shaping/rs_deliver_coffee',
-
-        # Hand-crafted RM baselines
-        'baselines/perfect_rm/office/deliver_coffee_perfect_rm',
-        'baselines/perfect_rm/office/coffee_mail_perfect_rm',
-        'baselines/perfect_rm/office/visit_abcd_a_perfect_rm',
-        'baselines/perfect_rm/water/waterworld_rg_b_unrestricted_perfect_rm',
-        'baselines/perfect_rm/water/waterworld_rgb_unrestricted_perfect_rm',
-        'baselines/perfect_rm/water/waterworld_RGBc_unrestricted_perfect_rm',
-
-        # Recurrent baselines
-        'baselines/recurrent/office/recurrent_deliver_coffee',
-        'baselines/recurrent/office/recurrent_coffee_mail',
-        'baselines/recurrent/office/recurrent_visit_abcd_a',
-
-        # Prob-IRM results
-        'probirm/office/deliver_coffee_rm_learning',
-        'probirm/office/coffee_mail_rm_learning',
-        'probirm/office/visit_abcd_a_rm_learning',
-        'probirm/water/waterworld_rg_b_unrestricted_rm_learning',
-        'probirm/water/waterworld_rgb_unrestricted_rm_learning',
-        'probirm/water/waterworld_RGBc_unrestricted_rm_learning',
-
+        # # Ablations
+        # 'ablations/reward_shaping/rs_deliver_coffee',
     ]
+
 
     json_results = [
+        # Ablations
+        # 'ablations/cross_entropy_threshold/cross_entorpy',
+        'ablations/reward_shaping/rs_deliver_coffee',
+        # 'ablations/example_penalty_multiplier/ex_penalty_multiplier',
 
-        'baselines/recurrent/water/recurrent_waterworld_rg_b',
-        'baselines/recurrent/water/recurrent_waterworld_rgb',
-        'baselines/recurrent/water/recurrent_waterworld_RGBc',
+        # "ablations/noise_all/all_deliver_coffee_rm_learning",
+        # "ablations/noise_all/all_deliver_coffee_perfect_rm",
 
+        # "ablations/rebalance_classes/rebalance_classes",
+        # "ablations/thresholding/threshold",
+
+        # 'probirm/office/deliver_coffee_rm_learning',
+        # 'probirm/office/coffee_mail_rm_learning',
+        # 'probirm/office/visit_abcd_a_rm_learning',
+
+        # 'baselines/office/perfect_rm/deliver_coffee_perfect_rm',
+        # 'baselines/office/perfect_rm/coffee_mail_perfect_rm',
+        # 'baselines/office/perfect_rm/visit_abcd_a_perfect_rm',
+
+        # 'probirm/water/waterworld_rgb_unrestricted_rm_learning',
+        # 'probirm/water/waterworld_rg_b_unrestricted_rm_learning',
+        # 'probirm/water/waterworld_rgbc_unrestricted_rm_learning',
+
+        # 'baselines/water/perfect_rm/waterworld_rgb_unrestricted_perfect_rm',
+        # 'baselines/water/perfect_rm/waterworld_rg_b_unrestricted_perfect_rm',
+        # 'baselines/water/perfect_rm/waterworld_rgbc_unrestricted_perfect_rm',
+
+        # 'baselines/office/perfect_rm/deliver_coffee_perfect_rm',
+        # 'baselines/office/perfect_rm/coffee_mail_perfect_rm',
+        # 'baselines/office/perfect_rm/visit_abcd_a_perfect_rm',
+
+        # "baselines/office/recurrent/recurrent_deliver_coffee_rm_learning",
+        # "baselines/office/recurrent/recurrent_coffee_mail_rm_learning",
+        # "baselines/office/recurrent/recurrent_visit_abcd_a_rm_learning",
+
+        # "baselines/water/recurrent/recurrent_waterworld_rgb_rm_learning",
+        # "baselines/water/recurrent/recurrent_waterworld_rg_b_rm_learning",
+        # "baselines/water/recurrent/recurrent_waterworld_rgbc_rm_learning",
     ]
+
+
+    # csv_results = [
+
+    #     # Ablations
+    #     'ablations/noisy_all/all_deliver_coffee',
+    #     'ablations/reward_shaping/rs_deliver_coffee',
+
+    #     # Hand-crafted RM baselines
+    #     'baselines/perfect_rm/office/deliver_coffee_perfect_rm',
+    #     'baselines/perfect_rm/office/coffee_mail_perfect_rm',
+    #     'baselines/perfect_rm/office/visit_abcd_a_perfect_rm',
+    #     'baselines/perfect_rm/water/waterworld_rg_b_unrestricted_perfect_rm',
+    #     'baselines/perfect_rm/water/waterworld_rgb_unrestricted_perfect_rm',
+    #     'baselines/perfect_rm/water/waterworld_RGBc_unrestricted_perfect_rm',
+
+    #     # Recurrent baselines
+    #     'baselines/recurrent/office/recurrent_deliver_coffee',
+    #     'baselines/recurrent/office/recurrent_coffee_mail',
+    #     'baselines/recurrent/office/recurrent_visit_abcd_a',
+
+    #     # Prob-IRM results
+    #     'probirm/office/deliver_coffee_rm_learning',
+    #     'probirm/office/coffee_mail_rm_learning',
+    #     'probirm/office/visit_abcd_a_rm_learning',
+    #     'probirm/water/waterworld_rg_b_unrestricted_rm_learning',
+    #     'probirm/water/waterworld_rgb_unrestricted_rm_learning',
+    #     'probirm/water/waterworld_RGBc_unrestricted_rm_learning',
+
+    # ]
+
+    # json_results = [
+
+    #     'baselines/recurrent/water/recurrent_waterworld_rg_b',
+    #     'baselines/recurrent/water/recurrent_waterworld_rgb',
+    #     'baselines/recurrent/water/recurrent_waterworld_RGBc',
+
+    # ]
 
     for exp in csv_results:
         results = load_results_data('results/csv', exp, results_format='csv')
         plot_learning_curves(results)
-
+    json_folder = '/home/rp218/from_hx1'
     for exp in json_results:
-        results = load_results_data('results/json', exp, results_format='json')
+        results = load_results_data(json_folder, exp, results_format='json')
         plot_learning_curves(results)

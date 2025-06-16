@@ -1,9 +1,0 @@
-defaults:
-  - base
-
-total_episodes: 30000 # 500
-testing_freq: 5000 # 250
-recording_freq: 5000 # 250
-name: "visit-abcd"
-num_envs: 50
-

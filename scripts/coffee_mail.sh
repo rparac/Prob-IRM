@@ -4,15 +4,12 @@
 
 cd ..
 
-# seeds=(0 100 200 300 400)
-seeds=(0)
-use_rm_options=(True False) 
-# noise_levels=(1 0.9979081153869629 0.995305061340332 0.9814815521240234)
-noise_levels=(1 0.9814815521240234)
+seeds=(0 100 200 300 400)
+use_rm_options=(True False)
 
-nodes=2
+nodes=1
 ncpus=32
-ram=250
+ram=256
 
 directory="coffee_mail"
 for seed in "${seeds[@]}"; do

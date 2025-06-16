@@ -8,7 +8,6 @@ import gymnasium
 from gymnasium.core import WrapperActType, WrapperObsType
 import numpy as np
 
-from rm_marl.agent import RewardMachineAgent
 from rm_marl.reward_machine import RewardMachine
 from rm_marl.rm_transition.prob_rm_transitioner import ProbRMTransitioner
 
@@ -18,7 +17,7 @@ class RMWrapper(gymnasium.Wrapper):
         super().__init__(env)
         assert isinstance(env.observation_space, gymnasium.spaces.Box)
 
-        _rm = rm if rm is not None else RewardMachineAgent.default_rm()
+        _rm = rm if rm is not None else RewardMachine.default_rm()
 
         self.rm_transitioner = ProbRMTransitioner(_rm)
 

@@ -27,11 +27,12 @@ LOGGER = getLogger(__name__)
 # TODO: implement new API
 # TODO: more cpus for this actor. The problem is the placement group allocation at the moment
 @ray.remote
-class NewProbFFNSLLearner:
+class RMLearner:
     """
     # edge_cost - ILASP penalty for using the ed predicate
     # n_phi_cost - ILASP penalty for using the n_phi_predicate
-    # ex_penalty_multiplier - multipler for the ILASP penalties
+    # ex_penalty_multiplier - multipler for the ILASP penalties. If =2 this means that all ILASP example penalties will
+    #                         sum to 200
     # min_penalty - the penalty threshold for discarding an ILASP example - makes the ILASP task simpler
     # base_dir - relative directory path where results will be stored
     """

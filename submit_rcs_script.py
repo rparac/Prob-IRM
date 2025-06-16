@@ -1,7 +1,8 @@
 """
 Quick script to run hydra with condor launcher
 Run the file as
-python submit_script.py <DIRECTORY> <NAME> ../dqrm_coffee_world.py <ARGS>
+python submit_script.py <NAME> ray_tests/hydra_RM_learning_PPO.py <ARGS>
+
 
 Environment variables require special care on HX1
   - https://icl-rcs-user-guide.readthedocs.io/en/latest/hpc/applications/guides/pytorch/

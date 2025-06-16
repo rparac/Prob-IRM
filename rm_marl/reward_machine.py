@@ -26,6 +26,13 @@ class RewardMachine:
         self.uacc = None
         self.urej = None
 
+    @classmethod
+    def default_rm(cls):
+        rm = cls()
+        rm.add_states(["u0"])
+        rm.set_u0("u0")
+        return rm
+
     @staticmethod
     def _transition_constructor():
         return _CustomDefaultDict()

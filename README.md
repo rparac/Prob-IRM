@@ -7,8 +7,9 @@ Create a conda environment with the required python version
 ```
 conda create -n rm_marl python=3.10.12
 conda activate rm_marl
-pip install -r to_install.txt
+pip install -r requirements.txt
 ```
+We also attach `environment.yml` that has been exported directly from `conda`.
 
 My script assumes that this environment will be inside the job
 

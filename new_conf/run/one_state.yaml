@@ -1,6 +1,0 @@
-defaults:
-  - base
-
-total_episodes: 1000
-testing_freq: 100
-recording_freq: 100

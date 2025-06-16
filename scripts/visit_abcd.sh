@@ -4,15 +4,13 @@
 
 cd ..
 
-# seeds=(0 100 200 300 400)
-seeds=(0)
-use_rm_options=(True False) 
-# noise_levels=(1 0.9989626407623291 0.997668981552124 0.9907407760620117)
-noise_levels=(1 0.9907407760620117)
+seeds=(0 100 200 300 400)
+use_rm_options=(True False)
+noise_levels=(1 0.9989626407623291 0.997668981552124 0.9907407760620117)
 
-nodes=2
+nodes=1
 ncpus=32
-ram=250
+ram=256
 
 directory="visit_abcd_a"
 for seed in "${seeds[@]}"; do

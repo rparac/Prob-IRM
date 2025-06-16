@@ -4,14 +4,13 @@ cd ..
 # Runs the deliver coffee task for 5 seeds and noise levels with the noise on the coffee sensor
 # Need to change 3 things: recurrent=True, model=recurrent, hyperparmeters=recurrent/config5
 
-seeds=(0) # (0 100 200 300 400)
-use_rm_options=(False) # (True False)
-noise_levels=(0.9907407760620117)
-# (1 0.9989626407623291 0.997668981552124 0.9907407760620117)
+seeds=(0 100 200 300 400)
+use_rm_options=(True False)
+noise_levels=(1 0.9989626407623291 0.997668981552124 0.9907407760620117)
 
-nodes=2
+nodes=1
 ncpus=32
-ram=250 # 512
+ram=256
 
 # directory="new_more_complex_after_fix_10_envs_long_visit_abcd_a"
 directory="recurrent_visit_abcd_a"

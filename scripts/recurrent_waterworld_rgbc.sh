@@ -10,10 +10,8 @@ use_rm_options=(False) # (True False)
 noise_levels=(1 0.9989626407623291 0.997668981552124 0.9907407760620117)
 
 nodes=1
-# ncpus=64
-ncpus=4
-# ram=128
-ram=32
+ncpus=32
+ram=256
 
 directory="recurrent_waterworld_rgbc"
 for seed in "${seeds[@]}"; do

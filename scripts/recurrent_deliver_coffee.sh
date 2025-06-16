@@ -5,16 +5,13 @@
 
 cd ..
 
-# TODO: seeds
-# seeds=(0 100 200 300 400)
-# num_agents=(10)
-# use_rm_options=(False True)
+seeds=(0 100 200 300 400)
 use_rm_options=(False)
 noise_levels=(1 0.9979081153869629 0.995305061340332 0.9814815521240234)
 
-nodes=2
-ncpus=64
-ram=128
+nodes=1
+ncpus=32
+ram=256
 
 directory="deliver_coffee"
 for use_rm in "${use_rm_options[@]}"; do
@@ -33,7 +30,7 @@ for use_rm in "${use_rm_options[@]}"; do
 	run.wandb.key=680ad332869d9761ae2b6bdd70cdbc068674d47b \
 	run.render_freq=20 \
 	model=recurrent \
-        +hyperparams/recurrent=config5 \
+        +hyperparams/recurrent=configabcd \
         +experiment=vanilla_coffee_symmetric_error x=${noise_level}
     # python submit_rcs_script.py ${nodes} ${ncpus} ${ram} ${directory} ${name} \
     # ray_tests/hydra_RM_learning_PPO.py run.name=${name} run.use_perfect_rm=True run.num_agents=${num_agent} run.should_tune=True run.num_env_runners=40 run.tune_config.num_samples=200

@@ -9,8 +9,8 @@ use_rs_options=(False True)
 noise_levels=(1 0.9989626407623291 0.997668981552124 0.9907407760620117)
 
 nodes=1
-ncpus=64
-ram=128
+ncpus=32
+ram=256
 
 directory="rs_deliver_coffee"
 for use_rs in "${use_rs_options[@]}"; do
@@ -28,7 +28,7 @@ for use_rs in "${use_rs_options[@]}"; do
           run.use_perfect_rm=False run.num_agents=10 run.should_tune=True \
 	  run.use_rs=${use_rs} \
           run.tune_config.num_samples=1 \
-  	  run.num_env_runners=50 \
+  	  run.num_env_runners=30 \
           run.render_freq=10000000 \
           +hyperparams/with_rm=configabcd \
           +experiment=vanilla_all_symmetric_error x=${noise_level}

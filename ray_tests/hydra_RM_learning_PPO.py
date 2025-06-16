@@ -173,7 +173,7 @@ def create_config(
     return config
 
 
-@hydra.main(version_base=None, config_path="../even_newer_conf", config_name="config")
+@hydra.main(version_base=None, config_path="../conf", config_name="config")
 def run(cfg: DictConfig) -> int:
     manual_value_override(cfg)
 

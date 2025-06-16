@@ -17,8 +17,7 @@ from ray.rllib.utils.from_config import NotProvided
 from ray.rllib.utils.serialization import space_from_dict, space_to_dict
 from ray.rllib.utils.typing import ResultDict, EnvConfigDict
 
-from rm_marl.agent import RewardMachineAgent
-from rm_marl.new_stack.learner.NewProbFFNSLLearner import NewProbFFNSLLearner
+from rm_marl.new_stack.learner.rm_learner import RMLearner
 from rm_marl.new_stack.utils.env import GET_PERFECT_RM, GET_DEFAULT_RM
 from rm_marl.reward_machine import RewardMachine
 
@@ -125,7 +124,7 @@ class PPORMLearning(PPO):
         actor_name = str(uuid.uuid4())
         print(f"Actor name is {actor_name}")
 
-        rm = RewardMachineAgent.default_rm()
+        rm = RewardMachine.default_rm()
         kwargs = {"rm_learner_actor": actor_name}
 
         self.config._is_frozen = False
@@ -139,7 +138,7 @@ class PPORMLearning(PPO):
         # )
         # ray.get(placement_group.ready())
 
-        self._rm_learner = (NewProbFFNSLLearner.options(name=actor_name)  # type: ignore
+        self._rm_learner = (RMLearner.options(name=actor_name)  # type: ignore
                             .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
         super().setup(config)
 
@@ -157,7 +156,7 @@ class PPORMLearning(PPO):
         self.config._is_frozen = True
 
         rm = RewardMachineAgent.default_rm()
-        self._rm_learner = (NewProbFFNSLLearner.options(name=actor_name)  # type: ignore
+        self._rm_learner = (RMLearner.options(name=actor_name)  # type: ignore
                             .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
         self._rm_learner.set_state_dict.remote(state)
 

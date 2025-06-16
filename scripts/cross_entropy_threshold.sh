@@ -14,7 +14,7 @@ noise_levels=(1 0.9979081153869629 0.995305061340332 0.9814815521240234)
 
 nodes=1
 ncpus=32
-ram=128
+ram=256
 
 directory="cross_entorpy_threshold"
 for seed in "${seeds[@]}"; do

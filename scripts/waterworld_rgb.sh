@@ -4,17 +4,13 @@
 
 cd ..
 
-# seeds=(0 100 200 300 400)
-seeds=(0 100 200 300 400)
-# seeds=(100)
-# use_rm_options=(True False)
-use_rm_options=(False)
+seeds=(0 100 200)
+use_rm_options=(True False)
 noise_levels=(1 0.9990105628967285 0.9977762699127197 0.9911642074584961)
-# noise_levels=(1)
 
-nodes=2
+nodes=1
 ncpus=32
-ram=250
+ram=256
 
 directory="waterworld_rgb_unrestricted"
 # directory="waterworld_rgb_unrestricted_min_memory"
