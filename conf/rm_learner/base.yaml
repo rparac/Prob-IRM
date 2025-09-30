@@ -1,6 +1,7 @@
 edge_cost: 2
 n_phi_cost: 1
 ex_penalty_multiplier: 2
+additional_ex_penalty_multipler: 4
 min_penalty: 2
 cross_entropy_threshold: 0.6
 

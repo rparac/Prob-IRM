@@ -95,6 +95,7 @@ class PPORMLearningConfig(PPOConfig):
                    new_inc_examples=NotProvided,
                    replay_experience=NotProvided,
                    max_container_size=NotProvided,
+                   additional_ex_penalty_multipler=NotProvided,
                    ):
         if edge_cost is not NotProvided:
             self.rm_learner_params["edge_cost"] = edge_cost
@@ -116,6 +117,8 @@ class PPORMLearningConfig(PPOConfig):
             self.rm_learner_params["replay_experience"] = replay_experience
         if max_container_size is not NotProvided:
             self.rm_learner_params["max_container_size"] = max_container_size 
+        if additional_ex_penalty_multipler is not NotProvided:
+            self.rm_learner_params["additional_ex_penalty_multipler"] = additional_ex_penalty_multipler
 
 
 class PPORMLearning(PPO):
