@@ -41,6 +41,7 @@ class RMLearner:
     def __init__(self, starting_rm, actor_name, edge_cost, n_phi_cost, ex_penalty_multiplier, additional_ex_penalty_multipler, min_penalty,
                  cross_entropy_threshold, replay_experience, rebalance_classes, max_container_size, new_inc_examples, base_dir):
         self._new_inc_examples = new_inc_examples
+        self._min_penalty = min_penalty
         self.examples = MultiISAExampleContainer(min_penalty, rebalance_classes, new_inc_examples, max_container_size)
 
         self.actor_name = actor_name
@@ -274,13 +275,13 @@ class RMLearner:
         total_ex_sum = int(100 * self.ex_penalty_multipler)
         goal_ex, dend_ex, inc_ex = self.examples.generate_goal_dend_inc(total_ex_sum)
 
-        if curr_rm is not None:
+
+        additional_inc_container = ISAExampleContainer(self._min_penalty)
+        for ex in generate_previous_incomplete_examples(curr_rm):
+            additional_inc_container.add(ex)
+
+        if len(additional_inc_container) > 0:
             additional_ex_penalty_sum = int(100 * self.additional_ex_penalty_multipler)
-
-            additional_inc_container = ISAExampleContainer()
-            for ex in generate_previous_incomplete_examples(curr_rm):
-                additional_inc_container.add(ex)
-
             additional_inc_ex = additional_inc_container.as_list_reweighted(additional_ex_penalty_sum)
             inc_ex.extend(additional_inc_ex)
 
