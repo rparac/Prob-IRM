@@ -158,7 +158,7 @@ class PPORMLearning(PPO):
         self.config.callbacks_class = partial(self.config.callbacks_class, **kwargs)
         self.config._is_frozen = True
 
-        rm = RewardMachineAgent.default_rm()
+        rm = RewardMachine.default_rm()
         self._rm_learner = (RMLearner.options(name=actor_name)  # type: ignore
                             .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
         self._rm_learner.set_state_dict.remote(state)
