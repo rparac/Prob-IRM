@@ -9,7 +9,7 @@ from typing import Optional
 import gymnasium as gym
 import ray
 from ray import tune
-from ray.rllib.algorithms import PPOConfig, AlgorithmConfig, PPO, Algorithm
+from ray.rllib.algorithms import APPOConfig, AlgorithmConfig, APPO, Algorithm
 from ray.rllib.utils import override
 from ray.rllib.utils.annotations import PublicAPI
 from ray.rllib.utils.checkpoints import Checkpointable
@@ -17,18 +17,19 @@ from ray.rllib.utils.from_config import NotProvided
 from ray.rllib.utils.serialization import space_from_dict, space_to_dict
 from ray.rllib.utils.typing import ResultDict, EnvConfigDict
 
-from rm_marl.new_stack.learner.rm_learner import RMLearner
-from rm_marl.new_stack.learner.non_noisy_rm_learner import NonNoisyRMLearner
+from rm_marl.agent import RewardMachineAgent
+from rm_marl.new_stack.learner.NewProbFFNSLLearner import NewProbFFNSLLearner
 from rm_marl.new_stack.utils.env import GET_PERFECT_RM, GET_DEFAULT_RM
+from rm_marl.new_stack.utils.gymnasium import gym_getattr
 from rm_marl.reward_machine import RewardMachine
 
 save_name = "ilasp_learner.pkl"
 
 # TODO: automatically set the connectors that are required
-class PPORMConfig(PPOConfig):
+class APPORMConfig(APPOConfig):
 
     def __init__(self, algo_class=None):
-        super().__init__(algo_class or PPORM)
+        super().__init__(algo_class or APPORM)
 
     def environment(
             self,
@@ -41,17 +42,17 @@ class PPORMConfig(PPOConfig):
         return super().environment(env_config=new_env_config, **kwargs)
 
 
-class PPORM(PPO):
+class APPORM(APPO):
     @classmethod
     @override(Algorithm)
     def get_default_config(cls) -> AlgorithmConfig:
-        return PPORMConfig()
+        return APPORMConfig()
 
 
-tune.register_trainable("PPORM", PPORM)
+tune.register_trainable("APPORM", APPORM)
 
 
-class PPORMLearningConfig(PPOConfig):
+class APPORMLearningConfig(APPOConfig):
     def __init__(self, algo_class=None):
         self._actor_name = None
 
@@ -67,10 +68,9 @@ class PPORMLearningConfig(PPOConfig):
             "rebalance_classes": True,
             "new_inc_examples": True,
             "max_container_size": None,
-            "use_old_rm_learner": False,
         }
 
-        super().__init__(algo_class or PPORMLearning)
+        super().__init__(algo_class or APPORMLearning)
 
     def actor_name(self, actor_name: str):
         self._actor_name = actor_name
@@ -97,8 +97,6 @@ class PPORMLearningConfig(PPOConfig):
                    new_inc_examples=NotProvided,
                    replay_experience=NotProvided,
                    max_container_size=NotProvided,
-                   additional_ex_penalty_multipler=NotProvided,
-                   use_old_rm_learner=NotProvided,
                    ):
         if edge_cost is not NotProvided:
             self.rm_learner_params["edge_cost"] = edge_cost
@@ -120,19 +118,15 @@ class PPORMLearningConfig(PPOConfig):
             self.rm_learner_params["replay_experience"] = replay_experience
         if max_container_size is not NotProvided:
             self.rm_learner_params["max_container_size"] = max_container_size 
-        if additional_ex_penalty_multipler is not NotProvided:
-            self.rm_learner_params["additional_ex_penalty_multipler"] = additional_ex_penalty_multipler
-        if use_old_rm_learner is not NotProvided:
-            self.rm_learner_params["use_old_rm_learner"] = use_old_rm_learner
 
 
-class PPORMLearning(PPO):
+class APPORMLearning(APPO):
 
     def setup(self, config: AlgorithmConfig) -> None:
         actor_name = str(uuid.uuid4())
         print(f"Actor name is {actor_name}")
 
-        rm = RewardMachine.default_rm()
+        rm = RewardMachineAgent.default_rm()
         kwargs = {"rm_learner_actor": actor_name}
 
         self.config._is_frozen = False
@@ -145,12 +139,9 @@ class PPORMLearning(PPO):
         #     ]
         # )
         # ray.get(placement_group.ready())
-        if self.config.rm_learner_params["use_old_rm_learner"]:
-            self._rm_learner = (NonNoisyRMLearner.options(name=actor_name)  # type: ignore
-                                .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
-        else:
-            self._rm_learner = (RMLearner.options(name=actor_name)  # type: ignore
-                                .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
+
+        self._rm_learner = (NewProbFFNSLLearner.options(name=actor_name)  # type: ignore
+                            .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
         super().setup(config)
 
     @override(Checkpointable)
@@ -166,8 +157,8 @@ class PPORMLearning(PPO):
         self.config.callbacks_class = partial(self.config.callbacks_class, **kwargs)
         self.config._is_frozen = True
 
-        rm = RewardMachine.default_rm()
-        self._rm_learner = (RMLearner.options(name=actor_name)  # type: ignore
+        rm = RewardMachineAgent.default_rm()
+        self._rm_learner = (NewProbFFNSLLearner.options(name=actor_name)  # type: ignore
                             .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
         self._rm_learner.set_state_dict.remote(state)
 
@@ -186,7 +177,7 @@ class PPORMLearning(PPO):
     @classmethod
     @override(Algorithm)
     def get_default_config(cls) -> AlgorithmConfig:
-        return PPORMLearningConfig()
+        return APPORMLearningConfig()
 
     @override(Algorithm)
     def training_step(self) -> ResultDict:
@@ -247,7 +238,9 @@ class PPORMLearning(PPO):
 
     def reset_policies(self, rm) -> None:
         obs_spaces = self.get_obs_space()
+        obs_space = obs_spaces[0] if isinstance(obs_spaces, list) else obs_spaces
         act_spaces = self.get_action_space()
+        act_space = act_spaces[0] if isinstance(act_spaces, list) else act_spaces
 
         def _update_config(w):
             initially_frozen = w.config._is_frozen
@@ -257,7 +250,7 @@ class PPORMLearning(PPO):
             num_agents = w.config.env_config['num_agents']
             rl_module_spec = w.config.get_multi_rl_module_spec(
                 spaces={
-                    f"p{pid}": (obs_spaces[0], act_spaces[0])
+                    f"p{pid}": (obs_space, act_space)
                     for pid in range(num_agents)
                 }
 
@@ -285,7 +278,7 @@ class PPORMLearning(PPO):
             num_agents = w.config.env_config['num_agents']
             w.module = w.config.get_multi_rl_module_spec(
                 spaces={
-                    f"p{pid}": (obs_spaces[0], act_spaces[0])
+                    f"p{pid}": (obs_space, act_space)
                     for pid in range(num_agents)
                 }
             ).build()
@@ -315,7 +308,13 @@ class PPORMLearning(PPO):
     @PublicAPI
     def set_rm(self, rm: RewardMachine) -> None:
         def _set_rm(w):
-            w.env.unwrapped.update_rm(rm)
+            if hasattr(w.env.unwrapped, "envs"):
+                for _env in w.env.unwrapped.envs:
+                    gym_getattr(_env, "update_rm")(rm)
+            else:
+                breakpoint()
+                w.env.unwrapped.update_rm(rm)
+            # w.env.unwrapped.envs[0].env.env.update_rm
 
         self.env_runner_group.foreach_worker(_set_rm)
 
@@ -323,4 +322,4 @@ class PPORMLearning(PPO):
             self.eval_env_runner_group.foreach_worker(_set_rm)
 
 
-tune.register_trainable("PPORMLearning", PPORMLearning)
+tune.register_trainable("APPORMLearning", APPORMLearning)

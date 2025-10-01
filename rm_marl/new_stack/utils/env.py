@@ -2,10 +2,10 @@ import gymnasium as gym
 import numpy as np
 from ray.rllib.env import EnvContext
 
-from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelingFunctionWrapper, \
-    OfficeWorldPlantLabelingFunctionWrapper, OfficeWorldCoffeeLabelingFunctionWrapper
+from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelExtractor, \
+    OfficeWorldPlantLabelExtractor, OfficeWorldCoffeeLabelExtractor
 from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
-from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer, ProbabilisticRewardShaping, RewardMachineWrapper
+from rm_marl.envs.wrappers import LabelingFunctionWrapper, NoisyLabelingFunctionComposer, ProbabilisticRewardShaping, RewardMachineWrapper
 from rm_marl.envs.wrappers import LabelThresholding
 from rm_marl.new_stack.env.augment_labels_wrapper import AugmentLabelsWrapper
 from rm_marl.new_stack.env.rm_wrapper import RMWrapper
@@ -29,9 +29,10 @@ def hydra_env_creator(env_config):
         env = NewGymSubgoalAutomataAdapter(env, max_episode_length=env_config["max_episode_length"], num_random_seeds=env_config["num_random_seeds"])  # type: ignore
         # raise RuntimeError(env.observation_space.shape)
 
-        labeling_funs = [label_factory(env) for label_factory in env_config["label_factories"]]
+        labeling_funs = [label_factory(seed=env_config["seed"]) for label_factory in env_config["label_factories"]]
 
-        env = NoisyLabelingFunctionComposer(labeling_funs)
+        label_extractor = NoisyLabelingFunctionComposer(labeling_funs)
+        env = LabelingFunctionWrapper(env, label_extractor, use_probability=not env_config["use_old_rm_learner"])
 
         if env_config['use_thresholding']:
             env = LabelThresholding(env, env_config['labelling_threshold'])
@@ -53,8 +54,13 @@ def hydra_env_creator(env_config):
         else:
             raise RuntimeError(f"Unexpected RM provided {rm}")
         if env_config["use_rs"]:
-            env = ProbabilisticRewardShaping(env, shaping_rm=rm, discount_factor=env_config["rs_discount"])
-        env = RMWrapper(env, rm=rm)
+            env = ProbabilisticRewardShaping(
+                env, 
+                shaping_rm=rm, 
+                use_deterministic_transitioner=env_config["use_old_rm_learner"], 
+                discount_factor=env_config["rs_discount"]
+            )
+        env = RMWrapper(env, rm=rm, use_deterministic_transitioner=env_config["use_old_rm_learner"])
 
         # raise RuntimeError(env.observation_space.shape)
         return env

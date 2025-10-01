@@ -357,7 +357,9 @@ def _lift(example: List[List[str]], ex_id: str, ex_type: ISAILASPExample.ExType)
             obs_context.append(ObservablePredicate(symbol, i))
     last = LastPredicate(len(example) - 1)
     penalty = None
-    return ISAILASPExample(ex_id, penalty, ex_type, obs_context, last)
+    ex = ISAILASPExample(ex_id, penalty, ex_type, obs_context, last)
+    ex.compact_observations()
+    return ex
 
 
 def lift_goal_example(example: List[List[str]], ex_id: str) -> ISAILASPExample:

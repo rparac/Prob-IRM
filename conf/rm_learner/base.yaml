@@ -16,3 +16,6 @@ new_inc_examples: True
 replay_experience: False
 
 max_container_size: null 
+
+# Note: Do not change. This value is filled in by run config
+use_old_rm_learner: null

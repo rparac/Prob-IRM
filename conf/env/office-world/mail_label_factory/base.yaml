@@ -1,2 +1,2 @@
-_target_: rm_marl.envs.gym_subgoal_automata_wrapper.OfficeWorldMailLabelingFunctionWrapper
+_target_: rm_marl.envs.gym_subgoal_automata_wrapper.OfficeWorldMailLabelExtractor
 _partial_: true

@@ -1,2 +1,2 @@
-_target_: rm_marl.envs.gym_subgoal_automata_wrapper.WaterWorldMagentaLabelingFunctionWrapper
+_target_: rm_marl.envs.gym_subgoal_automata_wrapper.WaterWorldMagentaLabelExtractor
 _partial_: true

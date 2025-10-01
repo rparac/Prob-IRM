@@ -1,5 +1,7 @@
 from typing import Optional
 
+import numpy as np
+
 from rm_marl.reward_machine import RewardMachine
 from rm_marl.rm_transition.rm_transitioner import RMTransitioner
 
@@ -11,9 +13,11 @@ class DeterministicRMTransitioner(RMTransitioner):
 
     def get_initial_state(self):
         assert isinstance(self.rm.u0, (str, int))
-        return self.rm.u0
+        return self._to_one_hot(self.rm.u0)
 
     def get_next_state(self, curr_state, event):
+        curr_state_idx = np.argmax(curr_state)
+        curr_state = self.rm.states[curr_state_idx]
         assert isinstance(curr_state, (str, int))
 
         if not isinstance(event, (list, tuple)):
@@ -27,7 +31,13 @@ class DeterministicRMTransitioner(RMTransitioner):
                 if all(self._is_event_satisfied(c, event) for c in condition):
                     u = self.rm.transitions[u][condition]
 
-        return u
+        return self._to_one_hot(u)
+
+    def _to_one_hot(self, u):
+        idx = self.rm.to_idx(u)
+        u_one_hot = np.zeros(len(self.rm.states), dtype=np.float32)
+        u_one_hot[idx] = 1
+        return u_one_hot
 
     @staticmethod
     def _is_event_satisfied(condition, observations):
