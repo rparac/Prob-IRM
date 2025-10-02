@@ -11,6 +11,7 @@ from sklearn.metrics import log_loss
 from pympler import asizeof
 
 from rm_marl.new_stack.learner.util import generate_previous_incomplete_examples
+from rm_marl.reward_machine import RewardMachine
 from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample, MultiISAExampleContainer, \
     ISAExampleContainer, LastPredicate, ObservablePredicate, lift_dend_example, lift_goal_example, lift_inc_example
 from rm_marl.rm_learning.ilasp.task_generator import generate_ilasp_task
@@ -189,9 +190,11 @@ class NonNoisyRMLearner:
             else:
                 # Can't solve the task
                 self._task_unsolvable = True
-                # Can't solve with the current set of examples. Wait for more traces
+                # Can't solve with the current set of examples nor adding more will help. 
                 LOGGER.debug(f"ILASP task unsolvable")
-                return None
+                # We set the RM to the default RM to get results without the RM
+                candidate_rm = RewardMachine.default_rm()
+                return candidate_rm
         else:
             LOGGER.debug(f"ILASP task timeout")
             return None
