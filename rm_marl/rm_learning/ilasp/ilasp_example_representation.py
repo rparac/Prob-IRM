@@ -372,3 +372,10 @@ def lift_dend_example(example: List[List[str]], ex_id: str) -> ISAILASPExample:
 
 def lift_inc_example(example: List[List[str]], ex_id: str) -> ISAILASPExample:
     return _lift(example, ex_id, ex_type=ISAILASPExample.ExType.INCOMPLETE)
+
+def remove_duplicates(examples: List[ISAILASPExample]) -> List[ISAILASPExample]:
+    sol = []
+    for ex in examples:
+        if ex not in sol:
+            sol.append(ex)
+    return sol

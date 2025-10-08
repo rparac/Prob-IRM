@@ -13,7 +13,7 @@ from pympler import asizeof
 from rm_marl.new_stack.learner.util import generate_previous_incomplete_examples
 from rm_marl.reward_machine import RewardMachine
 from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample, MultiISAExampleContainer, \
-    ISAExampleContainer, LastPredicate, ObservablePredicate, lift_dend_example, lift_goal_example, lift_inc_example
+    ISAExampleContainer, LastPredicate, ObservablePredicate, lift_dend_example, lift_goal_example, lift_inc_example, remove_duplicates
 from rm_marl.rm_learning.ilasp.task_generator import generate_ilasp_task
 from rm_marl.rm_learning.ilasp.task_improvement_validator import get_ilasp_solution_penalty
 from rm_marl.rm_learning.ilasp.task_parser import parse_ilasp_solutions
@@ -219,11 +219,10 @@ class NonNoisyRMLearner:
         )
         return union
 
-
     def _generate_ilasp_task(self, ilasp_task_filename):
-        positive_examples = self._seen_positive_counter_examples
-        negative_examples = self._seen_negative_counter_examples
-        incomplete_examples = self._seen_incomplete_counter_examples
+        positive_examples = remove_duplicates([lift_goal_example(ex.labels_sequence, f"ex_goal_{i}") for i, ex in enumerate(self._seen_positive_counter_examples)])
+        negative_examples = remove_duplicates([lift_dend_example(ex.labels_sequence, f"ex_dend_{i}") for i, ex in enumerate(self._seen_negative_counter_examples)])
+        incomplete_examples = remove_duplicates([lift_inc_example(ex.labels_sequence, f"ex_inc_{i}") for i, ex in enumerate(self._seen_incomplete_counter_examples)])
 
         # the sets of examples are sorted to make sure that ILASP produces the same solution for the same sets (ILASP
         # can produce different hypothesis for the same set of examples but given in different order)
@@ -232,9 +231,9 @@ class NonNoisyRMLearner:
             "u_acc",
             "u_rej",
             self.observables,
-            [lift_goal_example(ex.labels_sequence, f"ex_goal_{i}") for i, ex in enumerate(positive_examples)],
-            [lift_dend_example(ex.labels_sequence, f"ex_dend_{i}") for i, ex in enumerate(negative_examples)],
-            [lift_inc_example(ex.labels_sequence, f"ex_inc_{i}") for i, ex in enumerate(incomplete_examples)],
+            positive_examples,
+            negative_examples,
+            incomplete_examples,
             self._log_folder,
             ilasp_task_filename,
             symmetry_breaking_method="bfs-alternative",
