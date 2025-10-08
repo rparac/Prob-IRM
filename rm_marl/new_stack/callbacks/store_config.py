@@ -54,11 +54,9 @@ class StoreTracesCallback(DefaultCallbacks):
             ret = last_info["original_reward"] if "original_reward" in last_info else sa_episode.get_return()
             is_positive = ret > 0
 
-            # TODO: the starting position is ignored in the orignal pipeline;
-            #  need to check if that is okay
             # TODO: For unknown reason, the final observation seems duplicated in the
             #   episode.get_infos(). Removed now; need to double check this. Could be an environment issue
-            for info in sa_episode.get_infos()[1:]:
+            for info in sa_episode.get_infos():
                 t.update(info["labels"], is_positive, is_complete)
 
             self._traces.append(t)
