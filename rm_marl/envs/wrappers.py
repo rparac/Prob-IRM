@@ -118,16 +118,12 @@ class LabelThresholding(gym.Wrapper):
 
 class LabelExtractor(abc.ABC):
     @abc.abstractmethod
-    def get_labels(self, info: dict):
+    def get_labels(self, observation, info: dict):
         raise NotImplementedError("get_labels")
 
     @abc.abstractmethod
-    def get_labels_without_probability(self, info: dict) -> Set[str]:
+    def get_labels_without_probability(self, observation, info: dict) -> Set[str]:
         raise NotImplementedError("get_labels_without_probability")
-
-    @abc.abstractmethod
-    def get_all_labels(self):
-        raise NotImplementedError("get_all_labels")
 
 class LabelingFunctionWrapper(gym.Wrapper):
     def __init__(self, env: gym.Env, label_extractor: LabelExtractor, use_probability: bool = True):
@@ -140,9 +136,9 @@ class LabelingFunctionWrapper(gym.Wrapper):
     def step(self, action):
         observation, reward, terminated, truncated, info = super().step(action)
         if self._use_probability:
-            info["labels"] = self.label_extractor.get_labels(info)
+            info["labels"] = self.label_extractor.get_labels(observation, info)
         else: 
-            info["labels"] = self.label_extractor.get_labels_without_probability(info)
+            info["labels"] = self.label_extractor.get_labels_without_probability(observation, info)
         return observation, reward, terminated, truncated, info
 
 
@@ -162,23 +158,17 @@ class NoisyLabelingFunctionComposer(LabelExtractor):
         super().__init__()
         self.label_funs = label_funs
 
-    def get_labels(self, info):
+    def get_labels(self, observation, info):
         labels = {}
         for label_fun in self.label_funs:
-            labels.update(label_fun.get_labels(info))
+            labels.update(label_fun.get_labels(observation, info))
         return labels
 
-    def get_labels_without_probability(self, info: dict) -> Set[str]:
+    def get_labels_without_probability(self, observation, info: dict) -> Set[str]:
         labels = []
         for label_fun in self.label_funs:
-            labels.extend(label_fun.get_labels_without_probability(info))
+            labels.extend(label_fun.get_labels_without_probability(observation, info))
         return labels
-
-    def get_all_labels(self):
-        ret = []
-        for label_fun in self.label_funs:
-            ret.extend(label_fun.get_all_labels())
-        return ret
 
 
 class AutomataWrapper(gym.Wrapper):

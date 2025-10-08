@@ -168,7 +168,7 @@ class OfficeWorldAbstractLabelExtractor(LabelExtractor, abc.ABC):
             return p_true_and_false_pred / p_false_pred
 
 
-    def get_labels(self, info: dict):
+    def get_labels(self, observation, info: dict):
         self.num_steps += 1
         # TODO: this may be slow; as we do it a number of times
         if self.get_label() in info.get("observations", set()):
@@ -178,7 +178,7 @@ class OfficeWorldAbstractLabelExtractor(LabelExtractor, abc.ABC):
         labels = {self.get_label(): self.get_label_confidence(coffee_predicted, value_true_prior=self.value_true_prior)}
         return labels
 
-    def get_labels_without_probability(self, info: dict) -> Set[str]:
+    def get_labels_without_probability(self, observation, info: dict) -> Set[str]:
         if self.get_label() in info.get("observations", set()):
             coffee_predicted = bool(self.rng.binomial(1, self.sensor_true_confidence))
         else:
@@ -191,9 +191,6 @@ class OfficeWorldAbstractLabelExtractor(LabelExtractor, abc.ABC):
     @abc.abstractmethod
     def get_label(self):
         raise RuntimeError("Not implemented")
-
-    def get_all_labels(self):
-        return [self.get_label()]
 
 
 class OfficeWorldCoffeeLabelExtractor(OfficeWorldAbstractLabelExtractor):

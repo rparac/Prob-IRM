@@ -22,6 +22,8 @@ should_tune: True
 
 minimize_logs: False
 
+use_pretrained_model: False
+
 tune_config:
   num_samples: 1
   verbose: 2

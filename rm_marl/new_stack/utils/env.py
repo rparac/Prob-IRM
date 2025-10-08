@@ -5,6 +5,7 @@ from ray.rllib.env import EnvContext
 from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelExtractor, \
     OfficeWorldPlantLabelExtractor, OfficeWorldCoffeeLabelExtractor
 from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
+from rm_marl.envs.pretrained_label_extractor import PretrainedLabelExtractor
 from rm_marl.envs.wrappers import LabelingFunctionWrapper, NoisyLabelingFunctionComposer, ProbabilisticRewardShaping, RewardMachineWrapper
 from rm_marl.envs.wrappers import LabelThresholding
 from rm_marl.new_stack.env.augment_labels_wrapper import AugmentLabelsWrapper
@@ -29,14 +30,17 @@ def hydra_env_creator(env_config):
         env = NewGymSubgoalAutomataAdapter(env, max_episode_length=env_config["max_episode_length"], num_random_seeds=env_config["num_random_seeds"])  # type: ignore
         # raise RuntimeError(env.observation_space.shape)
 
-        labeling_funs = [label_factory(seed=env_config["seed"]) for label_factory in env_config["label_factories"]]
+        if not env_config["use_pretrained_model"]:
+            labeling_funs = [label_factory(seed=env_config["seed"]) for label_factory in env_config["label_factories"]]
 
-        label_extractor = NoisyLabelingFunctionComposer(labeling_funs)
+            label_extractor = NoisyLabelingFunctionComposer(labeling_funs)
+        else:
+            label_extractor = PretrainedLabelExtractor(env, env_config["tb_storage_path"])
+
         env = LabelingFunctionWrapper(env, label_extractor, use_probability=not env_config["use_old_rm_learner"])
 
         if env_config['use_thresholding']:
             env = LabelThresholding(env, env_config['labelling_threshold'])
-
         env = gym.wrappers.FlattenObservation(env)
         env = gym.wrappers.DtypeObservation(env, dtype=np.float32)
         rm = _env_ctx.get("rm", None)

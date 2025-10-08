@@ -239,6 +239,13 @@ def setup_env_config(env_config, run_config):
     env_config["use_thresholding"] = run_config["use_thresholding"]
     env_config["labelling_threshold"] = run_config["labelling_threshold"]
     env_config["use_old_rm_learner"] = run_config["use_old_rm_learner"]
+    env_config["use_pretrained_model"] = run_config["use_pretrained_model"]
+
+    storage_dir = str(os.environ["RAY_RESULTS_DIR"])
+    # Set the storage path to understand which experiment is running
+    storage_dir = f"{storage_dir}/{run_config['name']}"
+
+    env_config["tb_storage_path"] = storage_dir
     return env_config
 
 
