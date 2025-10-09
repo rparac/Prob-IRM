@@ -146,9 +146,9 @@ class LabelingFunctionWrapper(gym.Wrapper):
         """Resets the environment with kwargs."""
         obs, info = super().reset(**kwargs)
         if self._use_probability:
-            info["labels"] = self.label_extractor.get_labels(info)
+            info["labels"] = self.label_extractor.get_labels(obs, info)
         else: 
-            info["labels"] = self.label_extractor.get_labels_without_probability(info)
+            info["labels"] = self.label_extractor.get_labels_without_probability(obs, info)
         return obs, info
 
 class NoisyLabelingFunctionComposer(LabelExtractor):
