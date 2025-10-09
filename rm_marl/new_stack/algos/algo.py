@@ -155,6 +155,7 @@ class PPORMLearning(PPO):
 
     @override(Checkpointable)
     def restore_from_path(self, path, *args, **kwargs):
+        breakpoint()
         experiment_file = os.path.join(path, save_name)
         print(experiment_file)
         with open(experiment_file, "rb") as f:
@@ -167,8 +168,12 @@ class PPORMLearning(PPO):
         self.config._is_frozen = True
 
         rm = RewardMachine.default_rm()
-        self._rm_learner = (RMLearner.options(name=actor_name)  # type: ignore
-                            .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
+        if self.config.rm_learner_params["use_old_rm_learner"]:
+            self._rm_learner = (NonNoisyRMLearner.options(name=actor_name)  # type: ignore
+                                .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
+        else:
+            self._rm_learner = (RMLearner.options(name=actor_name)  # type: ignore
+                                .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
         self._rm_learner.set_state_dict.remote(state)
 
         self.callbacks.set_rm_learner(actor_name)
