@@ -62,6 +62,8 @@ class NonNoisyRMLearner:
         self._seen_negative_counter_examples = set()
         self._seen_incomplete_counter_examples = set()
         self._task_unsolvable = False
+        # If the task is already too complex, we will not try to solve it
+        self._task_too_complex = False
         self._last_num_counterexamples = 0
 
 
@@ -114,7 +116,7 @@ class NonNoisyRMLearner:
 
     
     def _update_counterexamples(self, trace):
-        if self._task_unsolvable:
+        if self._task_unsolvable or self._task_too_complex:
             # No need to update counterexamples if the task is already unsolvable
             return False
 
@@ -154,7 +156,7 @@ class NonNoisyRMLearner:
 
 
     def _update_reward_machine(self):
-        if self._task_unsolvable:
+        if self._task_unsolvable or self._task_too_complex:
             # If task is already unsolvable, adding more examples will not help
             return None
 
@@ -197,6 +199,7 @@ class NonNoisyRMLearner:
                 return candidate_rm
         else:
             LOGGER.debug(f"ILASP task timeout")
+            self._task_too_complex = True
             return None
 
     def _solve_ilasp_task(self, ilasp_task_filename, ilasp_solution_filename):
