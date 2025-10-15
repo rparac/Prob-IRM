@@ -200,7 +200,8 @@ class NonNoisyRMLearner:
         else:
             LOGGER.debug(f"ILASP task timeout")
             self._task_too_complex = True
-            return None
+            candidate_rm = RewardMachine.default_rm()
+            return candidate_rm
 
     def _solve_ilasp_task(self, ilasp_task_filename, ilasp_solution_filename):
         return solve_ilasp_task(
