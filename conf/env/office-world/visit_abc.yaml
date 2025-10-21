@@ -9,12 +9,12 @@ core_label_factories:
   - ${env.a_label_factory}
   - ${env.b_label_factory}
   - ${env.c_label_factory}
+  - ${env.plant_label_factory}
 
 noise_label_factories:
   - ${env.coffee_label_factory}
   - ${env.office_label_factory}
   - ${env.d_label_factory}
-  - ${env.plant_label_factory}
 
 # Variables that can be overriden with Optuna
 overridable:
