@@ -17,5 +17,8 @@ replay_experience: False
 
 max_container_size: null 
 
+# Whether we should generate incomplete examples from the previous RM
+prev_rm_inc_examples: True
+
 # Note: Do not change. This value is filled in by run config
 use_old_rm_learner: null

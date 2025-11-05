@@ -67,6 +67,7 @@ class PPORMLearningConfig(PPOConfig):
             "rebalance_classes": True,
             "new_inc_examples": True,
             "max_container_size": None,
+            "previous_rm_inc_examples": True,
             "use_old_rm_learner": False,
         }
 
@@ -98,6 +99,7 @@ class PPORMLearningConfig(PPOConfig):
                    replay_experience=NotProvided,
                    max_container_size=NotProvided,
                    additional_ex_penalty_multipler=NotProvided,
+                   previous_rm_inc_examples=NotProvided,
                    use_old_rm_learner=NotProvided,
                    ):
         if edge_cost is not NotProvided:
@@ -122,6 +124,8 @@ class PPORMLearningConfig(PPOConfig):
             self.rm_learner_params["max_container_size"] = max_container_size 
         if additional_ex_penalty_multipler is not NotProvided:
             self.rm_learner_params["additional_ex_penalty_multipler"] = additional_ex_penalty_multipler
+        if previous_rm_inc_examples is not NotProvided:
+            self.rm_learner_params["previous_rm_inc_examples"] = previous_rm_inc_examples
         if use_old_rm_learner is not NotProvided:
             self.rm_learner_params["use_old_rm_learner"] = use_old_rm_learner
 
