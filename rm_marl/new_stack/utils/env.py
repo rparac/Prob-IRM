@@ -35,7 +35,7 @@ def hydra_env_creator(env_config):
 
             label_extractor = NoisyLabelingFunctionComposer(labeling_funs)
         else:
-            label_extractor = PretrainedLabelExtractor(env, env_config["tb_storage_path"])
+            label_extractor = PretrainedLabelExtractor(env, env_config["tb_storage_path"], curr_id)
 
         env = LabelingFunctionWrapper(env, label_extractor, use_probability=not env_config["use_old_rm_learner"])
 

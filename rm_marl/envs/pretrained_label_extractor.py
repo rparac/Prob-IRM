@@ -11,6 +11,8 @@ from tqdm import tqdm
 
 from rm_marl.envs.wrappers import LabelExtractor
 
+from gym_subgoal_automata.envs.officeworld.officeworld_env import OfficeWorldObject
+
 
 class LabelingFunctionDataset(torch.utils.data.Dataset):
     def __init__(self, data: pd.DataFrame, propositions: List[str], num_states: int):
@@ -55,15 +57,18 @@ class SimpleNN(torch.nn.Module):
             return out
 
 class PretrainedLabelExtractor(LabelExtractor):
-    def __init__(self, env, tb_storage_path: str):
+    def __init__(self, env, tb_storage_path: str, curr_id: int):
         super().__init__()
+
+        self._curr_id = curr_id
 
         self._tb_storage_path = tb_storage_path
 
-        self._num_collection_episodes = 1000
+        self._num_collection_episodes = 250
         self._dataset = self._collect_training_data(env)
+        self._test_dataset = self._collect_test_data(env)
         self._num_training_epochs = 2
-        self._model = self._train_model(self._dataset)
+        self._model = self._train_model(self._dataset, self._test_dataset)
 
     def get_labels(self, observation, info: dict):
         obs_vector = F.one_hot(torch.tensor(observation), num_classes=self._dataset.num_states)
@@ -107,16 +112,45 @@ class PretrainedLabelExtractor(LabelExtractor):
         df = pd.DataFrame(data)
         return LabelingFunctionDataset(df, all_observations, env.observation_space.n)
 
+    def _collect_test_data(self, env: gym.Wrapper):
+        all_observations = env.unwrapped.get_observables()
 
-    def _train_model(self, dataset: LabelingFunctionDataset):
-        model = SimpleNN(dataset.num_states, len(dataset.propositions))
+        data = {
+            observable: []
+            for observable in all_observations
+        }
+        data["obs"] = []
 
-        train_size = int(0.8 * len(dataset))
-        test_size = len(dataset) - train_size
-        train_set, test_set = torch.utils.data.random_split(dataset, [train_size, test_size])
+        num_states = env.observation_space.n 
+        for obs in range(num_states):
+            data["obs"].append(obs)
 
-        train_loader = torch.utils.data.DataLoader(train_set, batch_size=32, shuffle=True)
-        test_loader = torch.utils.data.DataLoader(test_set, batch_size=len(test_set), shuffle=False)
+            agent = obs // env.unwrapped.height, obs % env.unwrapped.height
+
+            curr_observations = set()
+            for location in env.unwrapped.locations:
+                if location == agent:
+                    curr_observations.add(env.unwrapped.locations[location])
+
+            if agent in env.unwrapped.coffee:
+                curr_observations.add(OfficeWorldObject.COFFEE)
+            if agent == env.unwrapped.mail:
+                curr_observations.add(OfficeWorldObject.MAIL)
+
+            for observable in all_observations:
+                seen = observable in curr_observations
+                data[observable].append(seen)
+
+        df = pd.DataFrame(data)
+        # breakpoint()
+        return LabelingFunctionDataset(df, all_observations, env.observation_space.n)
+
+
+    def _train_model(self, train_dataset: LabelingFunctionDataset, test_dataset: LabelingFunctionDataset):
+        model = SimpleNN(train_dataset.num_states, len(train_dataset.propositions))
+
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=len(test_dataset), shuffle=False)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
         loss_fn = nn.BCEWithLogitsLoss(reduction="sum")
@@ -143,8 +177,8 @@ class PretrainedLabelExtractor(LabelExtractor):
                 epoch_train_loss += loss.item()
             
             # Calculate average training loss for epoch
-            avg_train_loss = epoch_train_loss / len(train_set)
-            writer.add_scalar('Loss/train_epoch', avg_train_loss, epoch)
+            avg_train_loss = epoch_train_loss / len(train_dataset)
+            writer.add_scalar(f'Loss/{self._curr_id}/train_epoch', avg_train_loss, epoch)
             
             # Evaluation phase
             model.eval()
@@ -154,20 +188,20 @@ class PretrainedLabelExtractor(LabelExtractor):
                 test_labels = test_labels.to(device)
 
                 test_out = model(test_obs)
-                avg_test_loss = loss_fn(test_out, test_labels) / len(test_set)
+                avg_test_loss = loss_fn(test_out, test_labels) / len(test_dataset)
                 
                 # Log test loss
-                writer.add_scalar('Loss/test', avg_test_loss.item(), epoch)
+                writer.add_scalar(f'Loss/{self._curr_id}/test', avg_test_loss.item(), epoch)
                 
                 # Calculate accuracy (using 0.5 threshold for binary classification)
                 test_predictions = torch.sigmoid(test_out) > 0.5
                 test_accuracy = (test_predictions == test_labels).float().mean()
-                writer.add_scalar('Accuracy/test', test_accuracy.item(), epoch)
+                writer.add_scalar(f'Accuracy/{self._curr_id}/test', test_accuracy.item(), epoch)
                 
                 # Log per-proposition accuracy
-                for prop_idx, prop_name in enumerate(dataset.propositions):
+                for prop_idx, prop_name in enumerate(test_dataset.propositions):
                     f1 = f1_score(test_labels[:, prop_idx].cpu(), test_predictions[:, prop_idx].cpu())
-                    writer.add_scalar(f'F1-Score/test_{prop_name}', f1.item(), epoch)
+                    writer.add_scalar(f'F1-Score/{self._curr_id}/test_{prop_name}', f1.item(), epoch)
             
             print(f'Epoch {epoch+1}/{self._num_training_epochs} - Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss.item():.4f}, Test Acc: {test_accuracy.item():.4f}')
         model = model.cpu()
