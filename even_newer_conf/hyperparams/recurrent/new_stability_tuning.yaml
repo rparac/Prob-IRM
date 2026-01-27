@@ -1,0 +1,30 @@
+# @package _global_
+
+model:
+  vf_share_layers:
+    best_value: true
+
+  fcnet_activation:
+    #  We use ReLU activations everywhere except within the critic, which use Tanh activations.  fcnet_activations:
+    best_value: "relu"
+
+  max_seq_len:
+    best_value: 500
+
+  post_fcnet_hiddens:
+    best_value: []
+
+  post_fcnet_activation:
+    best_value: 'relu'
+
+ppo:
+  train_batch_size_per_learner:
+    best_value: 32768
+  minibatch_size: 
+    best_value: 8192
+  lambda_:
+    best_value: 0.95
+  grad_clip:
+    best_value: 0.5
+  clip_param:
+    best_value: 0.2

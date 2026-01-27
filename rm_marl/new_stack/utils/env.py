@@ -2,6 +2,7 @@ import gymnasium as gym
 import numpy as np
 from ray.rllib.env import EnvContext
 
+from rm_marl.envs.visual_minecraft.env import GridWorldEnv
 from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelExtractor, \
     OfficeWorldPlantLabelExtractor, OfficeWorldCoffeeLabelExtractor
 from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
@@ -66,6 +67,39 @@ def hydra_env_creator(env_config):
             )
         env = RMWrapper(env, rm=rm, use_deterministic_transitioner=env_config["use_old_rm_learner"])
 
+        # raise RuntimeError(env.observation_space.shape)
+        return env
+
+    return thunk
+
+def hydra_visual_minecraft_env_creator(env_config):
+    def thunk(_env_ctx: EnvContext):
+        # curr_id = _env_ctx.worker_index - 1
+        # curr_id = _env_ctx.vector_index
+        curr_id = _env_ctx["curr_id"]
+
+        items = ["pickaxe", "lava", "door", "gem", "empty"]
+        formula = "(F c0)", 5, "task0: visit({1})".format(*items)
+        params = {
+            "render_mode": env_config["render_mode"],
+            "formula": formula,
+            "state_type": "symbolic",
+            "train": False,
+            "use_dfa_state": False,
+            "random_start": True,
+        }
+        gym.envs.registration.register(
+            id=env_config["name"],
+            entry_point="rm_marl.envs.visual_minecraft.env:GridWorldEnv",
+        )
+
+        # env = gym.make("CartPole-v1")
+        env = gym.make(
+            env_config["name"],
+            **params
+        )
+        env = gym.wrappers.FlattenObservation(env)
+        env = gym.wrappers.DtypeObservation(env, dtype=np.float32)
         # raise RuntimeError(env.observation_space.shape)
         return env
 

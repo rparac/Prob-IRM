@@ -1,0 +1,14 @@
+defaults:
+  - base
+
+name: "gym_subgoal_automata:WaterWorldRed-v0"
+
+core_label_factories:
+  - ${env.red_label_factory}
+
+noise_label_factories:
+  - ${env.green_label_factory}
+  - ${env.blue_label_factory}
+  - ${env.cyan_label_factory}
+  - ${env.magenta_label_factory}
+  - ${env.yellow_label_factory}
