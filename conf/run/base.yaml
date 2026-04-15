@@ -7,18 +7,22 @@ name: "Custom-PPO"
 num_env_runners: 1
 
 no_rm: False
-use_perfect_rm: True
+use_perfect_rm: False
 use_rs: True
 rs_discount: 1
 
 use_thresholding: False
 labelling_threshold: 0.5
 
+use_old_rm_learner: False
+
 continue_training: False
 
 should_tune: True
 
 minimize_logs: False
+
+use_pretrained_model: False
 
 tune_config:
   num_samples: 1

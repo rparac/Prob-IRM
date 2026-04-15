@@ -18,6 +18,7 @@ from ray.rllib.utils.serialization import space_from_dict, space_to_dict
 from ray.rllib.utils.typing import ResultDict, EnvConfigDict
 
 from rm_marl.new_stack.learner.rm_learner import RMLearner
+from rm_marl.new_stack.learner.non_noisy_rm_learner import NonNoisyRMLearner
 from rm_marl.new_stack.utils.env import GET_PERFECT_RM, GET_DEFAULT_RM
 from rm_marl.reward_machine import RewardMachine
 
@@ -66,6 +67,8 @@ class PPORMLearningConfig(PPOConfig):
             "rebalance_classes": True,
             "new_inc_examples": True,
             "max_container_size": None,
+            "previous_rm_inc_examples": True,
+            "use_old_rm_learner": False,
         }
 
         super().__init__(algo_class or PPORMLearning)
@@ -95,6 +98,9 @@ class PPORMLearningConfig(PPOConfig):
                    new_inc_examples=NotProvided,
                    replay_experience=NotProvided,
                    max_container_size=NotProvided,
+                   additional_ex_penalty_multipler=NotProvided,
+                   previous_rm_inc_examples=NotProvided,
+                   use_old_rm_learner=NotProvided,
                    ):
         if edge_cost is not NotProvided:
             self.rm_learner_params["edge_cost"] = edge_cost
@@ -116,6 +122,12 @@ class PPORMLearningConfig(PPOConfig):
             self.rm_learner_params["replay_experience"] = replay_experience
         if max_container_size is not NotProvided:
             self.rm_learner_params["max_container_size"] = max_container_size 
+        if additional_ex_penalty_multipler is not NotProvided:
+            self.rm_learner_params["additional_ex_penalty_multipler"] = additional_ex_penalty_multipler
+        if previous_rm_inc_examples is not NotProvided:
+            self.rm_learner_params["previous_rm_inc_examples"] = previous_rm_inc_examples
+        if use_old_rm_learner is not NotProvided:
+            self.rm_learner_params["use_old_rm_learner"] = use_old_rm_learner
 
 
 class PPORMLearning(PPO):
@@ -137,13 +149,17 @@ class PPORMLearning(PPO):
         #     ]
         # )
         # ray.get(placement_group.ready())
-
-        self._rm_learner = (RMLearner.options(name=actor_name)  # type: ignore
-                            .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
+        if self.config.rm_learner_params["use_old_rm_learner"]:
+            self._rm_learner = (NonNoisyRMLearner.options(name=actor_name)  # type: ignore
+                                .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
+        else:
+            self._rm_learner = (RMLearner.options(name=actor_name)  # type: ignore
+                                .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
         super().setup(config)
 
     @override(Checkpointable)
     def restore_from_path(self, path, *args, **kwargs):
+        # breakpoint()
         experiment_file = os.path.join(path, save_name)
         print(experiment_file)
         with open(experiment_file, "rb") as f:
@@ -155,9 +171,13 @@ class PPORMLearning(PPO):
         self.config.callbacks_class = partial(self.config.callbacks_class, **kwargs)
         self.config._is_frozen = True
 
-        rm = RewardMachineAgent.default_rm()
-        self._rm_learner = (RMLearner.options(name=actor_name)  # type: ignore
-                            .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
+        rm = RewardMachine.default_rm()
+        if self.config.rm_learner_params["use_old_rm_learner"]:
+            self._rm_learner = (NonNoisyRMLearner.options(name=actor_name)  # type: ignore
+                                .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
+        else:
+            self._rm_learner = (RMLearner.options(name=actor_name)  # type: ignore
+                                .remote(rm, actor_name, **self.config.rm_learner_params))  # type: ignore
         self._rm_learner.set_state_dict.remote(state)
 
         self.callbacks.set_rm_learner(actor_name)

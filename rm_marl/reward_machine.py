@@ -137,7 +137,7 @@ class RewardMachine:
 
                 dot.edge(str(from_state), str(to_state), str(condition))
 
-        dot.render(file_name)
+        dot.render(file_name, format='png')
 
     def to_idx(self, state_name: str) -> int:
         try:

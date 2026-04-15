@@ -4,6 +4,7 @@ import gymnasium
 import numpy as np
 from gymnasium.core import WrapperObsType, WrapperActType
 
+from rm_marl.envs.wrappers import LabelingFunctionWrapper, NoisyLabelingFunctionComposer
 from rm_marl.new_stack.utils.gymnasium import gym_getattr
 
 
@@ -17,9 +18,9 @@ class AugmentLabelsWrapper(gymnasium.Wrapper):
         super().__init__(env)
 
         # We assume NoisyLabelingFunctionComposer is used before this component
-        assert gym_getattr(env, "label_funs") is not None
+        assert gym_getattr(env, "label_extractor") is not None
 
-        num_labels = len(gym_getattr(env, "label_funs"))
+        num_labels = len(gym_getattr(env, "label_extractor").label_funs)
 
         self.observation_space = gymnasium.spaces.Box(
             low=env.observation_space.low[0], high=env.observation_space.high[0],  # type: ignore

@@ -357,7 +357,9 @@ def _lift(example: List[List[str]], ex_id: str, ex_type: ISAILASPExample.ExType)
             obs_context.append(ObservablePredicate(symbol, i))
     last = LastPredicate(len(example) - 1)
     penalty = None
-    return ISAILASPExample(ex_id, penalty, ex_type, obs_context, last)
+    ex = ISAILASPExample(ex_id, penalty, ex_type, obs_context, last)
+    ex.compact_observations()
+    return ex
 
 
 def lift_goal_example(example: List[List[str]], ex_id: str) -> ISAILASPExample:
@@ -370,3 +372,10 @@ def lift_dend_example(example: List[List[str]], ex_id: str) -> ISAILASPExample:
 
 def lift_inc_example(example: List[List[str]], ex_id: str) -> ISAILASPExample:
     return _lift(example, ex_id, ex_type=ISAILASPExample.ExType.INCOMPLETE)
+
+def remove_duplicates(examples: List[ISAILASPExample]) -> List[ISAILASPExample]:
+    sol = []
+    for ex in examples:
+        if ex not in sol:
+            sol.append(ex)
+    return sol

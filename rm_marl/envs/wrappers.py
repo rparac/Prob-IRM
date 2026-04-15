@@ -3,11 +3,13 @@ import copy
 import random
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Set
 
 import numpy as np
 import gymnasium as gym
 from gymnasium.wrappers import RecordEpisodeStatistics, TimeLimit
+
+from rm_marl.rm_transition.deterministic_rm_transitioner import DeterministicRMTransitioner
 
 from ..reward_machine import RewardMachine
 from ..rm_transition.rm_transitioner import RMTransitioner
@@ -17,7 +19,7 @@ from ..rm_transition.prob_rm_transitioner import ProbRMTransitioner
 # Important: This class needs to be the last one used. This also includes the RecordEpisodeStatisticsWrapper
 class ProbabilisticRewardShaping(gym.Wrapper):
 
-    def __init__(self, env, shaping_rm: RewardMachine, discount_factor: float = 0.99,
+    def __init__(self, env, shaping_rm: RewardMachine, use_deterministic_transitioner: bool, discount_factor: float = 0.99,
                  dist_fn: str = 'max'):
         super().__init__(env)
 
@@ -26,6 +28,8 @@ class ProbabilisticRewardShaping(gym.Wrapper):
         self._rm = None
         self._rm_transitioner = None
         self._rm_state_belief = None
+
+        self._use_deterministic_rm_transitioner = use_deterministic_transitioner
 
         self._dist_fn = dist_fn
 
@@ -43,9 +47,7 @@ class ProbabilisticRewardShaping(gym.Wrapper):
 
         obs, reward, terminated, truncated, info = super().step(action)
 
-        assert "labels" in info and type(info["labels"]) == dict, "Unsupported labeling function, list of events needed"
-        # assert "rm_state" in info and type(
-        #     info["rm_state"]) == np.ndarray, "Unsupported env, belief over RM states needed"
+        # assert "labels" in info and type(info["labels"]) == dict, "Unsupported labeling function, list of events needed"
 
         # Determine additional reward due to reward shaping
         new_rm_state_belief = self._rm_transitioner.get_next_state(self._rm_state_belief, info["labels"])
@@ -75,9 +77,11 @@ class ProbabilisticRewardShaping(gym.Wrapper):
         self._rm = shaping_rm
         self._rm.compute_state_pontentials(self._dist_fn)
 
-        self._rm_transitioner = ProbRMTransitioner(self._rm)
+        if self._use_deterministic_rm_transitioner:
+            self._rm_transitioner = DeterministicRMTransitioner(self._rm)
+        else:
+            self._rm_transitioner = ProbRMTransitioner(self._rm)
         self._rm_state_belief = None
-
 
 class LabelThresholding(gym.Wrapper):
 
@@ -112,92 +116,59 @@ class LabelThresholding(gym.Wrapper):
 
         return obs, info
 
-
-class LabelingFunctionWrapper(gym.Wrapper):
-    def __init__(self, env: gym.Env, noisy: bool = False, seed: int = 0, sensor_true_confidence: float = 1,
-                 sensor_false_confidence: float = 1):
-        super().__init__(env)
-
-        self.prev_obs = None
-
-        if noisy:
-            random.seed(seed)
-            # Note: When we are designing environment ourselves, we tend to know underlying true
-            #   values. So, it would be desirable to simulate "sensor" errors by simply using
-            #   a Bernoulli distribution with p=sensor_true(false)_confidence respectively.
-            self.sensor_true_confidence = sensor_true_confidence
-            self.sensor_false_confidence = sensor_false_confidence
-
-    """
-    We use the following binary sensor model:
-        - It takes in two parameters:
-            - p(true_value_predicated | true_value) = sensor_true_confidence
-                - can compute p(false_value_predicted | true_value) = 1 - sensor_true_confidence
-            - p(false_value_predicated | false_value) = sensor_false_confidence
-                - can compute p(true_value_predicted | false_value) = 1 - sensor_false_confidence
-        - Assumes the prior probabilities as 0.5, i.e p(true_value) = 0.5 (=sensor_true_prior), p(false_value) = 0.5
-        - We can see a sensor prediction, but need to compute our belief that the value is true.
-            - This can be done with Bayes rule
-            -   p(true_value | true_value_predicted) =
-                   p(true_value_predicated | true_value) * p(true_value) / 
-                   p(true_value_predicated | true_value) * p(true_value) 
-                      + p(true_value_predicted | false_value) * p(false_value)
-           - Opposite case p(true_value | false_value_predicted)  is similar
-    """
-
-    def get_label_confidence(self, label_true_pred: bool, value_true_prior: float = 0.5):
-        value_false_prior = 1 - value_true_prior
-        # case: p(true_value | true_value_predicted)
-        if label_true_pred:
-            p_true_and_true_pred = self.sensor_true_confidence * value_true_prior
-            p_true_pred = (self.sensor_true_confidence * value_true_prior +
-                           (1 - self.sensor_false_confidence) * value_false_prior)
-            return p_true_and_true_pred / p_true_pred
-        # case p(true_value | false_value_predicted)
-        else:
-            p_true_and_false_pred = (1 - self.sensor_true_confidence) * value_true_prior
-            p_false_pred = ((1 - self.sensor_true_confidence) * value_true_prior
-                            + self.sensor_false_confidence * value_false_prior)
-            return p_true_and_false_pred / p_false_pred
-
+class LabelExtractor(abc.ABC):
     @abc.abstractmethod
-    def get_labels(self, info: dict):
+    def get_labels(self, observation, info: dict):
         raise NotImplementedError("get_labels")
 
     @abc.abstractmethod
-    def get_all_labels(self):
-        raise NotImplementedError("get_all_labels")
+    def get_labels_without_probability(self, observation, info: dict) -> Set[str]:
+        raise NotImplementedError("get_labels_without_probability")
+
+class LabelingFunctionWrapper(gym.Wrapper):
+    def __init__(self, env: gym.Env, label_extractor: LabelExtractor, use_probability: bool = True):
+        super().__init__(env)
+
+        self.prev_obs = None
+        self.label_extractor = label_extractor
+        self._use_probability = use_probability
 
     def step(self, action):
         observation, reward, terminated, truncated, info = super().step(action)
-        info["labels"] = self.get_labels(info)
+        if self._use_probability:
+            info["labels"] = self.label_extractor.get_labels(observation, info)
+        else: 
+            info["labels"] = self.label_extractor.get_labels_without_probability(observation, info)
         return observation, reward, terminated, truncated, info
+
 
     def reset(self, **kwargs):
         """Resets the environment with kwargs."""
         obs, info = super().reset(**kwargs)
-        info["labels"] = self.get_labels(info)
+        if self._use_probability:
+            info["labels"] = self.label_extractor.get_labels(obs, info)
+        else: 
+            info["labels"] = self.label_extractor.get_labels_without_probability(obs, info)
         return obs, info
 
-
-class NoisyLabelingFunctionComposer(LabelingFunctionWrapper):
-    def __init__(self, label_funs: List[LabelingFunctionWrapper]):
+class NoisyLabelingFunctionComposer(LabelExtractor):
+    def __init__(self, label_funs: List[LabelExtractor]):
         assert len(label_funs) > 0
 
-        super().__init__(label_funs[0].env, noisy=True)
+        super().__init__()
         self.label_funs = label_funs
 
-    def get_labels(self, info):
+    def get_labels(self, observation, info):
         labels = {}
         for label_fun in self.label_funs:
-            labels.update(label_fun.get_labels(info))
+            labels.update(label_fun.get_labels(observation, info))
         return labels
 
-    def get_all_labels(self):
-        ret = []
+    def get_labels_without_probability(self, observation, info: dict) -> Set[str]:
+        labels = []
         for label_fun in self.label_funs:
-            ret.extend(label_fun.get_all_labels())
-        return ret
+            labels.extend(label_fun.get_labels_without_probability(observation, info))
+        return labels
 
 
 class AutomataWrapper(gym.Wrapper):

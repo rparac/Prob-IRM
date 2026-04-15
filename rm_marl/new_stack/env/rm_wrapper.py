@@ -10,16 +10,21 @@ import numpy as np
 
 from rm_marl.reward_machine import RewardMachine
 from rm_marl.rm_transition.prob_rm_transitioner import ProbRMTransitioner
+from rm_marl.rm_transition.deterministic_rm_transitioner import DeterministicRMTransitioner
 
 
 class RMWrapper(gymnasium.Wrapper):
-    def __init__(self, env: gymnasium.Wrapper, rm=None):
+    def __init__(self, env: gymnasium.Wrapper, rm=None, use_deterministic_transitioner=False):
         super().__init__(env)
         assert isinstance(env.observation_space, gymnasium.spaces.Box)
 
         _rm = rm if rm is not None else RewardMachine.default_rm()
 
-        self.rm_transitioner = ProbRMTransitioner(_rm)
+        self.use_old_rm_learner = use_deterministic_transitioner
+        if use_deterministic_transitioner:
+            self.rm_transitioner = DeterministicRMTransitioner(_rm)
+        else:
+            self.rm_transitioner = ProbRMTransitioner(_rm)
 
         self.observation_space_wo_rm = env.observation_space
         self._augment_obs_space_with_rm()
@@ -39,9 +44,11 @@ class RMWrapper(gymnasium.Wrapper):
         )
 
     def update_rm(self, rm: RewardMachine):
+        if self.use_old_rm_learner:
+            self.rm_transitioner = DeterministicRMTransitioner(rm)
+        else:
+            self.rm_transitioner = ProbRMTransitioner(rm)
         # needs to change the observation space
-        self.rm_transitioner = ProbRMTransitioner(rm)
-        # TODO: interrupt episode when RM is updated
         self._curr_rm_state = self.rm_transitioner.get_initial_state()
         self._augment_obs_space_with_rm()
 

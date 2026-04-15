@@ -10,6 +10,7 @@ import ray
 from sklearn.metrics import log_loss
 from pympler import asizeof
 
+from rm_marl.new_stack.learner.util import generate_previous_incomplete_examples
 from rm_marl.rm_learning.ilasp.ilasp_example_representation import ISAILASPExample, MultiISAExampleContainer, \
     ISAExampleContainer, LastPredicate, ObservablePredicate
 from rm_marl.rm_learning.ilasp.task_generator import generate_ilasp_task
@@ -37,9 +38,11 @@ class RMLearner:
     # base_dir - relative directory path where results will be stored
     """
 
-    def __init__(self, starting_rm, actor_name, edge_cost, n_phi_cost, ex_penalty_multiplier, min_penalty,
-                 cross_entropy_threshold, replay_experience, rebalance_classes, max_container_size, new_inc_examples, base_dir):
+    def __init__(self, starting_rm, actor_name, edge_cost, n_phi_cost, ex_penalty_multiplier, additional_ex_penalty_multipler, min_penalty,
+                 cross_entropy_threshold, replay_experience, rebalance_classes, max_container_size, new_inc_examples, base_dir, previous_rm_inc_examples, **kwargs):
         self._new_inc_examples = new_inc_examples
+        self._prev_rm_inc_examples = previous_rm_inc_examples
+        self._min_penalty = min_penalty
         self.examples = MultiISAExampleContainer(min_penalty, rebalance_classes, new_inc_examples, max_container_size)
 
         self.actor_name = actor_name
@@ -83,6 +86,7 @@ class RMLearner:
         self.edge_cost = edge_cost
         self.n_phi_cost = n_phi_cost
         self.ex_penalty_multipler = ex_penalty_multiplier
+        self.additional_ex_penalty_multipler = additional_ex_penalty_multipler
 
         # Number of ILASP examples
         # self.I = 100
@@ -213,7 +217,7 @@ class RMLearner:
             self._log_folder, f"solution_{self.rm_learning_counter}"
         )
 
-        self._generate_ilasp_task(ilasp_task_filename)
+        self._generate_ilasp_task(ilasp_task_filename, curr_rm)
         solver_completed = self._solve_ilasp_task(ilasp_task_filename, ilasp_solution_filename)
         if solver_completed:
             candidate_rm = parse_ilasp_solutions(ilasp_solution_filename)
@@ -268,10 +272,20 @@ class RMLearner:
             compute_minimal=True,
         )
 
-    def _generate_ilasp_task(self, ilasp_task_filename):
+    def _generate_ilasp_task(self, ilasp_task_filename, curr_rm):
         total_ex_sum = int(100 * self.ex_penalty_multipler)
         goal_ex, dend_ex, inc_ex = self.examples.generate_goal_dend_inc(total_ex_sum)
-        # breakpoint()
+
+
+        additional_inc_container = ISAExampleContainer(self._min_penalty)
+        if self._prev_rm_inc_examples:
+            for ex in generate_previous_incomplete_examples(curr_rm):
+                additional_inc_container.add(ex)
+
+        if len(additional_inc_container) > 0:
+            additional_ex_penalty_sum = int(100 * self.additional_ex_penalty_multipler)
+            additional_inc_ex = additional_inc_container.as_list_reweighted(additional_ex_penalty_sum)
+            inc_ex.extend(additional_inc_ex)
 
         generate_ilasp_task(
             self.rm_num_states,

@@ -2,10 +2,12 @@ import gymnasium as gym
 import numpy as np
 from ray.rllib.env import EnvContext
 
-from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelingFunctionWrapper, \
-    OfficeWorldPlantLabelingFunctionWrapper, OfficeWorldCoffeeLabelingFunctionWrapper
+from rm_marl.envs.visual_minecraft.env import GridWorldEnv
+from rm_marl.envs.gym_subgoal_automata_wrapper import OfficeWorldOfficeLabelExtractor, \
+    OfficeWorldPlantLabelExtractor, OfficeWorldCoffeeLabelExtractor
 from rm_marl.envs.new_gym_subgoal_automata_wrapper import NewGymSubgoalAutomataAdapter
-from rm_marl.envs.wrappers import NoisyLabelingFunctionComposer, ProbabilisticRewardShaping, RewardMachineWrapper
+from rm_marl.envs.pretrained_label_extractor import PretrainedLabelExtractor
+from rm_marl.envs.wrappers import LabelingFunctionWrapper, NoisyLabelingFunctionComposer, ProbabilisticRewardShaping, RewardMachineWrapper
 from rm_marl.envs.wrappers import LabelThresholding
 from rm_marl.new_stack.env.augment_labels_wrapper import AugmentLabelsWrapper
 from rm_marl.new_stack.env.rm_wrapper import RMWrapper
@@ -29,13 +31,17 @@ def hydra_env_creator(env_config):
         env = NewGymSubgoalAutomataAdapter(env, max_episode_length=env_config["max_episode_length"], num_random_seeds=env_config["num_random_seeds"])  # type: ignore
         # raise RuntimeError(env.observation_space.shape)
 
-        labeling_funs = [label_factory(env) for label_factory in env_config["label_factories"]]
+        if not env_config["use_pretrained_model"]:
+            labeling_funs = [label_factory(seed=env_config["seed"]) for label_factory in env_config["label_factories"]]
 
-        env = NoisyLabelingFunctionComposer(labeling_funs)
+            label_extractor = NoisyLabelingFunctionComposer(labeling_funs)
+        else:
+            label_extractor = PretrainedLabelExtractor(env, env_config["tb_storage_path"], curr_id)
+
+        env = LabelingFunctionWrapper(env, label_extractor, use_probability=not env_config["use_old_rm_learner"])
 
         if env_config['use_thresholding']:
             env = LabelThresholding(env, env_config['labelling_threshold'])
-
         env = gym.wrappers.FlattenObservation(env)
         env = gym.wrappers.DtypeObservation(env, dtype=np.float32)
         rm = _env_ctx.get("rm", None)
@@ -52,11 +58,48 @@ def hydra_env_creator(env_config):
             rm = rm
         else:
             raise RuntimeError(f"Unexpected RM provided {rm}")
-
         if env_config["use_rs"]:
-            env = ProbabilisticRewardShaping(env, shaping_rm=rm, discount_factor=env_config["rs_discount"])
-        env = RMWrapper(env, rm=rm)
+            env = ProbabilisticRewardShaping(
+                env, 
+                shaping_rm=rm, 
+                use_deterministic_transitioner=env_config["use_old_rm_learner"], 
+                discount_factor=env_config["rs_discount"]
+            )
+        env = RMWrapper(env, rm=rm, use_deterministic_transitioner=env_config["use_old_rm_learner"])
 
+        # raise RuntimeError(env.observation_space.shape)
+        return env
+
+    return thunk
+
+def hydra_visual_minecraft_env_creator(env_config):
+    def thunk(_env_ctx: EnvContext):
+        # curr_id = _env_ctx.worker_index - 1
+        # curr_id = _env_ctx.vector_index
+        curr_id = _env_ctx["curr_id"]
+
+        items = ["pickaxe", "lava", "door", "gem", "empty"]
+        formula = "(F c0)", 5, "task0: visit({1})".format(*items)
+        params = {
+            "render_mode": env_config["render_mode"],
+            "formula": formula,
+            "state_type": "symbolic",
+            "train": False,
+            "use_dfa_state": False,
+            "random_start": True,
+        }
+        gym.envs.registration.register(
+            id=env_config["name"],
+            entry_point="rm_marl.envs.visual_minecraft.env:GridWorldEnv",
+        )
+
+        # env = gym.make("CartPole-v1")
+        env = gym.make(
+            env_config["name"],
+            **params
+        )
+        env = gym.wrappers.FlattenObservation(env)
+        env = gym.wrappers.DtypeObservation(env, dtype=np.float32)
         # raise RuntimeError(env.observation_space.shape)
         return env
 
